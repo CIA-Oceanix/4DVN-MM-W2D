@@ -11,8 +11,8 @@ load_dotenv(os.path.join(os.getcwd(), 'config.env'))
 PATH_DATA  = os.getenv('PATH_DATA')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('create', type = bool, default = True)
-parser.add_argument('fetch', type = bool,  default = True)
+parser.add_argument('-c', type = int, default = 1)
+parser.add_argument('-f', type = int, default = 1)
 args = parser.parse_args()
 
 print(args)
@@ -114,17 +114,12 @@ for var in dataset.variables.values():
     print()
 #end
 
-DS_CREATE = True
-DS_FETCH  = False
+DS_CREATE = args.c
+DS_FETCH  = args.f
 
-if DS_FETCH:
-    U10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-    V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-#end
-
-if DS_CREATE:
+if DS_CREATE == 1:
     
-    for i in tqdm(range(delta_hours+1)):
+    for i in tqdm(range(10+1)):
         
         U10 = dataset['U10'][i,:,:]
         V10 = dataset['V10'][i,:,:]
@@ -138,9 +133,12 @@ if DS_CREATE:
         f.close()
     #end
     
-if DS_FETCH:
+if DS_FETCH == 1:
     
-    for i in tqdm(range(delta_hours+1)):
+    U10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
+    V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
+    
+    for i in tqdm(range(10+1)):
         
         U10[i,:,:] = np.load(open(os.path.join(PATH_DATA, f'u10_run{i}.npy'), 'rb'))
         V10[i,:,:] = np.load(open(os.path.join(PATH_DATA, f'v10_run{i}.npy'), 'rb'))
