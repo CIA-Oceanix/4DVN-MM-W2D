@@ -122,7 +122,7 @@ V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
 
 if DS_CREATE == 1:
     
-    for i in tqdm(range(10)):
+    for i in tqdm(range(delta_hours + 1)):
         
         U10[i,:,:] = dataset['U10'][i,:,:]
         V10[i,:,:] = dataset['V10'][i,:,:]
