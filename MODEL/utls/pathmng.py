@@ -1,6 +1,7 @@
 
 import os
 import datetime
+import json
 
 
 class PathManager:
@@ -75,16 +76,23 @@ class PathManager:
             return path
         #end
     #end
-#end
-
-
-class VersionFinder:
     
-    def __init__(self):
-        pass
+    def print_evalreport(self, report_dict):
+                
+        with open(os.path.join(self.path_evalmetrics, 'evalmetrics.json'), 'w') as f:
+            json.dump(report_dict, f, indent = 4)
+        f.close()
+    #end
+    
+    def save_configfiles(self, configfile, configfile_name):
+        
+        with open(os.path.join(self.path_configfiles, configfile_name + '.json'), 'w') as f:
+            json.dump(configfile, f, indent = 4)
+        f.close()
     #end
     
 #end
+
     
         
         

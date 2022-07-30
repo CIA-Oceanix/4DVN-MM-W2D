@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 
 
 class Phi_r(nn.Module):
+    ''' Dynamical prior '''
     
     def __init__(self):
         super(Phi_r, self).__init__()
@@ -19,6 +20,7 @@ class Phi_r(nn.Module):
 
 
 class ObservationModel(torch.nn.Module):
+    ''' Observation model : mask observations '''
     
     def __init__(self):
     	super(ObservationModel, self).__init__()
@@ -35,8 +37,54 @@ class ObservationModel(torch.nn.Module):
 
 class LitModel(pl.LightningModule):
     
-    def __init__(self):
+    def __init__(self, Phi):
         super(LitModel, self).__init__()
         
-    pass
+        self.Phi = Phi
+    #end
+    
+    def forward(self, data):
+        
+        loss, out = self.compute_loss(data)
+        return loss, out
+    #end
+    
+    def configure_optimizers(self):
+        
+        optimizers = None
+        return optimizers
+    #end
+    
+    def compute_loss(self, data, phase = 'train'):
+        
+        loss = None
+        out = None
+        return loss, out
+    #end
+    
+    def training_step(self):
+        
+        pass
+    #end
+    
+    def training_epoch_end(self):
+        
+        pass
+    #end
+    
+    def validation_step(self):
+        
+        pass
+    #end
+    
+    def validation_epoch_end(self):
+        
+        pass
+    #end
+    
+    def test_step(self):
+        
+        pass
+    #end
+    
 #end

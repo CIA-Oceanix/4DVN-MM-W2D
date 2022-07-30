@@ -15,7 +15,11 @@ parser.add_argument('-c', type = int, default = 1)
 parser.add_argument('-f', type = int, default = 1)
 args = parser.parse_args()
 
-print(args)
+if args.c > 1:
+    args.c = 1
+if args.f > 1:
+    args.f = 1
+#end
 
 
 def distance_km_from_lat_lon(lat1, lat2, lon1, lon2):
@@ -41,9 +45,9 @@ def size_obj(obj, unit = 'MiB'):
     elif unit == 'kB':
         return getsizeof(obj) / (1e3)
     elif unit == 'MB':
-        return getsizeof(obj) / (1e5)
+        return getsizeof(obj) / (1e6)
     elif unit == 'GB':
-        return getsizeof(obj) / (1e8)
+        return getsizeof(obj) / (1e9)
     else:
         raise NotImplementedError('please MiB')
     #end
@@ -120,7 +124,7 @@ DS_FETCH  = args.f
 U10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
 V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
 
-if DS_CREATE == 1:
+if np.bool_(DS_CREATE):
     
     for i in tqdm(range(delta_hours + 1)):
         
@@ -137,47 +141,12 @@ if DS_CREATE == 1:
     f.close()
 #end
 
-if DS_FETCH:
+if np.bool_(DS_FETCH):
     
-    pass
+    with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'rb') as f:
+        wind = np.load(f)
+    f.close()
 #end
-
-# if DS_CREATE == 1:
-    
-#     for i in tqdm(range(delta_hours+1)):
-        
-#         U10 = dataset['U10'][i,:,:]
-#         V10 = dataset['V10'][i,:,:]
-        
-#         with open(os.path.join(PATH_DATA, f'u10_run{i}.npy'), 'wb') as f:
-#             np.save(f, np.array(U10))
-#         f.close()
-        
-#         with open(os.path.join(PATH_DATA, f'v10_run{i}.npy'), 'wb') as f:
-#             np.save(f, np.array(V10))
-#         f.close()
-#     #end
-    
-# if DS_FETCH == 1:
-    
-#     U10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-#     V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-    
-#     for i in tqdm(range(delta_hours+1)):
-        
-#         U10[i,:,:] = np.load(open(os.path.join(PATH_DATA, f'u10_run{i}.npy'), 'rb'))
-#         V10[i,:,:] = np.load(open(os.path.join(PATH_DATA, f'v10_run{i}.npy'), 'rb'))
-#     #end
-    
-#     wind = np.sqrt((U10**2 + V10**2))
-#     print('Scalar wind shape : ', wind.shape)
-#     print('Size of scalar wind in MiB : ', size_obj(wind, unit = 'MiB'))
-    
-#     with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'wb') as f:
-#         np.save(f, wind, allow_pickle = True)
-#     f.close()
-# #end
-        
 
 lat   = np.array(lat)
 lon   = np.array(lon)
@@ -193,10 +162,10 @@ print(f'Latitude  range [ {lat_min:.4f} : {lat_max:.4f} ] — shape : {lat.shape
 print(f'Time range [ {times.min()} : {times.max()} ] — shape : {times.shape}')
 print(f'u10 , v10 shapes : {U10.shape} , {V10.shape}')
 
-sizeu, sizev = size_obj(U10, unit = 'KiB'), size_obj(V10, unit = 'KiB')
-print(f'Velocity field u10, v10 memory space : {sizeu:.4f}, {sizev:.4f} KiB')
-sizeu, sizev = size_obj(U10, unit = 'MiB'), size_obj(V10, unit = 'MiB')
-print(f'Velocity field u10, v10 memory space : {sizeu:.4f}, {sizev:.4f} MiB')
+sizew = size_obj(wind, unit = 'KiB')
+print(f'Velocity field memory space : {sizew:.4f} KiB')
+sizew = size_obj(wind, unit = 'MiB')
+print(f'Velocity field memory space : {sizew:.4f} MiB')
 
 
 width  = distance_km_from_lat_lon(lat[0,0], lat[0,-1], lon[0,0], lon[0,-1])
