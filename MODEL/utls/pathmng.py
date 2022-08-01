@@ -2,11 +2,18 @@
 import os
 import datetime
 import json
+import torch
+from torchsummary import summary
+import pickle
 
 
 class PathManager:
     
-    def __init__(self, mother_dir, model_name, versioning = True):
+    def __init__(self, mother_dir, model_name, versioning = True, tabula_rasa = False):
+        
+        if tabula_rasa:
+            os.system(r'rm -rf {}/*'.format(mother_dir))
+        #end
         
         if versioning:
             time_now = datetime.datetime.now()
@@ -52,6 +59,8 @@ class PathManager:
         self.path_evalmetrics      = path_evalmetrics
         self.path_configfiles      = path_configfiles
         self.path_modeloutput      = path_modeloutput
+        
+        self.nrun = None
     #end
     
     def get_path(self, directory, absolute = False):
@@ -77,20 +86,38 @@ class PathManager:
         #end
     #end
     
+    def set_nrun(self, nrun):
+        
+        self.nrun = nrun
+    #end
+    
     def print_evalreport(self, report_dict):
-                
-        with open(os.path.join(self.path_evalmetrics, 'evalmetrics.json'), 'w') as f:
+        
+        fname = 'evalmetrics' if self.nrun is None else f'evalmetrics_{self.nrun}'
+        
+        with open(os.path.join(self.path_evalmetrics, f'{fname}.json'), 'w') as f:
             json.dump(report_dict, f, indent = 4)
         f.close()
     #end
     
     def save_configfiles(self, configfile, configfile_name):
         
-        with open(os.path.join(self.path_configfiles, configfile_name + '.json'), 'w') as f:
-            json.dump(configfile, f, indent = 4)
+        with open(os.path.join(self.path_configfiles, 
+                               configfile_name + '.json'), 'w') as f:
+            json.dump(configfile._asdict(), f, indent = 4)
         f.close()
     #end
     
+    def save_litmodel_trainer(self, lit_model, trainer):
+        
+        with open(os.path.join(self.path_litmodel_trainer, 'lit_model.pkl'), 'wb') as f:
+            torch.save(lit_model.cpu(), f)
+        f.close()
+        
+        with open(os.path.join(self.path_litmodel_trainer, 'trainer.pkl'), 'wb') as f:
+            pickle.dump(trainer, f)
+        #end
+    #end
 #end
 
     

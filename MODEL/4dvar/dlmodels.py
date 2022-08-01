@@ -6,14 +6,14 @@ import pytorch_lightning as pl
 class Phi_r(nn.Module):
     ''' Dynamical prior '''
     
-    def __init__(self):
+    def __init__(self, model):
         super(Phi_r, self).__init__()
         
-        self.net = None
+        self.net = model
     #end
     
     def forward(self, data):
-    
+        
     	return self.net(data)
     #end
 #end
@@ -37,8 +37,9 @@ class ObservationModel(torch.nn.Module):
 
 class LitModel(pl.LightningModule):
     
-    def __init__(self, Phi):
+    def __init__(self, Phi, shape_data):
         super(LitModel, self).__init__()
+        
         
         self.Phi = Phi
     #end

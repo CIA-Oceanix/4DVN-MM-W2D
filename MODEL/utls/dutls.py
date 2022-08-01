@@ -61,14 +61,14 @@ class W2DSimuDataset(Dataset):
 #end
 
 
-class W2DDataModule(pl.LightningDataModule):
+class W2DSimuDataModule(pl.LightningDataModule):
     
     def __init__(self, path_data, batch_size, 
                  ttsplit = 0.33, 
                  tvsplit = 0.15,
                  lr_factor = 6, 
                  normalize = True):
-        super(W2DDataModule, self).__init__()
+        super(W2DSimuDataModule, self).__init__()
         
         self.path_data  = path_data
         self.batch_size = batch_size
@@ -78,14 +78,15 @@ class W2DDataModule(pl.LightningDataModule):
         self.normalize  = normalize
         
         self.setup()
-        
-        print()
     #end
     
     def setup(self):
         
         wind_2D_hr = np.load(open(os.path.join(self.path_data, 
                                   'patch_modwind2D_24h.npy'), 'rb'))
+        
+        shape = wind_2D_hr.shape[-2:]
+        wind_2D_hr = wind_2D_hr.reshape(-1, 24, shape[0], shape[1])
         
         n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)
         n_train = np.int32(wind_2D_hr.__len__() - n_test)
@@ -95,7 +96,7 @@ class W2DDataModule(pl.LightningDataModule):
         train_set = wind_2D_hr[:n_train, :, :]
         val_set   = wind_2D_hr[n_train : n_train + n_val, :, :]
         test_set  = wind_2D_hr[n_train + n_val : n_train + n_val + n_test, :, :]
-        
+                
         self.train_dataset = W2DSimuDataset(train_set,
                                             lr_factor = self.lr_factor, 
                                             normalize = self.normalize)
