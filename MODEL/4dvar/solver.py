@@ -9,7 +9,8 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class CorrelateNoise(torch.nn.Module):
@@ -21,9 +22,9 @@ class CorrelateNoise(torch.nn.Module):
     #end
     
     def forward(self, w):
-        w = self.conv1(F.relu(w)).to(device)
-        w = self.conv2(F.relu(w)).to(device)
-        w = self.conv3(w).to(device)
+        w = self.conv1(F.relu(w)).to(DEVICE)
+        w = self.conv2(F.relu(w)).to(DEVICE)
+        w = self.conv3(w).to(DEVICE)
         return w
     #end
 #end
@@ -37,9 +38,9 @@ class RegularizeVariance(torch.nn.Module):
     #end    
     
     def forward(self, v):
-        v = self.conv1(F.relu(v)).to(device)
-        v = self.conv2(F.relu(v)).to(device)
-        v = self.conv3(v).to(device)
+        v = self.conv1(F.relu(v)).to(DEVICE)
+        v = self.conv2(F.relu(v)).to(DEVICE)
+        v = self.conv3(v).to(DEVICE)
         return v
     #end
 #end
@@ -152,7 +153,7 @@ class ConvLSTM2d(torch.nn.Module):
         batch_size = input_.shape[0]
         spatial_size = input_.shape[2:]
         if self.stochastic == True:
-            z = torch.randn(input_.shape).to(device)
+            z = torch.randn(input_.shape).to(DEVICE)
             z = self.correlate_noise(z)
             z = (z-torch.mean(z))/torch.std(z)
             #z = torch.mul(self.regularize_variance(z),self.correlate_noise(z))
@@ -162,8 +163,8 @@ class ConvLSTM2d(torch.nn.Module):
         if prev_state is None:
             state_size = [batch_size, self.hidden_size] + list(spatial_size)
             prev_state = (
-                torch.autograd.Variable(torch.zeros(state_size)).to(device),
-                torch.autograd.Variable(torch.zeros(state_size)).to(device)
+                torch.autograd.Variable(torch.zeros(state_size)).to(DEVICE),
+                torch.autograd.Variable(torch.zeros(state_size)).to(DEVICE)
             )
         #end
         
@@ -229,8 +230,8 @@ class ConvLSTM1d(torch.nn.Module):
             # spatial_size : FORMAT_SIZE
             state_size = [batch_size, self.hidden_size] + list(spatial_size)
             prev_state = (
-                torch.autograd.Variable(torch.zeros(state_size)).to(device),
-                torch.autograd.Variable(torch.zeros(state_size)).to(device)
+                torch.autograd.Variable(torch.zeros(state_size)).to(DEVICE),
+                torch.autograd.Variable(torch.zeros(state_size)).to(DEVICE)
             )
         #end
         
@@ -389,26 +390,37 @@ class Model_Var_Cost(nn.Module):
         
         # parameters for variational cost
         if learnable_params:
-            self.alphaObs = torch.nn.Parameter(torch.Tensor(1. * np.ones((self.dim_obs,1)))).to(device)
-            self.alphaReg = torch.nn.Parameter(torch.Tensor([1.])).to(device)
+            
+            self.alphaObs = torch.nn.Parameter(torch.Tensor(1. * np.ones((self.dim_obs,1)))).to(DEVICE)
+            self.alphaReg = torch.nn.Parameter(torch.Tensor([1.])).to(DEVICE)
+            
             if self.dim_obs_channel[0] == 0 :
-                self.WObs = torch.nn.Parameter(torch.Tensor(np.ones((self.dim_obs,ShapeData[0])))).to(device)
+                
+                self.WObs = torch.nn.Parameter(torch.Tensor(np.ones((self.dim_obs,ShapeData[0])))).to(DEVICE)
                 self.dim_obs_channel = ShapeData[0] * np.ones((self.dim_obs,))
             else:
-                self.WObs = torch.nn.Parameter(torch.Tensor(np.ones((self.dim_obs,np.max(self.dim_obs_channel))))).to(device)
+                
+                self.WObs = torch.nn.Parameter(torch.Tensor(np.ones((self.dim_obs,np.max(self.dim_obs_channel))))).to(DEVICE)
             #end
+            
             self.WReg = torch.nn.Parameter(torch.Tensor(np.ones(self.dim_state,)))
             self.epsObs = torch.nn.Parameter(0.1 * torch.Tensor(np.ones((self.dim_obs,))))
             self.epsReg = torch.nn.Parameter(torch.Tensor([0.1]))
+            
         else:
-            self.alphaObs = torch.Tensor([alphaObs]).to(device)
-            self.alphaReg = torch.Tensor([alphaReg]).to(device)
-            if self.dim_obs_channel[0] == 0 :
+            
+            self.alphaObs = torch.Tensor([alphaObs]).to(DEVICE)
+            self.alphaReg = torch.Tensor([alphaReg]).to(DEVICE)
+            
+            if self.dim_obs_channel[0] == 0:
+                
                 self.WObs = torch.Tensor(np.ones((self.dim_obs,ShapeData[0])))
                 self.dim_obs_channel = ShapeData[0] * np.ones((self.dim_obs,))
             else:
+                
                 self.WObs = torch.Tensor(np.ones((self.dim_obs, np.max(self.dim_obs_channel))))
             #end
+            
             self.WReg = torch.Tensor(np.ones(self.dim_state,))
             self.epsObs = 0.1 * torch.Tensor(np.ones((self.dim_obs,)))
             self.epsReg = torch.Tensor([0.1])
@@ -420,17 +432,16 @@ class Model_Var_Cost(nn.Module):
         # data_fidelty   : [m, N, T]
         # regularization : [m, N, T]
         # mask_obs       : [m, N, T]
-        loss = self.alphaReg.pow(2) * self.normPrior(regularization, mask = None)
-        
+        loss = self.alphaReg.pow(2) * self.normPrior(regularization, mask_obs)
+                    
         if self.dim_obs == 1:
             loss += self.alphaObs[0].pow(2) * self.normObs(data_fidelty, mask_obs)
         else:
-            for kk in range(0,self.dim_obs):
-                loss += self.alphaObs[kk].pow(2) * self.normObs(data_fidelty[kk], mask = mask_obs)
+            for kk in range(0, self.dim_obs):
+                loss += self.alphaObs[0,kk].pow(2) * self.normObs(data_fidelty[kk], mask = mask_obs)
             #end
         #end
         
-        pass
         return loss
     #end
 #end
@@ -442,8 +453,19 @@ class Model_Var_Cost(nn.Module):
 # updated inner modles to account for the variational model module
 class Solver_Grad_4DVarNN(nn.Module):
     
-    def __init__(self , prior, mod_H, m_Grad, m_NormObs, m_NormPhi, ShapeData, n_iter_grad,
-                 stochastic = False, varcost_learnable_params = False):
+    def __init__(self, 
+                 prior, 
+                 mod_H, 
+                 m_Grad, 
+                 m_NormObs, 
+                 m_NormPhi, 
+                 ShapeData, 
+                 n_iter_grad,
+                 alphaObs = 1., 
+                 alphaReg = 1.,
+                 stochastic = False, 
+                 varcost_learnable_params = False):
+        
         super(Solver_Grad_4DVarNN, self).__init__()
                 
         self.Phi = prior
@@ -456,7 +478,13 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         self.model_H = mod_H
         self.model_Grad = m_Grad
-        self.model_VarCost = Model_Var_Cost(m_NormObs, m_NormPhi, ShapeData, mod_H.dim_obs, mod_H.dim_obs_channel,
+        self.model_VarCost = Model_Var_Cost(m_NormObs, 
+                                            m_NormPhi, 
+                                            ShapeData, 
+                                            mod_H.dim_obs, 
+                                            mod_H.dim_obs_channel,
+                                            alphaObs = alphaObs,
+                                            alphaReg = alphaReg,
                                             learnable_params = varcost_learnable_params)
         
         self.stochastic = stochastic

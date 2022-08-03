@@ -3,7 +3,6 @@ import os
 import datetime
 import json
 import torch
-from torchsummary import summary
 import pickle
 
 
