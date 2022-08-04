@@ -132,7 +132,9 @@ class LitModel(pl.LightningModule):
         self.val_losses   = np.zeros(config_params.EPOCHS)
         
         # Save reconstructions to a list
-        self.samples_to_save = list()
+        self.__samples_to_save = list()
+        self.__test_loss = list()
+        self.num_test_batches = 0
         
         # Initialize gradient solver (LSTM)
         batch_size, height, width, ts_length = shape_data
@@ -156,6 +158,40 @@ class LitModel(pl.LightningModule):
             alphaObs = alpha_obs,                    # alpha observations
             alphaReg = alpha_reg                     # alpha regularization
         )
+    #end
+    
+    def save_test_loss(self, test_loss, add_to_previous = True):
+        
+        # if add_to_previous:
+        #     self.num_test_batches += 1
+        #     self.__test_loss += test_loss
+        # else:
+        #     self.num_test_batches = 1
+        #     self.__test_loss = test_loss
+        # #end
+        
+        self.__test_loss.append(test_loss)
+    #end
+    
+    def get_test_loss(self, batches_avg = True):
+        
+        # if batches_avg:
+        #     return self.__test_loss.div(self.num_test_batches)
+        # else:
+        #     return self.__test_loss
+        # #end
+        
+        return torch.Tensor(self.__test_loss), torch.Tensor(self.__test_loss).mean()
+    #end
+    
+    def save_samples(self, samples):
+        
+        self.__samples_to_save.append(samples)
+    #end
+    
+    def get_saved_samples(self):
+        
+        return self.__samples_to_save
     #end
     
     def forward(self, data):
@@ -234,6 +270,8 @@ class LitModel(pl.LightningModule):
     
     def test_step(self, batch, batch_idx):
         
+        print(batch_idx)
+        
         with torch.no_grad():
             metrics, outs = self.compute_loss(batch, phase = 'test')
             
@@ -241,6 +279,9 @@ class LitModel(pl.LightningModule):
             self.log('test_loss', test_loss.item())
         #end
         
+        print(test_loss)
+        
+        self.save_test_loss(test_loss)
         return metrics, outs
     #end
     

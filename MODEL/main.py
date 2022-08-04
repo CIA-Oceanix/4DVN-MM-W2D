@@ -1,7 +1,4 @@
 
-print('###################################')
-print('Experiment : ')
-print('###################################')
 
 import os
 import sys
@@ -13,7 +10,6 @@ import glob
 import json
 import argparse
 from collections import namedtuple
-import numpy as np
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -147,6 +143,10 @@ class Experiment:
     
     def main(self, run):
         
+        print('###################################')
+        print('Experiment : ')
+        print('###################################')
+        
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams.BATCH_SIZE)
         print(w2d_dm.__class__)
@@ -155,7 +155,6 @@ class Experiment:
         ## Obtain shape data
         # batch_size, ts_length, height, width
         shape_data = tuple( next(iter(w2d_dm.train_dataloader())).shape )
-        
         
         ## Instantiate dynamical prior and lit model
         Phi = Phi_r(shape_data, self.cparams)
@@ -196,16 +195,18 @@ class Experiment:
         
         ## Test
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
-        # trainer.test(lit_model, w2d_dm.test_dataloader())
+        trainer.test(lit_model, w2d_dm.test_dataloader())
         
         # print report in the proper target directory
         self.path_manager.save_configfiles(self.cparams, 'config_params')
         
-        perf_dict = {
-            'mse' : np.random.normal(0, 1),
-            'kld' : np.random.normal(0, 1)
-        }
-        self.path_manager.print_evalreport(perf_dict)
+        print('\n\nTest loss = {}\n\n'.format(lit_model.get_test_loss()))
+        
+        # perf_dict = {
+        #     'mse' : np.random.normal(0, 1),
+        #     'kld' : np.random.normal(0, 1)
+        # }
+        # self.path_manager.print_evalreport(perf_dict)
         
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
         
