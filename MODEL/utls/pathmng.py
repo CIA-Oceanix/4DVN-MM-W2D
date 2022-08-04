@@ -117,8 +117,13 @@ class PathManager:
             pickle.dump(trainer, f)
         #end
     #end
+    
+    def save_model_output(self, outputs):
+        
+        with open(os.path.join(self.path_modeloutput, 'reconstructions.pkl'), 'wb') as f:
+            pickle.dump(outputs, f)
+        f.close()
+    #end
 #end
 
-    
-        
-        
+

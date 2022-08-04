@@ -208,7 +208,7 @@ class LitModel(pl.LightningModule):
     def compute_loss(self, data, phase = 'train'):
         
         # Prepare input data
-        input_data = data
+        input_data = data.clone()
         mask = None
         
         # Prepare input state initialized
@@ -221,6 +221,9 @@ class LitModel(pl.LightningModule):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             outputs, _,_,_ = self.model(input_state, input_data, mask)
         #end
+        
+        # Save reconstructionss
+        self.save_samples({'data' : data, 'reco' : outputs})
         
         # Return loss, computed as reconstruction loss
         loss = self.loss_fn( (outputs - data), mask = None )
