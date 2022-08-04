@@ -200,13 +200,13 @@ class Experiment:
         # print report in the proper target directory
         self.path_manager.save_configfiles(self.cparams, 'config_params')
         
-        print('\n\nTest loss = {}\n\n'.format(lit_model.get_test_loss()))
+        test_loss = lit_model.get_test_loss()
+        print('\n\nTest loss = {}\n\n'.format(test_loss))
         
-        # perf_dict = {
-        #     'mse' : np.random.normal(0, 1),
-        #     'kld' : np.random.normal(0, 1)
-        # }
-        # self.path_manager.print_evalreport(perf_dict)
+        perf_dict = {
+            'mse' : test_loss.item()
+        }
+        self.path_manager.print_evalreport(perf_dict)
         
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
         
