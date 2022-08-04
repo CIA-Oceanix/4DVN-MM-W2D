@@ -124,7 +124,7 @@ class PathManager:
             pickle.dump(outputs, f)
         f.close()
         
-        with open(os.path.join(self.path_litmodel_trainer, 'learning_curves.pkl'), 'wb') as f:
+        with open(os.path.join(self.path_modeloutput, 'learning_curves.pkl'), 'wb') as f:
             pickle.dump({'train' : train_losses, 'val' : val_losses}, f)
         f.close()
     #end
