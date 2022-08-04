@@ -131,10 +131,10 @@ class LitModel(pl.LightningModule):
         self.train_losses = np.zeros(config_params.EPOCHS)
         self.val_losses   = np.zeros(config_params.EPOCHS)
         
-        # Save reconstructions to a list
+        # Save reconstructions to a list—protected fields
         self.__samples_to_save = list()
         self.__test_loss = list()
-        self.num_test_batches = 0
+        self.__test_batches_size = list()
         
         # Initialize gradient solver (LSTM)
         batch_size, height, width, ts_length = shape_data
@@ -160,28 +160,18 @@ class LitModel(pl.LightningModule):
         )
     #end
     
-    def save_test_loss(self, test_loss, add_to_previous = True):
-        
-        # if add_to_previous:
-        #     self.num_test_batches += 1
-        #     self.__test_loss += test_loss
-        # else:
-        #     self.num_test_batches = 1
-        #     self.__test_loss = test_loss
-        # #end
-        
+    def save_test_loss(self, test_loss, batch_size):
+                
         self.__test_loss.append(test_loss)
+        self.__test_batches_size.append(batch_size)
     #end
     
-    def get_test_loss(self, batches_avg = True):
+    def get_test_loss(self):
         
-        # if batches_avg:
-        #     return self.__test_loss.div(self.num_test_batches)
-        # else:
-        #     return self.__test_loss
-        # #end
+        losses, bsizes = torch.Tensor(self.__test_loss), torch.Tensor(self.__test_batches_size)
+        weighted_average = torch.sum(torch.mul(losses, bsizes)).div(bsizes.sum())
         
-        return torch.Tensor(self.__test_loss), torch.Tensor(self.__test_loss).mean()
+        return weighted_average
     #end
     
     def save_samples(self, samples):
@@ -269,7 +259,7 @@ class LitModel(pl.LightningModule):
     #end
     
     def test_step(self, batch, batch_idx):
-                
+        
         with torch.no_grad():
             metrics, outs = self.compute_loss(batch, phase = 'test')
             
@@ -277,8 +267,7 @@ class LitModel(pl.LightningModule):
             self.log('test_loss', test_loss.item())
         #end
         
-        print(batch_idx, test_loss, batch.shape)
-        self.save_test_loss(test_loss)
+        self.save_test_loss(test_loss, batch.shape[0])
         return metrics, outs
     #end
     
