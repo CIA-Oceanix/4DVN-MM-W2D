@@ -128,8 +128,8 @@ class LitModel(pl.LightningModule):
         self.hparams.automatic_optimization = True
         
         # Monitoring metrics
-        self.train_losses = np.zeros(config_params.EPOCHS)
-        self.val_losses   = np.zeros(config_params.EPOCHS)
+        self.__train_losses = np.zeros(config_params.EPOCHS)
+        self.__val_losses   = np.zeros(config_params.EPOCHS)
         
         # Save reconstructions to a list—protected fields
         self.__samples_to_save = list()
@@ -182,6 +182,20 @@ class LitModel(pl.LightningModule):
     def get_saved_samples(self):
         
         return self.__samples_to_save
+    #end
+    
+    def save_epoch_loss(self, loss, epoch, quantity):
+        
+        if quantity == 'train':
+            self.__train_losses[epoch] = loss.item()
+        elif quantity == 'val':
+            self.__vel_losses[epoch] = loss.item()
+        #end
+    #end
+    
+    def get_learning_curves(self):
+        
+        return self.__train_losses, self.__val_losses
     #end
     
     def forward(self, data):
@@ -247,7 +261,7 @@ class LitModel(pl.LightningModule):
     def training_epoch_end(self, outputs):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
-        self.train_losses[self.current_epoch] = loss
+        self.save_epoch_loss(loss, self.current_epoch, 'train')
     #end
     
     def validation_step(self, batch, batch_idx):
@@ -262,7 +276,7 @@ class LitModel(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         
         loss = torch.stack([out for out in outputs]).mean()
-        self.val_losses[self.current_epoch] = loss
+        self.save_epoch_loss(loss, self.current_epoch, 'val')
     #end
     
     def test_step(self, batch, batch_idx):
