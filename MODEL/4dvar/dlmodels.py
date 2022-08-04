@@ -269,9 +269,7 @@ class LitModel(pl.LightningModule):
     #end
     
     def test_step(self, batch, batch_idx):
-        
-        print(batch_idx)
-        
+                
         with torch.no_grad():
             metrics, outs = self.compute_loss(batch, phase = 'test')
             
@@ -279,8 +277,7 @@ class LitModel(pl.LightningModule):
             self.log('test_loss', test_loss.item())
         #end
         
-        print(test_loss)
-        
+        print(batch_idx, test_loss)
         self.save_test_loss(test_loss)
         return metrics, outs
     #end
