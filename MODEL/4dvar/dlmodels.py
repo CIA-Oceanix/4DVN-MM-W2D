@@ -277,7 +277,7 @@ class LitModel(pl.LightningModule):
             self.log('test_loss', test_loss.item())
         #end
         
-        print(batch_idx, test_loss)
+        print(batch_idx, test_loss, batch.shape)
         self.save_test_loss(test_loss)
         return metrics, outs
     #end
