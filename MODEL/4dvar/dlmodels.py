@@ -186,6 +186,7 @@ class LitModel(pl.LightningModule):
     
     def forward(self, data):
         
+        print('Forward')
         loss, out = self.compute_loss(data)
         return loss, out
     #end
@@ -223,7 +224,10 @@ class LitModel(pl.LightningModule):
         #end
         
         # Save reconstructionss
-        self.save_samples({'data' : data, 'reco' : outputs})
+        if phase == 'test':
+            self.save_samples({'data' : data.detach().cpu(), 
+                               'reco' : outputs.detach().cpu()})
+        #end
         
         # Return loss, computed as reconstruction loss
         loss = self.loss_fn( (outputs - data), mask = None )

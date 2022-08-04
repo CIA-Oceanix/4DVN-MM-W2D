@@ -203,8 +203,8 @@ class Experiment:
         # save reports and reconstructions in the proper target directory
         self.path_manager.save_configfiles(self.cparams, 'config_params')        
         self.path_manager.print_evalreport(perf_dict)
-        # self.path_manager.save_litmodel_trainer(lit_model, trainer)
-        # self.path_manager.save_model_output(lit_model.get_saved_samples())
+        self.path_manager.save_litmodel_trainer(lit_model, trainer)
+        self.path_manager.save_model_output(lit_model.get_saved_samples())
     #end
 #end
 
