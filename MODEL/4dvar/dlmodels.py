@@ -189,7 +189,7 @@ class LitModel(pl.LightningModule):
         if quantity == 'train':
             self.__train_losses[epoch] = loss.item()
         elif quantity == 'val':
-            self.__vel_losses[epoch] = loss.item()
+            self.__val_losses[epoch] = loss.item()
         #end
     #end
     
