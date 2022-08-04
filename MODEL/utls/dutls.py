@@ -6,7 +6,14 @@ import torch
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
 
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+if torch.cuda.is_available():
+    DEVICE  = torch.device('cuda')
+    WORKERS = 64
+else:
+    DEVICE  = torch.device('cpu')
+    WORKERS = 8
+#end
 
 
 class W2DSimuDataset(Dataset):
