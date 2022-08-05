@@ -1,5 +1,4 @@
 
-
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), 'utls'))
@@ -32,7 +31,7 @@ class Experiment:
     def __init__(self, versioning = True):
         
         # Load configuration file
-        load_dotenv(os.path.join(os.getcwd(), 'config.env'))
+        load_dotenv(os.path.join(os.getcwd(), 'config_.env'))
         with open('./cparams.json', 'r') as f:
             CPARAMS = json.load(f)
         f.close()
@@ -203,9 +202,11 @@ class Experiment:
         # save reports and reconstructions in the proper target directory
         self.path_manager.save_configfiles(self.cparams, 'config_params')        
         self.path_manager.print_evalreport(perf_dict)
-        self.path_manager.save_litmodel_trainer(lit_model, trainer)
         self.path_manager.save_model_output(lit_model.get_saved_samples(),
                                             *lit_model.get_learning_curves())
+        lit_model.remove_saved_outputs()
+        self.path_manager.save_litmodel_trainer(lit_model, trainer)
+        
     #end
 #end
 
@@ -230,3 +231,4 @@ if __name__ == '__main__':
     exp = Experiment(versioning = versioning)
     exp.run_simulation()
 #end
+

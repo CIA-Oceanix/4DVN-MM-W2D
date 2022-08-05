@@ -198,6 +198,11 @@ class LitModel(pl.LightningModule):
         return self.__train_losses, self.__val_losses
     #end
     
+    def remove_saved_outputs(self):
+        
+        del self.__samples_to_save
+    #end
+    
     def forward(self, data):
         
         print('Forward')
