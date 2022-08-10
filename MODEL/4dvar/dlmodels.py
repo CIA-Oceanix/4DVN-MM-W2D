@@ -111,6 +111,8 @@ class LitModel(pl.LightningModule):
         self.hparams.kernel_size            = (6,6) # tuple(config_params.KERNEL_SIZE)
         self.hparams.padding                = 0     # config_params.PADDING
         self.hparams.stride                 = (6,6) # tuple(config_params.STRIDE)
+        self.hparams.weight_hr              = config_params.WEIGHT_HR
+        self.hparams.weight_lr              = config_params.WEIGHT_LR
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
         self.hparams.mgrad_wd               = config_params.SOLVER_WD
         self.hparams.prior_lr               = config_params.PHI_LR
@@ -274,8 +276,10 @@ class LitModel(pl.LightningModule):
         #end
         
         # Return loss, computed as reconstruction loss
-        loss = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None ) + \
-               self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
+        loss_lr = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None )
+        loss_hr = self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
+        
+        loss = self.hparams.WEIGHT_LR * loss_lr + self.hparams.WEIGHT_HR * loss_hr               
         
         return dict({'loss' : loss}), outputs
     #end
