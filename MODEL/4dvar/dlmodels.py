@@ -13,7 +13,7 @@ class Phi_r(nn.Module):
     def __init__(self, shape_data, config_params):
         super(Phi_r, self).__init__()
         	
-        ts_length = shape_data[1]
+        ts_length = shape_data[1] * 2
         
         # Conv2D-AE
         self.encoder = nn.Sequential(
@@ -49,28 +49,18 @@ class ObsModel_Mask(nn.Module):
         super(ObsModel_Mask, self).__init__()
         
         self.shape_data = shape_data
-        self.dim_obs    = dim_obs
-        self.mask_obs   = torch.zeros(shape_data)
-        self.downsample = nn.AvgPool2d(6,6)
+        self.dim_obs = dim_obs
         self.dim_obs_channel = np.array([shape_data[0], dim_obs])
     #end
     
-    def get_mask(self, img):
+    def forward(self, x, y_obs, mask):
         
-        height, width = img.shape[-2:]
-        height_center, width_center = height // 2, width // 2
-        mask = torch.zeros_like(img)
-        mask[:,:, height_center, width_center] = 1.
-        return mask
-    #end
-    
-    def forward(self, y_obs, x, mask):
+        y_lr, y_pt_hr = y_obs
+        center_h, center_w = y_lr.shape[-2] // 2, y_lr.shape[-1] // 2
         
-        mask = self.get_mask(y_obs)
-        y_lr = self.downsample(y_obs)
-        obs_term_mask = (y_obs - x).mul(mask)
-        obs_term_lr   = (y_lr - self.downsample(x))
-        return obs_term_mask, obs_term_lr
+        obs_term_lr = (x - torch.cat([y_lr, y_lr], dim = 1))
+        obs_term_hr = (x[:,:, center_h, center_w] - y_pt_hr)
+        return obs_term_lr, obs_term_hr
     #end
 #end
 
@@ -118,6 +108,9 @@ class LitModel(pl.LightningModule):
         self.loss_fn = NormLoss()
         
         # Hyper-parameters, learning and workflow
+        self.hparams.kernel_size            = (6,6) # tuple(config_params.KERNEL_SIZE)
+        self.hparams.padding                = 0     # config_params.PADDING
+        self.hparams.stride                 = (6,6) # tuple(config_params.STRIDE)
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
         self.hparams.mgrad_wd               = config_params.SOLVER_WD
         self.hparams.prior_lr               = config_params.PHI_LR
@@ -138,8 +131,9 @@ class LitModel(pl.LightningModule):
         self.__test_batches_size = list()
         
         # Initialize gradient solver (LSTM)
-        batch_size, height, width, ts_length = shape_data
-        mgrad_shapedata = [height, width, ts_length]
+        batch_size, ts_length, height, width = shape_data
+        mgrad_shapedata = [ts_length * 2, height, width]
+        model_shapedata = [batch_size, ts_length, height, width]
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
         
@@ -154,7 +148,7 @@ class LitModel(pl.LightningModule):
             ),
             NormLoss(dim_item = 2),                  # Norm Observation
             NormLoss(dim_item = 2),                  # Norm Prior
-            shape_data,                              # Shape data
+            model_shapedata,                         # Shape data
             self.hparams.n_fourdvar_iter,            # Solver iterations
             alphaObs = alpha_obs,                    # alpha observations
             alphaReg = alpha_reg                     # alpha regularization
@@ -169,7 +163,8 @@ class LitModel(pl.LightningModule):
     
     def get_test_loss(self):
         
-        losses, bsizes = torch.Tensor(self.__test_loss), torch.Tensor(self.__test_batches_size)
+        losses = torch.Tensor(self.__test_loss)
+        bsizes = torch.Tensor(self.__test_batches_size)
         weighted_average = torch.sum(torch.mul(losses, bsizes)).div(bsizes.sum())
         
         return weighted_average
@@ -229,7 +224,8 @@ class LitModel(pl.LightningModule):
     def avgpool2d_keepsize(self, data, kernel_size, padding, stride):
         
         img_size = data.shape[-2:]
-        pooled = F.avg_pool2d(data, kernel_size = kernel_size, padding = padding, stride = stride)
+        pooled = F.avg_pool2d(data, kernel_size = kernel_size,
+                              padding = padding, stride = stride)
         pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'nearest')
         
         if not data.shape == pooled.shape:
@@ -239,21 +235,36 @@ class LitModel(pl.LightningModule):
         return pooled
     #end
     
+    def get_hr_local_observation(self, data):
+        
+        center_x, center_y = data.shape[-2] // 2, data.shape[-1] // 2
+        return data[:,:, center_x, center_y].unsqueeze(-1).unsqueeze(-1)
+    #end
+    
     def compute_loss(self, data, phase = 'train'):
         
         # Prepare input data
-        input_data = data.clone()
+        data_hr = data.clone()
+        data_lr = self.avgpool2d_keepsize(data_hr, 
+                                          kernel_size = self.hparams.kernel_size, 
+                                          padding = self.hparams.padding, 
+                                          stride = self.hparams.stride)
+        local_hr = self.get_hr_local_observation(data_hr)
         mask = None
         
         # Prepare input state initialized
-        input_state = torch.zeros_like(input_data)
+        # input_state = torch.zeros_like(data_lr)
+        input_state = torch.cat(
+            [data_lr,                     # Low-resolution component
+             torch.zeros_like(data_lr)],  # Anomaly component
+            dim = 1)
         
         # with torch.set_grad_enabled(True): 
         # inputs_init = torch.autograd.Variable(inputs_init, requires_grad = True)
         # outputs, _,_,_ = self.model(inputs_init, data_input, mask_input)
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
-            outputs, _,_,_ = self.model(input_state, input_data, mask)
+            outputs, _,_,_ = self.model(input_state, [data_lr, local_hr], mask)
         #end
         
         # Save reconstructions
@@ -263,7 +274,8 @@ class LitModel(pl.LightningModule):
         #end
         
         # Return loss, computed as reconstruction loss
-        loss = self.loss_fn( (outputs - data), mask = None )
+        loss = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None ) + \
+               self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
         
         return dict({'loss' : loss}), outputs
     #end

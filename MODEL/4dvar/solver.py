@@ -453,17 +453,17 @@ class Model_Var_Cost(nn.Module):
 # updated inner modles to account for the variational model module
 class Solver_Grad_4DVarNN(nn.Module):
     
-    def __init__(self, 
-                 prior, 
-                 mod_H, 
-                 m_Grad, 
-                 m_NormObs, 
-                 m_NormPhi, 
-                 ShapeData, 
+    def __init__(self,
+                 prior,
+                 mod_H,
+                 m_Grad,
+                 m_NormObs,
+                 m_NormPhi,
+                 ShapeData,
                  n_iter_grad,
-                 alphaObs = 1., 
+                 alphaObs = 1.,
                  alphaReg = 1.,
-                 stochastic = False, 
+                 stochastic = False,
                  varcost_learnable_params = False):
         
         super(Solver_Grad_4DVarNN, self).__init__()
@@ -496,16 +496,11 @@ class Solver_Grad_4DVarNN(nn.Module):
     
     def forward(self, x, yobs, mask):
         
-        # x    : [m, N, T]
-        # yobs : [m, N, T]
-        # mask : [m, N, T]
         return self.solve(x_0 = x, obs = yobs, mask = mask)
     #end
     
     def solve(self, x_0, obs, mask):
         
-        # x_0 : [m, N, T]
-        # x_k : [m, N, T]
         x_k = torch.mul(x_0, 1.)
         hidden = None
         cell = None 
@@ -522,9 +517,6 @@ class Solver_Grad_4DVarNN(nn.Module):
     
     def solver_step(self, x_k, obs, mask, hidden, cell, normgrad = 0.):
         
-        # x_k  : [m, N, T]
-        # obs  : [m, N, T]
-        # mask : [m, N, T]
         var_cost, var_cost_grad = self.var_cost(x_k, obs, mask)
         
         if normgrad == 0. :
@@ -542,14 +534,9 @@ class Solver_Grad_4DVarNN(nn.Module):
     
     def var_cost(self, x, yobs, mask):
         
-        # x    : [m, N, T]
-        # yobs : [m, N, T]
-        # mask : [m, N, T]
         data_fidelty = self.model_H(x, yobs, mask)
         regularization = x - self.Phi(x)
         
-        # data_fidelty   : [m, N, T]
-        # regularization : [m, N, T]
         var_cost = self.model_VarCost(data_fidelty, regularization, mask)
         var_cost_grad = torch.autograd.grad(var_cost, x, create_graph = True)[0]
         
