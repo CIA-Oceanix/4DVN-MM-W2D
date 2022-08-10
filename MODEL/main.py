@@ -31,7 +31,7 @@ class Experiment:
     def __init__(self, versioning = True):
         
         # Load configuration file
-        load_dotenv(os.path.join(os.getcwd(), 'config_.env'))
+        load_dotenv(os.path.join(os.getcwd(), 'config.env'))
         with open('./cparams.json', 'r') as f:
             CPARAMS = json.load(f)
         f.close()

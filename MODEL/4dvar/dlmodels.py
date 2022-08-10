@@ -2,6 +2,7 @@
 import numpy as np
 import torch
 from torch import nn
+from torch.nn import functional as F
 import pytorch_lightning as pl
 import solver as NN_4DVar
 
@@ -11,7 +12,7 @@ class Phi_r(nn.Module):
     
     def __init__(self, shape_data, config_params):
         super(Phi_r, self).__init__()
-        
+        	
         ts_length = shape_data[1]
         
         # Conv2D-AE
@@ -225,6 +226,19 @@ class LitModel(pl.LightningModule):
         return optimizers
     #end
     
+    def avgpool2d_keepsize(self, data, kernel_size, padding, stride):
+        
+        img_size = data.shape[-2:]
+        pooled = F.avg_pool2d(data, kernel_size = kernel_size, padding = padding, stride = stride)
+        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'nearest')
+        
+        if not data.shape == pooled.shape:
+            raise ValueError('Original and Pooled_keepsize data shapes mismatch')
+        #end
+        
+        return pooled
+    #end
+    
     def compute_loss(self, data, phase = 'train'):
         
         # Prepare input data
@@ -242,7 +256,7 @@ class LitModel(pl.LightningModule):
             outputs, _,_,_ = self.model(input_state, input_data, mask)
         #end
         
-        # Save reconstructionss
+        # Save reconstructions
         if phase == 'test':
             self.save_samples({'data' : data.detach().cpu(), 
                                'reco' : outputs.detach().cpu()})
