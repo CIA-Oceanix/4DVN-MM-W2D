@@ -280,6 +280,9 @@ class LitModel(pl.LightningModule):
         loss_lr = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None )
         loss_hr = self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
         
+        reco_lr_plus_hr = outputs[:,:24,:,:] + outputs[:,24:,:,:]
+        loss_tot = self.loss_fn((reco_lr_plus_hr - data_hr), mask = None)
+        
         loss = self.hparams.weight_lr * loss_lr + self.hparams.weight_hr * loss_hr               
         
         return dict({'loss' : loss}), outputs
