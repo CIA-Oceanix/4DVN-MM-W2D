@@ -20,7 +20,9 @@ class Phi_r(nn.Module):
                       kernel_size = tuple(config_params.KERNEL_SIZE),
                       padding = config_params.PADDING,
                       stride = tuple(config_params.STRIDE)),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.ConvTranspose2d(ts_length, ts_length,
+                               kernel_size = tuple(config_params.KERNEL_SIZE))
         )
         
         # Conv2D-AE
