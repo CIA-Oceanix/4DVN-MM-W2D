@@ -15,36 +15,56 @@ class Phi_r(nn.Module):
         	
         ts_length = shape_data[1] * 2
         
-        # self.net = nn.Sequential(
-        #     nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 0),
-        #     nn.ReLU(),
-        #     nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 0)
-        # )
+        if config_params.PRIOR == 'CL':
+            
+            # 1 couche conv
+            self.prior = 'cl'
+            self.net = nn.Sequential(
+                nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 0),
+                nn.ReLU(),
+                nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 0)
+            )
         
-        # Conv2D-AE
-        self.encoder = nn.Sequential(
-            nn.Conv2d(ts_length, 48, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.Conv2d(48, 72, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.Conv2d(72, 128, (6,6),  padding = 1)
-        )
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(128, 72, (6,6),  padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.ConvTranspose2d(72, 48, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.ConvTranspose2d(48, ts_length, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-        )
+        elif config_params.PRIOR == 'AE':
+            
+            # Conv2D-AE
+            self.prior = 'ae'
+            self.encoder = nn.Sequential(
+                nn.Conv2d(ts_length, 48, (10,10), padding = 1),
+                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+                nn.Conv2d(48, 72, (10,10), padding = 1),
+                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+                nn.Conv2d(72, 128, (6,6),  padding = 1)
+            )
+            self.decoder = nn.Sequential(
+                nn.ConvTranspose2d(128, 72, (6,6),  padding = 1),
+                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+                nn.ConvTranspose2d(72, 48, (10,10), padding = 1),
+                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+                nn.ConvTranspose2d(48, ts_length, (10,10), padding = 1),
+                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+            )
+        
+        else:
+            
+            raise NotImplementedError('No valid prior chosen')
+        #end
     #end
     
     def forward(self, data):
         
-        latent = self.encoder(data)
-        reco = self.decoder(latent)
-        # reco = self.net(data)
-        return reco
+        if self.prior == 'cl':
+            reco = self.net(data)
+            return reco
+        
+        elif self.prior == 'ae':
+            latent = self.encoder(data)
+            reco = self.decoder(latent)
+            return reco
+            
+        else:
+            raise NotImplementedError('No valid prior chosen')
+        #end
     #end
 #end
 
@@ -65,7 +85,14 @@ class ObsModel_Mask(nn.Module):
         y_lr, y_pt_hr = y_obs
         center_h, center_w = y_lr.shape[-2] // 2, y_lr.shape[-1] // 2
         
-        obs_term_lr = (x - torch.cat([y_lr, y_lr], dim = 1))
+        # MASK !
+        # Pour masker le hr et garder lr !!
+        # Garder que UN TERM, plutôt utiliser une mask !!
+        # definition du mask : dans compute loss
+        # Low-reso background term 
+        obs_term_lr = x[:, :24, :,:] - y_lr
+        
+        # High-reso anomaly term
         obs_term_hr = (x[:,:, center_h, center_w] - y_pt_hr)
         return obs_term_lr, obs_term_hr
     #end
@@ -235,7 +262,7 @@ class LitModel(pl.LightningModule):
         img_size = data.shape[-2:]
         pooled = F.avg_pool2d(data, kernel_size = kernel_size,
                               padding = padding, stride = stride)
-        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'nearest')
+        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bilinear')
         
         if not data.shape == pooled.shape:
             raise ValueError('Original and Pooled_keepsize data shapes mismatch')
@@ -268,9 +295,6 @@ class LitModel(pl.LightningModule):
              torch.zeros_like(data_lr)],  # Anomaly component
             dim = 1)
         
-        # with torch.set_grad_enabled(True): 
-        # inputs_init = torch.autograd.Variable(inputs_init, requires_grad = True)
-        # outputs, _,_,_ = self.model(inputs_init, data_input, mask_input)
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             outputs, _,_,_ = self.model(input_state, [data_lr, local_hr], mask)
@@ -285,10 +309,12 @@ class LitModel(pl.LightningModule):
         
         # Return loss, computed as reconstruction loss
         loss_lr = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None )
-        loss_hr = self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
+        loss_hr = self.loss_fn( (outputs[:,24:,:,:] + outputs[:,:24,:,:] - data_hr), mask = None )
         
         # reco_lr_plus_hr = outputs[:,:24,:,:] + outputs[:,24:,:,:]
         # loss = self.loss_fn((reco_lr_plus_hr - data_hr), mask = None)
+        
+        # autres terms : || x - Phi(x) || 
         
         loss = self.hparams.weight_lr * loss_lr + self.hparams.weight_hr * loss_hr               
         
