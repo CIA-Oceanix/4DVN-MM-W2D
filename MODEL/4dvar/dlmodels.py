@@ -269,8 +269,8 @@ class LitModel(pl.LightningModule):
             outputs, _,_,_ = self.model(input_state, [data_lr, local_hr], mask)
         #end
         
-        print(outputs.shape)
         # Save reconstructions
+        print(outputs.shape)
         if phase == 'test':
             self.save_samples({'data' : data.detach().cpu(), 
                                'reco' : outputs.detach().cpu()})
