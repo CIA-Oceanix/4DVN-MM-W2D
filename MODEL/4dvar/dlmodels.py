@@ -16,9 +16,9 @@ class Phi_r(nn.Module):
         ts_length = shape_data[1] * 2
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 1),
+            nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 0),
             nn.ReLU(),
-            nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 1)
+            nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 0)
         )
         
         # Conv2D-AE
