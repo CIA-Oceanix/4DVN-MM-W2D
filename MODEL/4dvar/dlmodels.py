@@ -15,35 +15,35 @@ class Phi_r(nn.Module):
         	
         ts_length = shape_data[1] * 2
         
-        self.net = nn.Sequential(
-            nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 0),
-            nn.ReLU(),
-            nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 0)
-        )
+        # self.net = nn.Sequential(
+        #     nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 0),
+        #     nn.ReLU(),
+        #     nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 0)
+        # )
         
         # Conv2D-AE
-        # self.encoder = nn.Sequential(
-        #     nn.Conv2d(ts_length, 48, (10,10), padding = 1),
-        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-        #     nn.Conv2d(48, 72, (10,10), padding = 1),
-        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-        #     nn.Conv2d(72, 128, (6,6),  padding = 1)
-        # )
-        # self.decoder = nn.Sequential(
-        #     nn.ConvTranspose2d(128, 72, (6,6),  padding = 1),
-        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-        #     nn.ConvTranspose2d(72, 48, (10,10), padding = 1),
-        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-        #     nn.ConvTranspose2d(48, ts_length, (10,10), padding = 1),
-        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-        # )
+        self.encoder = nn.Sequential(
+            nn.Conv2d(ts_length, 48, (10,10), padding = 1),
+            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+            nn.Conv2d(48, 72, (10,10), padding = 1),
+            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+            nn.Conv2d(72, 128, (6,6),  padding = 1)
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(128, 72, (6,6),  padding = 1),
+            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+            nn.ConvTranspose2d(72, 48, (10,10), padding = 1),
+            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+            nn.ConvTranspose2d(48, ts_length, (10,10), padding = 1),
+            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+        )
     #end
     
     def forward(self, data):
         
-        # latent = self.encoder(data)
-        # reco = self.decoder(latent)
-        reco = self.net(data)
+        latent = self.encoder(data)
+        reco = self.decoder(latent)
+        # reco = self.net(data)
         return reco
     #end
 #end
