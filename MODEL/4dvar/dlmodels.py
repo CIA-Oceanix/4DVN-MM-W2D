@@ -269,6 +269,7 @@ class LitModel(pl.LightningModule):
             outputs, _,_,_ = self.model(input_state, [data_lr, local_hr], mask)
         #end
         
+        print(outputs.shape)
         # Save reconstructions
         if phase == 'test':
             self.save_samples({'data' : data.detach().cpu(), 
@@ -279,7 +280,7 @@ class LitModel(pl.LightningModule):
         loss_lr = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None )
         loss_hr = self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
         
-        loss = self.hparams.WEIGHT_LR * loss_lr + self.hparams.WEIGHT_HR * loss_hr               
+        loss = self.hparams.weight_lr * loss_lr + self.hparams.weight_hr * loss_hr               
         
         return dict({'loss' : loss}), outputs
     #end
