@@ -82,19 +82,7 @@ class ObsModel_Mask(nn.Module):
     
     def forward(self, x, y_obs, mask):
         
-        y_lr, y_pt_hr = y_obs
-        center_h, center_w = y_lr.shape[-2] // 2, y_lr.shape[-1] // 2
-        
-        # MASK !
-        # Pour masker le hr et garder lr !!
-        # Garder que UN TERM, plutôt utiliser une mask !!
-        # definition du mask : dans compute loss
-        # Low-reso background term 
-        obs_term_lr = x[:, :24, :,:] - y_lr
-        
-        # High-reso anomaly term
-        obs_term_hr = (x[:,:, center_h, center_w] - y_pt_hr)
-        return obs_term_lr, obs_term_hr
+        return (x - y_obs).mul(mask)
     #end
 #end
 
@@ -285,8 +273,7 @@ class LitModel(pl.LightningModule):
                                           kernel_size = self.hparams.kernel_size, 
                                           padding = self.hparams.padding, 
                                           stride = self.hparams.stride)
-        local_hr = self.get_hr_local_observation(data_hr)
-        mask = None
+        input_data = torch.cat([data_lr, data_hr], dim = 1)
         
         # Prepare input state initialized
         # input_state = torch.zeros_like(data_lr)
@@ -295,9 +282,15 @@ class LitModel(pl.LightningModule):
              torch.zeros_like(data_lr)],  # Anomaly component
             dim = 1)
         
+        # Mask data
+        center_h, center_w = data.shape[-2] // 2, data.shape[-1] // 2
+        mask = torch.zeros_like(input_state)
+        mask[:,:24,:,:] = 1.
+        mask[:,24:, center_h, center_w] = 1.
+        
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
-            outputs, _,_,_ = self.model(input_state, [data_lr, local_hr], mask)
+            outputs, _,_,_ = self.model(input_state, input_data, mask)
         #end
         
         # Save reconstructions
@@ -308,8 +301,10 @@ class LitModel(pl.LightningModule):
         #end
         
         # Return loss, computed as reconstruction loss
-        loss_lr = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None )
-        loss_hr = self.loss_fn( (outputs[:,24:,:,:] + outputs[:,:24,:,:] - data_hr), mask = None )
+        reco_lr = outputs[:,:24,:,:]
+        reco_tot = outputs[:,:24,:,:] + outputs[:,24:,:,:]
+        loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
+        loss_hr = self.loss_fn( (reco_tot - data_hr), mask = None )
         
         # reco_lr_plus_hr = outputs[:,:24,:,:] + outputs[:,24:,:,:]
         # loss = self.loss_fn((reco_lr_plus_hr - data_hr), mask = None)
