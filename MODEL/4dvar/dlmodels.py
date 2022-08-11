@@ -15,28 +15,37 @@ class Phi_r(nn.Module):
         	
         ts_length = shape_data[1] * 2
         
+        self.net = nn.Sequential(
+            nn.Conv2d(ts_length, ts_length,
+                      kernel_size = tuple(config_params.KERNEL_SIZE),
+                      padding = config_params.PADDING,
+                      stride = tuple(config_params.STRIDE)),
+            nn.ReLU()
+        )
+        
         # Conv2D-AE
-        self.encoder = nn.Sequential(
-            nn.Conv2d(ts_length, 48, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.Conv2d(48, 72, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.Conv2d(72, 128, (6,6),  padding = 1)
-        )
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(128, 72, (6,6),  padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.ConvTranspose2d(72, 48, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            nn.ConvTranspose2d(48, ts_length, (10,10), padding = 1),
-            nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-        )
+        # self.encoder = nn.Sequential(
+        #     nn.Conv2d(ts_length, 48, (10,10), padding = 1),
+        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+        #     nn.Conv2d(48, 72, (10,10), padding = 1),
+        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+        #     nn.Conv2d(72, 128, (6,6),  padding = 1)
+        # )
+        # self.decoder = nn.Sequential(
+        #     nn.ConvTranspose2d(128, 72, (6,6),  padding = 1),
+        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+        #     nn.ConvTranspose2d(72, 48, (10,10), padding = 1),
+        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+        #     nn.ConvTranspose2d(48, ts_length, (10,10), padding = 1),
+        #     nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+        # )
     #end
     
     def forward(self, data):
         
-        latent = self.encoder(data)
-        reco = self.decoder(latent)
+        # latent = self.encoder(data)
+        # reco = self.decoder(latent)
+        reco = self.net(data)
         return reco
     #end
 #end
@@ -277,13 +286,13 @@ class LitModel(pl.LightningModule):
         #end
         
         # Return loss, computed as reconstruction loss
-        loss_lr = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None )
-        loss_hr = self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
+        # loss_lr = self.loss_fn( (outputs[:,:24,:,:] - data_lr), mask = None )
+        # loss_hr = self.loss_fn( (outputs[:,24:,:,:] - data_hr), mask = None )
         
         reco_lr_plus_hr = outputs[:,:24,:,:] + outputs[:,24:,:,:]
-        loss_tot = self.loss_fn((reco_lr_plus_hr - data_hr), mask = None)
+        loss = self.loss_fn((reco_lr_plus_hr - data_hr), mask = None)
         
-        loss = self.hparams.weight_lr * loss_lr + self.hparams.weight_hr * loss_hr               
+        # loss = self.hparams.weight_lr * loss_lr + self.hparams.weight_hr * loss_hr               
         
         return dict({'loss' : loss}), outputs
     #end
