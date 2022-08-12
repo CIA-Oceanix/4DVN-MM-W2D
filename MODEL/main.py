@@ -149,6 +149,7 @@ class Experiment:
         print('Model name          : {}'.format(self.model_name))
         print('Prior               : {}'.format(self.cparams.PRIOR))
         print('Path source         : {}'.format(self.path_checkpoint_source))
+        print('Model source        : {}'.format(self.name_source_model))
         print('Path target         : {}'.format(self.path_checkpoint))
         print('###################################')
         
