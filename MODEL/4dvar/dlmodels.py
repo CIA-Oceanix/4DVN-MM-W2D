@@ -20,9 +20,9 @@ class Phi_r(nn.Module):
             # 1 couche conv
             self.prior = 'cl'
             self.net = nn.Sequential(
-                nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 0),
+                nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 'same'),
                 nn.ReLU(),
-                nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 0)
+                nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 'same')
             )
         
         elif config_params.PRIOR == 'AE':
@@ -30,11 +30,11 @@ class Phi_r(nn.Module):
             # Conv2D-AE
             self.prior = 'ae'
             self.encoder = nn.Sequential(
-                nn.Conv2d(ts_length, 72, (3,3), padding = 0),
+                nn.Conv2d(ts_length, 72, (3,3), padding = 'same'),
                 nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU()
             )
             self.decoder = nn.Sequential(
-                nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0),
+                nn.ConvTranspose2d(72, ts_length, (3,3), padding = 'same'),
                 nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
             )
         
