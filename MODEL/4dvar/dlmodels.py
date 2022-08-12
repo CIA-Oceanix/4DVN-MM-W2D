@@ -30,18 +30,11 @@ class Phi_r(nn.Module):
             # Conv2D-AE
             self.prior = 'ae'
             self.encoder = nn.Sequential(
-                nn.Conv2d(ts_length, 48, (10,10), padding = 1),
-                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-                nn.Conv2d(48, 72, (10,10), padding = 1),
-                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-                nn.Conv2d(72, 128, (6,6),  padding = 1)
+                nn.Conv2d(ts_length, 72, (3,3), padding = 0),
+                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU()
             )
             self.decoder = nn.Sequential(
-                nn.ConvTranspose2d(128, 72, (6,6),  padding = 1),
-                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-                nn.ConvTranspose2d(72, 48, (10,10), padding = 1),
-                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-                nn.ConvTranspose2d(48, ts_length, (10,10), padding = 1),
+                nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0),
                 nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
             )
         
