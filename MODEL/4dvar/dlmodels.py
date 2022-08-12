@@ -86,6 +86,7 @@ class ObsModel_Mask(nn.Module):
     #end
 #end
 
+
 class NormLoss(nn.Module):
     
     def __init__(self, dim_item = 2):
