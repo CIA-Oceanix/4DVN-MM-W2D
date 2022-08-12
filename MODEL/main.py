@@ -209,8 +209,6 @@ class Experiment:
         #end
         
         self.path_manager.print_evalreport(perf_dict)
-        
-        
     #end
 #end
 
