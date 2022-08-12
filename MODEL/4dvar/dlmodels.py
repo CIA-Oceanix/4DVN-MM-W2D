@@ -135,8 +135,8 @@ class LitModel(pl.LightningModule):
         self.hparams.kernel_size            = (6,6) # tuple(config_params.KERNEL_SIZE)
         self.hparams.padding                = 0     # config_params.PADDING
         self.hparams.stride                 = (6,6) # tuple(config_params.STRIDE)
-        self.hparams.weight_hr              = config_params.WEIGHT_HR
-        self.hparams.weight_lr              = config_params.WEIGHT_LR
+        self.hparams.weight_hres            = config_params.WEIGHT_HRES
+        self.hparams.weight_lres            = config_params.WEIGHT_LRES
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
         self.hparams.mgrad_wd               = config_params.SOLVER_WD
         self.hparams.prior_lr               = config_params.PHI_LR
@@ -314,7 +314,7 @@ class LitModel(pl.LightningModule):
         
         # autres terms : || x - Phi(x) || 
         
-        loss = self.hparams.weight_lr * loss_lr + self.hparams.weight_hr * loss_hr               
+        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr               
         
         return dict({'loss' : loss}), outputs
     #end
