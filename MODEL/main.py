@@ -75,6 +75,8 @@ class Experiment:
                 model_name = mname_target
             else:
                 
+                self.path_checkpoint_source = 'None'
+                self.name_source_model = 'None'
                 model_name += f'-gs{n_iter}it'
             #end
         #end
@@ -143,12 +145,15 @@ class Experiment:
     def main(self, run):
         
         print('###################################')
-        print('Experiment : ')
+        print('Experiment\n')
+        print('Model name          : {}'.format(self.model_name))
+        print('Prior               : {}'.format(self.cparams.PRIOR))
+        print('Path source         : {}'.format(self.path_checkpoint_source))
+        print('Path target         : {}'.format(self.path_checkpoint))
         print('###################################')
         
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams.BATCH_SIZE)
-        print(w2d_dm.__class__)
         
         # MODELS : initialize and configure
         ## Obtain shape data
@@ -158,7 +163,6 @@ class Experiment:
         ## Instantiate dynamical prior and lit model
         Phi = Phi_r(shape_data, self.cparams)
         lit_model = LitModel(Phi, shape_data, self.cparams)
-        print(lit_model.__class__)
         
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')
