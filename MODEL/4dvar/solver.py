@@ -430,7 +430,7 @@ class Model_Var_Cost(nn.Module):
     def forward(self, data_fidelty, regularization, mask_obs):
         
         loss = self.alphaReg.pow(2) * self.normPrior(regularization, mask_obs)
-                    
+        
         if self.dim_obs == 1:
             loss += self.alphaObs[0].pow(2) * self.normObs(data_fidelty, mask_obs)
         else:

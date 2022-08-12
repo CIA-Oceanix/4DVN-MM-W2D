@@ -75,9 +75,10 @@ class ObsModel_Mask(nn.Module):
     def __init__(self, shape_data, dim_obs):
         super(ObsModel_Mask, self).__init__()
         
+        # NOTE : chennels == time series length
         self.shape_data = shape_data
         self.dim_obs = dim_obs
-        self.dim_obs_channel = np.array([shape_data[0], dim_obs])
+        self.dim_obs_channel = np.array([shape_data[1], dim_obs])
     #end
     
     def forward(self, x, y_obs, mask):
@@ -164,7 +165,7 @@ class LitModel(pl.LightningModule):
         
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             self.Phi,                                # Prior
-            ObsModel_Mask(shape_data, dim_obs = 2),  # Observation model
+            ObsModel_Mask(shape_data, dim_obs = 1),  # Observation model
             NN_4DVar.model_GradUpdateLSTM(           # Gradient solver
                 mgrad_shapedata,                       # m_Grad : Shape data
                 False,                                 # m_Grad : Periodic BCs
@@ -289,6 +290,8 @@ class LitModel(pl.LightningModule):
         mask[:,:24,:,:] = 1.
         mask[:,24:, center_h, center_w] = 1.
         
+        input_state = input_state * mask
+        
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             outputs, _,_,_ = self.model(input_state, input_data, mask)
@@ -297,6 +300,8 @@ class LitModel(pl.LightningModule):
         # Save reconstructions
         if phase == 'test':
             print(outputs.shape)
+            print(outputs[:,:24,:,:].mean())
+            print(outputs[:,24:,:,:].mean())
             self.save_samples({'data' : data.detach().cpu(), 
                                'reco' : outputs.detach().cpu()})
         #end
@@ -306,9 +311,6 @@ class LitModel(pl.LightningModule):
         reco_tot = outputs[:,:24,:,:] + outputs[:,24:,:,:]
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco_tot - data_hr), mask = None )
-        
-        # reco_lr_plus_hr = outputs[:,:24,:,:] + outputs[:,24:,:,:]
-        # loss = self.loss_fn((reco_lr_plus_hr - data_hr), mask = None)
         
         # autres terms : || x - Phi(x) || 
         
