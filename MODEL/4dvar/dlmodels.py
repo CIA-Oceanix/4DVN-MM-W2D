@@ -398,7 +398,8 @@ class LitModel(pl.LightningModule):
         img_size = data.shape[-2:]
         pooled = F.avg_pool2d(data, kernel_size = kernel_size,
                               padding = padding, stride = stride)
-        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bilinear')
+        pooled  = F.interpolate(pooled, size = tuple(img_size),
+                                mode = 'bilinear', align_corners = True)
         
         if not data.shape == pooled.shape:
             raise ValueError('Original and Pooled_keepsize data shapes mismatch')
@@ -454,13 +455,15 @@ class LitModel(pl.LightningModule):
         
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
-        reco_tot = outputs[:,:24,:,:] + outputs[:,24:,:,:]
+        reco_hr = outputs[:,24:,:,:]
+        # reco_tot = reco_lr + reco_hr
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
-        loss_hr = self.loss_fn( (reco_tot - data_hr), mask = None )
+        # loss_hr = self.loss_fn( (reco_tot - data_hr), mask = None )
+        loss_hr = self.loss_fn( (reco_hr - (data_hr - data_lr)), mask = None )
         
         # autres terms : || x - Phi(x) || 
         
-        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr               
+        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr            
         
         return dict({'loss' : loss}), outputs
     #end
