@@ -7,11 +7,11 @@ import pytorch_lightning as pl
 import solver as NN_4DVar
 
 
-class Phi_r(nn.Module):
+class Phi(nn.Module):
     ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
-        super(Phi_r, self).__init__()
+        super(Phi, self).__init__()
         	
         ts_length = shape_data[1] * 2
         
@@ -58,6 +58,84 @@ class Phi_r(nn.Module):
         else:
             raise NotImplementedError('No valid prior chosen')
         #end
+    #end
+#end
+
+
+class Encoder(nn.Module):
+    def __init__(self, shape_data, config_params):
+        super(Encoder, self).__init__()
+        
+        # encoder
+        self.enc_avgpool1 = nn.AvgPool2d(3)
+        self.enc_conv1 = nn.Conv2d(48, 2 * 48, (3,3), padding = 0)
+        self.enc_conv2 = nn.Conv2d(2 * 48, 3 * 48, (3,3), padding = 0)
+        
+        # decoder
+        # lr net
+        self.dec_convt1_lr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
+        self.dec_convt2_lr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
+        self.dec_convt3_lr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
+        
+        # hr net
+        self.dec_convt1_hr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
+        self.dec_convt2_hr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
+        self.dec_convt3_hr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
+    #end
+    
+    def forward(self, data):
+        
+        # print('Data : {}'.format(data.shape))
+        #encoder
+        data = self.enc_avgpool1(data)
+        latent = self.enc_conv1(data)
+        latent = self.enc_conv2(latent)
+        # print('latent : {}'.format(latent.shape))
+        
+        # decoder lr
+        reco = self.dec_convt1_lr(F.relu(latent))
+        reco = self.dec_convt2_lr(F.relu(reco))
+        reco_lr = self.dec_convt3_lr(F.relu(reco))
+        # print('LR output : {}'.format(reco_lr.shape))
+        
+        # decoder hr
+        reco = self.dec_convt1_hr(F.relu(latent))
+        reco = self.dec_convt2_hr(F.relu(reco))
+        reco_hr = self.dec_convt3_hr(F.relu(reco))
+        # print('HR output : {}'.format(reco_hr.shape))
+        
+        reco = torch.cat((reco_lr, reco_hr), dim = 1)
+        # print(reco.shape)
+        return reco
+    #end
+#end
+
+
+class Decoder(nn.Module):
+    def __init__(self):
+        super(Decoder, self).__init__()
+    #end
+    
+    def forward(self, data):
+        
+        return torch.mul(1., data)
+    #end
+#end
+
+
+class Phi_r(nn.Module):
+    def __init__(self, shape_data, config_params):
+        super(Phi_r, self).__init__()
+        
+        self.encoder = Encoder(shape_data, config_params)
+        self.decoder = Decoder()
+    #end
+    
+    def forward(self, data):
+        
+        latent = self.encoder(data)
+        reco = self.decoder(latent)
+        return reco
     #end
 #end
 
