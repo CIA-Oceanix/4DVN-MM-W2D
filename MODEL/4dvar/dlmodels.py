@@ -174,11 +174,12 @@ class Encoder(torch.nn.Module):
         ## LR component
         x_lr = self.nn_lr(self.pool1(xinp))
         x_lr = self.dropout(x_lr)
+        x_lr = self.conv_tr(x_lr)
         
         # HR component
         x_hr = self.nn_hr(xinp)
         
-        print(x_lr.shape, x_hr.shape)
+        # print(x_lr.shape, x_hr.shape)
         # return x_lr + x_hr
         return torch.cat((x_lr, x_hr), dim = 1)
     #end
