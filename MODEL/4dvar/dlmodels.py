@@ -7,106 +7,180 @@ import pytorch_lightning as pl
 import solver as NN_4DVar
 
 
-class Phi(nn.Module):
-    ''' Dynamical prior '''
+# class Phi(nn.Module):
+#     ''' Dynamical prior '''
     
-    def __init__(self, shape_data, config_params):
-        super(Phi, self).__init__()
+#     def __init__(self, shape_data, config_params):
+#         super(Phi, self).__init__()
         	
-        ts_length = shape_data[1] * 2
+#         ts_length = shape_data[1] * 2
         
-        if config_params.PRIOR == 'CL':
+#         if config_params.PRIOR == 'CL':
             
-            # 1 couche conv
-            self.prior = 'cl'
-            self.net = nn.Sequential(
-                nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 'same'),
-                nn.ReLU(),
-                nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 'same')
-            )
+#             # 1 couche conv
+#             self.prior = 'cl'
+#             self.net = nn.Sequential(
+#                 nn.Conv2d(ts_length, ts_length, kernel_size = (6,6), padding = 'same'),
+#                 nn.ReLU(),
+#                 nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (6,6), padding = 'same')
+#             )
         
-        elif config_params.PRIOR == 'AE':
+#         elif config_params.PRIOR == 'AE':
             
-            # Conv2D-AE
-            self.prior = 'ae'
-            self.encoder = nn.Sequential(
-                nn.Conv2d(ts_length, 72, (3,3), padding = 0),
-                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU()
-            )
-            self.decoder = nn.Sequential(
-                nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0)#,
-                # nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            )
+#             # Conv2D-AE
+#             self.prior = 'ae'
+#             self.encoder = nn.Sequential(
+#                 nn.Conv2d(ts_length, 72, (3,3), padding = 0),
+#                 nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU()
+#             )
+#             self.decoder = nn.Sequential(
+#                 nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0)#,
+#                 # nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+#             )
         
-        else:
+#         else:
             
-            raise NotImplementedError('No valid prior chosen')
-        #end
+#             raise NotImplementedError('No valid prior chosen')
+#         #end
+#     #end
+    
+#     def forward(self, data):
+        
+#         if self.prior == 'cl':
+#             reco = self.net(data)
+#             return reco
+        
+#         elif self.prior == 'ae':
+#             latent = self.encoder(data)
+#             reco = self.decoder(latent)
+#             return reco
+            
+#         else:
+#             raise NotImplementedError('No valid prior chosen')
+#         #end
+#     #end
+# #end
+
+
+# class Encoder(nn.Module):
+#     def __init__(self, shape_data, config_params):
+#         super(Encoder, self).__init__()
+        
+#         # encoder
+#         self.enc_avgpool1 = nn.AvgPool2d(3)
+#         self.enc_conv1 = nn.Conv2d(48, 2 * 48, (3,3), padding = 0)
+#         self.enc_conv2 = nn.Conv2d(2 * 48, 3 * 48, (3,3), padding = 0)
+        
+#         # decoder
+#         # lr net
+#         self.dec_convt1_lr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
+#         self.dec_convt2_lr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
+#         self.dec_convt3_lr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
+        
+#         # hr net
+#         self.dec_convt1_hr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
+#         self.dec_convt2_hr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
+#         self.dec_convt3_hr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
+#     #end
+    
+#     def forward(self, data):
+        
+#         # print('Data : {}'.format(data.shape))
+#         #encoder
+#         data = self.enc_avgpool1(data)
+#         latent = self.enc_conv1(data)
+#         latent = self.enc_conv2(latent)
+#         # print('latent : {}'.format(latent.shape))
+        
+#         # decoder lr
+#         reco = self.dec_convt1_lr(F.relu(latent))
+#         reco = self.dec_convt2_lr(F.relu(reco))
+#         reco_lr = self.dec_convt3_lr(F.relu(reco))
+#         # print('LR output : {}'.format(reco_lr.shape))
+        
+#         # decoder hr
+#         reco = self.dec_convt1_hr(F.relu(latent))
+#         reco = self.dec_convt2_hr(F.relu(reco))
+#         reco_hr = self.dec_convt3_hr(F.relu(reco))
+#         # print('HR output : {}'.format(reco_hr.shape))
+        
+#         reco = torch.cat((reco_lr, reco_hr), dim = 1)
+#         # print(reco.shape)
+#         return reco
+#     #end
+# #end
+
+
+class BiLinUnit(torch.nn.Module):
+    def __init__(self, dim_in, dim_out, dim, dw, dw2, dropout=0.):
+        super(BiLinUnit, self).__init__()
+        self.conv1 = torch.nn.Conv2d(dim_in, 2 * dim, (2 * dw + 1, 2 * dw + 1), padding=dw, bias=False)
+        self.conv2 = torch.nn.Conv2d(2 * dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
+        self.conv3 = torch.nn.Conv2d(2 * dim, dim_out, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
+        self.bilin0 = torch.nn.Conv2d(dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
+        self.bilin1 = torch.nn.Conv2d(dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
+        self.bilin2 = torch.nn.Conv2d(dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
+        self.dropout = torch.nn.Dropout(dropout)
     #end
     
-    def forward(self, data):
-        
-        if self.prior == 'cl':
-            reco = self.net(data)
-            return reco
-        
-        elif self.prior == 'ae':
-            latent = self.encoder(data)
-            reco = self.decoder(latent)
-            return reco
-            
-        else:
-            raise NotImplementedError('No valid prior chosen')
-        #end
+    def forward(self, xin):
+        x = self.conv1(xin)
+        x = self.dropout(x)
+        x = self.conv2(F.relu(x))
+        x = self.dropout(x)
+        x = torch.cat((self.bilin0(x), self.bilin1(x) * self.bilin2(x)), dim=1)
+        x = self.dropout(x)
+        x = self.conv3(x)
+        return x
     #end
 #end
 
-
-class Encoder(nn.Module):
-    def __init__(self, shape_data, config_params):
+class Encoder(torch.nn.Module):
+    def __init__(self, shape_data, config_params,
+                 dim_inp     = 48,
+                 dim_out     = 24,
+                 dim_ae      = 24,
+                 dw          = 6,
+                 dw2         = 6,
+                 ss          = 5,
+                 nb_blocks   = 3,
+                 rateDropout = 0.):
         super(Encoder, self).__init__()
         
-        # encoder
-        self.enc_avgpool1 = nn.AvgPool2d(3)
-        self.enc_conv1 = nn.Conv2d(48, 2 * 48, (3,3), padding = 0)
-        self.enc_conv2 = nn.Conv2d(2 * 48, 3 * 48, (3,3), padding = 0)
+        self.nb_blocks = nb_blocks
+        self.dim_ae = dim_ae
+        self.pool1 = torch.nn.AvgPool2d(ss)
+        print(dim_inp, dim_out, dim_ae, dw, dw2, ss, nb_blocks, rateDropout)
+        self.conv_tr = torch.nn.ConvTranspose2d(dim_out, dim_out, (ss, ss),
+                                                stride = (ss, ss),
+                                                bias = False)
         
-        # decoder
-        # lr net
-        self.dec_convt1_lr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
-        self.dec_convt2_lr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
-        self.dec_convt3_lr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
-        
-        # hr net
-        self.dec_convt1_hr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
-        self.dec_convt2_hr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
-        self.dec_convt3_hr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
+        self.nn_lr = self.__make_BilinNN(dim_inp, dim_out, self.dim_ae, dw, dw2, self.nb_blocks, rateDropout)
+        self.nn_hr = self.__make_BilinNN(dim_inp, dim_out, self.dim_ae, dw, dw2, self.nb_blocks, rateDropout)
+        self.dropout = torch.nn.Dropout(rateDropout)
     #end
     
-    def forward(self, data):
+    def __make_BilinNN(self, dim_inp, dim_out, dim_ae, dw, dw2, 
+                       nb_blocks = 2,
+                       dropout = 0.):
+        layers = []
+        layers.append(BiLinUnit(dim_inp, dim_out, dim_ae, dw, dw2, dropout))
+        for kk in range(0, nb_blocks - 1):
+            layers.append(BiLinUnit(dim_ae, dim_out, dim_ae, dw, dw2, dropout))
+        return torch.nn.Sequential(*layers)
+    #end
+    
+    def forward(self, xinp):
+        ## LR component
+        x_lr = self.nn_lr(self.pool1(xinp))
+        x_lr = self.dropout(x_lr)
         
-        # print('Data : {}'.format(data.shape))
-        #encoder
-        data = self.enc_avgpool1(data)
-        latent = self.enc_conv1(data)
-        latent = self.enc_conv2(latent)
-        # print('latent : {}'.format(latent.shape))
+        # HR component
+        x_hr = self.nn_hr(xinp)
         
-        # decoder lr
-        reco = self.dec_convt1_lr(F.relu(latent))
-        reco = self.dec_convt2_lr(F.relu(reco))
-        reco_lr = self.dec_convt3_lr(F.relu(reco))
-        # print('LR output : {}'.format(reco_lr.shape))
-        
-        # decoder hr
-        reco = self.dec_convt1_hr(F.relu(latent))
-        reco = self.dec_convt2_hr(F.relu(reco))
-        reco_hr = self.dec_convt3_hr(F.relu(reco))
-        # print('HR output : {}'.format(reco_hr.shape))
-        
-        reco = torch.cat((reco_lr, reco_hr), dim = 1)
-        # print(reco.shape)
-        return reco
+        print(x_lr.shape, x_hr.shape)
+        # return x_lr + x_hr
+        return torch.cat((x_lr, x_hr), dim = 1)
     #end
 #end
 
