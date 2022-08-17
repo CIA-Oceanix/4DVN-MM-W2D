@@ -7,11 +7,11 @@ import pytorch_lightning as pl
 import solver as NN_4DVar
 
 
-class Phi(nn.Module):
+class Phi_r(nn.Module):
     ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
-        super(Phi, self).__init__()
+        super(Phi_r, self).__init__()
         	
         ts_length = shape_data[1] * 2
         
