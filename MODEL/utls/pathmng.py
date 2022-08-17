@@ -124,7 +124,7 @@ class PathManager:
             pickle.dump(outputs, f)
         f.close()
         
-        with open(os.path.join(self.path_configfiles,'cparams.json'), 'w') as f:
+        with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:
             json.dump(cparams._asdict(), f, indent = 4)
         f.close()
         
