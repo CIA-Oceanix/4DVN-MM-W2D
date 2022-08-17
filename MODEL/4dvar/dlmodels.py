@@ -456,10 +456,11 @@ class LitModel(pl.LightningModule):
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,24:,:,:]
-        # reco_tot = reco_lr + reco_hr
-        loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
-        # loss_hr = self.loss_fn( (reco_tot - data_hr), mask = None )
-        loss_hr = self.loss_fn( (reco_hr - (data_hr - data_lr)), mask = None )
+        anomaly = data_hr - data_lr
+        reco_tot = reco_lr + reco_hr
+        loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = None )
+        loss_hr = self.loss_fn( (reco_hr - anomaly),  mask = None ) + \
+                  self.loss_fn( (data_hr - reco_tot), mask = None )
         
         # autres terms : || x - Phi(x) || 
         
