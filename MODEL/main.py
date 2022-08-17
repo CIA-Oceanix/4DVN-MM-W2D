@@ -208,6 +208,7 @@ class Experiment:
         if not self.versioning:
             self.path_manager.save_configfiles(self.cparams, 'config_params')
             self.path_manager.save_model_output(lit_model.get_saved_samples(),
+                                                self.cparams,
                                                 *lit_model.get_learning_curves())
             lit_model.remove_saved_outputs()
             self.path_manager.save_litmodel_trainer(lit_model, trainer)

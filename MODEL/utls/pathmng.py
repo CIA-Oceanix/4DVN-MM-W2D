@@ -118,10 +118,14 @@ class PathManager:
         #end
     #end
     
-    def save_model_output(self, outputs, train_losses, val_losses):
+    def save_model_output(self, outputs, cparams, train_losses, val_losses):
         
         with open(os.path.join(self.path_modeloutput, 'reconstructions.pkl'), 'wb') as f:
             pickle.dump(outputs, f)
+        f.close()
+        
+        with open(os.path.join(self.path_configfiles,'cparams.json'), 'w') as f:
+            json.dump(cparams._asdict(), f, indent = 4)
         f.close()
         
         with open(os.path.join(self.path_modeloutput, 'learning_curves.pkl'), 'wb') as f:
