@@ -446,9 +446,6 @@ class LitModel(pl.LightningModule):
         
         # Save reconstructions
         if phase == 'test':
-            print(outputs.shape)
-            print(outputs[:,:24,:,:].mean())
-            print(outputs[:,24:,:,:].mean())
             self.save_samples({'data' : data.detach().cpu(), 
                                'reco' : outputs.detach().cpu()})
         #end
@@ -461,10 +458,10 @@ class LitModel(pl.LightningModule):
         loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = None )
         loss_hr = self.loss_fn( (reco_tot - data_hr),  mask = None ) #+ \
                   # self.loss_fn( (data_hr - reco_tot), mask = None )
+        regularization = self.loss_fn((reco_tot - self.Phi(reco_tot)), mask = None)
         
-        # autres terms : || x - Phi(x) || 
-        
-        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr            
+        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
+        loss = loss + regularization
         
         return dict({'loss' : loss}), outputs
     #end
