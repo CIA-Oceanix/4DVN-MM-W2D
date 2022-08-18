@@ -281,6 +281,7 @@ class LitModel(pl.LightningModule):
         self.hparams.kernel_size            = (6,6) # tuple(config_params.KERNEL_SIZE)
         self.hparams.padding                = 0     # config_params.PADDING
         self.hparams.stride                 = (6,6) # tuple(config_params.STRIDE)
+        self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.weight_hres            = config_params.WEIGHT_HRES
         self.hparams.weight_lres            = config_params.WEIGHT_LRES
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
@@ -441,7 +442,12 @@ class LitModel(pl.LightningModule):
         
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
-            outputs, _,_,_ = self.model(input_state, input_data, mask)
+            
+            if self.hparams.fixed_point:
+                outputs = self.Phi(input_data)
+            else:
+                outputs, _,_,_ = self.model(input_state, input_data, mask)
+            #end
         #end
         
         # Save reconstructions
@@ -451,7 +457,7 @@ class LitModel(pl.LightningModule):
         #end
         
         # Return loss, computed as reconstruction loss
-        reco_lr = outputs[:,:24,:,:]
+        reco_lr = data_lr  # outputs[:,:24,:,:]
         reco_hr = outputs[:,24:,:,:]
         # anomaly = data_hr - data_lr
         reco_tot = reco_lr + reco_hr
