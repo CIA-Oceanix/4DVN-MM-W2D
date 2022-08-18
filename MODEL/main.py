@@ -40,6 +40,10 @@ class Experiment:
         _cparams = namedtuple('config_params', CPARAMS)
         cparams  = _cparams(**CPARAMS)
         
+        if cparams.GS_TRAIN and cparams.FIXED_POINT:
+            raise ValueError('Either fixed point or gradient train')
+        #end
+        
         path_data  = os.getenv('PATH_DATA')
         path_model = os.getenv('PATH_MODEL')
         
