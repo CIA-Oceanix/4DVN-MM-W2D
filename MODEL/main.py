@@ -79,6 +79,10 @@ class Experiment:
                 self.name_source_model = 'None'
                 model_name += f'-gs{n_iter}it'
             #end
+        else:
+            self.path_checkpoint_source = None
+            self.name_source_model = None
+            model_name += '-fp1it'
         #end
         
         self.model_name = model_name
