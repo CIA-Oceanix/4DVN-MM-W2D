@@ -457,7 +457,7 @@ class LitModel(pl.LightningModule):
         #end
         
         # Return loss, computed as reconstruction loss
-        reco_lr = data_lr  # outputs[:,:24,:,:]
+        reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,24:,:,:]
         # anomaly = data_hr - data_lr
         reco_tot = reco_lr + reco_hr
