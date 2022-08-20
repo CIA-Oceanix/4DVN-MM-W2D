@@ -14,6 +14,7 @@ class Phi_r(nn.Module):
         super(Phi_r, self).__init__()
         	
         ts_length = shape_data[1] * 2
+        img_H, img_W = shape_data[-2:]
         
         if config_params.PRIOR == 'CL':
             
@@ -30,13 +31,19 @@ class Phi_r(nn.Module):
             # Conv2D-AE
             self.prior = 'ae'
             self.encoder = nn.Sequential(
-                nn.Conv2d(ts_length, 72, (3,3), padding = 0),
+                nn.AvgPool2d(3),
+                nn.Conv2d(ts_length, 72, (3,3), padding = 'same'),
                 nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU()
             )
             self.decoder = nn.Sequential(
-                nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0)#,
-                # nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+                nn.Conv2d(72, ts_length, (3,3), padding = 'same'),
+                nn.Upsample(size = (img_H, img_W), mode = 'bilinear'),
+                nn.Conv2d(ts_length, ts_length, (3,3), padding = 'same')
             )
+            # self.decoder = nn.Sequential(
+            #     nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0)#,
+            #     # nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
+            # )
         
         else:
             
@@ -462,13 +469,10 @@ class LitModel(pl.LightningModule):
         # anomaly = data_hr - data_lr
         reco_tot = reco_lr + reco_hr
         loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = None )
-        loss_hr = self.loss_fn( (reco_tot - data_hr),  mask = None ) #+ \
-                  # self.loss_fn( (data_hr - reco_tot), mask = None )
-        # regularization = self.loss_fn((reco_tot - self.Phi(reco_tot)), mask = None)
+        loss_hr = self.loss_fn( (reco_tot - data_hr),  mask = None )
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        # loss = loss + regularization
-        
+                
         return dict({'loss' : loss}), outputs
     #end
     
