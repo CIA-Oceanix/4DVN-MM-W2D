@@ -7,6 +7,17 @@ import pytorch_lightning as pl
 import solver as NN_4DVar
 
 
+class Print(nn.Module):
+    def __init__(self):
+        super(Print, self).__init__()
+    #end
+    
+    def forward(self, signal):
+        print(signal.shape)
+        return signal
+    #end
+#end
+
 class Phi_r(nn.Module):
     ''' Dynamical prior '''
     
@@ -23,9 +34,11 @@ class Phi_r(nn.Module):
             self.net = nn.Sequential(
                 nn.Conv2d(ts_length, ts_length, (3,3), 
                           padding = 'same', padding_mode = 'reflect', bias = False),
+                # Print(),
                 nn.ReLU(),
-                nn.ConvTranspose2d(ts_length, ts_length, (3,3), 
-                                   padding = 0, bias = False)
+                nn.Conv2d(ts_length, ts_length, (3,3), 
+                          padding = 'same', bias = False),
+                # Print()
             )
         
         elif config_params.PRIOR == 'AE':
