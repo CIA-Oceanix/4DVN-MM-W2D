@@ -473,13 +473,16 @@ class LitModel(pl.LightningModule):
                                'reco' : outputs.detach().cpu()})
         #end
         
+        mask_loss = torch.zeros_like(data_hr)
+        mask_loss[:,:, center_h - 10 : center_h + 10, center_w - 10 : center_w + 10] = 1.
+        
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,24:,:,:]
         # anomaly = data_hr - data_lr
         reco_tot = reco_lr + reco_hr
-        loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = None )
-        loss_hr = self.loss_fn( (reco_tot - data_hr),  mask = None )
+        loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = mask_loss )
+        loss_hr = self.loss_fn( (reco_tot - data_hr),  mask = mask_loss )
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
                 
