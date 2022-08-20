@@ -33,19 +33,14 @@ class Phi_r(nn.Module):
             self.encoder = nn.Sequential(
                 nn.AvgPool2d(3),
                 nn.Conv2d(ts_length, 72, (3,3), padding = 'same'),
-                nn.ReLU(),
-                nn.AvgPool2d(3),
-                nn.Conv2d(72, 120, (3,3), padding = 'same'),
-                nn.ReLU()
+                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU()
             )
             self.decoder = nn.Sequential(
-                nn.Conv2d(120, 72, (3,3), padding = 'same'),
-                nn.Upsample(size = (img_H - 6, img_W - 6), mode = 'bilinear'),
                 nn.Conv2d(72, ts_length, (3,3), padding = 'same'),
+                nn.Upsample(size = (img_H, img_W), mode = 'bilinear'),
                 nn.ReLU(),
                 nn.Conv2d(ts_length, ts_length, (3,3), padding = 'same'),
-                nn.Upsample(size = (img_H, img_W), mode = 'bilinear'),
-                nn.Conv2d(ts_length, ts_length, (3,3), padding = 'same')
+                nn.ReLU()
             )
             # self.decoder = nn.Sequential(
             #     nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0)#,
