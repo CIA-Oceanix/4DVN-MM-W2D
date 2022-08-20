@@ -21,9 +21,11 @@ class Phi_r(nn.Module):
             # 1 couche conv
             self.prior = 'cl'
             self.net = nn.Sequential(
-                nn.Conv2d(ts_length, ts_length, kernel_size = (3,3), padding = 'same'),
+                nn.Conv2d(ts_length, ts_length, (3,3), 
+                          padding = 'same', padding_mode = 'reflect', bias = False),
                 nn.ReLU(),
-                nn.ConvTranspose2d(ts_length, ts_length, kernel_size = (3,3), padding = 'same')
+                nn.ConvTranspose2d(ts_length, ts_length, (3,3), 
+                                   padding = 0, bias = False)
             )
         
         elif config_params.PRIOR == 'AE':
