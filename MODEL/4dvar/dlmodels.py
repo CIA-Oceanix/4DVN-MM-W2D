@@ -417,7 +417,7 @@ class LitModel(pl.LightningModule):
         pooled = F.avg_pool2d(data, kernel_size = kernel_size,
                               padding = padding, stride = stride)
         pooled  = F.interpolate(pooled, size = tuple(img_size),
-                                mode = 'bilinear', align_corners = True)
+                                mode = 'bilinear', align_corners = False)
         
         if not data.shape == pooled.shape:
             raise ValueError('Original and Pooled_keepsize data shapes mismatch')
@@ -430,6 +430,29 @@ class LitModel(pl.LightningModule):
         
         center_x, center_y = data.shape[-2] // 2, data.shape[-1] // 2
         return data[:,:, center_x, center_y].unsqueeze(-1).unsqueeze(-1)
+    #end
+    
+    def get_mask(self, data_shape, mode):
+        
+        if mode == 'pixel':
+            
+            center_h, center_w = data_shape[-2] // 2, data_shape[-1] // 2
+            mask = torch.zeros(data_shape)
+            mask[:,:, center_h, center_w] = 1.
+            
+        elif mode == 'patch':
+            
+            delta_x = 10
+            center_h, center_w = data_shape[-2] // 2, data_shape[-1] // 2
+            mask = torch.zeros(data_shape)
+            mask[:,:, center_h - delta_x : center_h + delta_x, 
+                 center_w - delta_x : center_w + delta_x] = 1.
+            
+        else:
+            raise ValueError('Mask mode not impletemented.')
+        #end
+        
+        return mask
     #end
     
     def compute_loss(self, data, phase = 'train'):
@@ -446,14 +469,19 @@ class LitModel(pl.LightningModule):
         # input_state = torch.zeros_like(data_lr)
         input_state = torch.cat(
             [data_lr,                     # Low-resolution component
-             torch.zeros_like(data_lr)],  # Anomaly component
+             # torch.zeros_like(data_lr)],  # Anomaly component
+             data_hr],
             dim = 1)
         
         # Mask data
-        center_h, center_w = data.shape[-2] // 2, data.shape[-1] // 2
-        mask = torch.zeros_like(input_state)
-        mask[:,:24,:,:] = 1.
-        mask[:,24:, center_h, center_w] = 1.
+        # center_h, center_w = data.shape[-2] // 2, data.shape[-1] // 2
+        # mask = torch.zeros_like(input_state)
+        # mask[:,:24,:,:] = 1.
+        # mask[:,24:, center_h, center_w] = 1.
+        mask = torch.cat(
+            [torch.ones_like(data_lr),
+             self.get_mask(data_hr.shape, mode = 'pixel')],
+            dim = 1)
         
         input_state = input_state * mask
         
@@ -473,8 +501,9 @@ class LitModel(pl.LightningModule):
                                'reco' : outputs.detach().cpu()})
         #end
         
-        mask_loss = torch.zeros_like(data_hr)
-        mask_loss[:,:, center_h - 10 : center_h + 10, center_w - 10 : center_w + 10] = 1.
+        # mask_loss = torch.zeros_like(data_hr)
+        # mask_loss[:,:, center_h - 10 : center_h + 10, center_w - 10 : center_w + 10] = 1.
+        mask_loss = self.get_mask(input_state.shape, mode = 'patch')
         
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
