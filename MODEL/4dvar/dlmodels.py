@@ -503,7 +503,7 @@ class LitModel(pl.LightningModule):
         
         # mask_loss = torch.zeros_like(data_hr)
         # mask_loss[:,:, center_h - 10 : center_h + 10, center_w - 10 : center_w + 10] = 1.
-        mask_loss = self.get_mask(input_state.shape, mode = 'patch')
+        mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
         
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
