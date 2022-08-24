@@ -463,25 +463,15 @@ class LitModel(pl.LightningModule):
                                           kernel_size = self.hparams.kernel_size, 
                                           padding = self.hparams.padding, 
                                           stride = self.hparams.stride)
-        input_data = torch.cat([data_lr, data_hr], dim = 1)
+        input_data = torch.cat((data_lr, data_hr), dim = 1)
         
         # Prepare input state initialized
-        # input_state = torch.zeros_like(data_lr)
-        input_state = torch.cat(
-            [data_lr,                     # Low-resolution component
-             # torch.zeros_like(data_lr)],  # Anomaly component
-             data_hr],
-            dim = 1)
+        input_state = torch.cat((data_lr, data_hr), dim = 1)
         
         # Mask data
-        # center_h, center_w = data.shape[-2] // 2, data.shape[-1] // 2
-        # mask = torch.zeros_like(input_state)
-        # mask[:,:24,:,:] = 1.
-        # mask[:,24:, center_h, center_w] = 1.
-        mask = torch.cat(
-            [torch.ones_like(data_lr),
-             self.get_mask(data_hr.shape, mode = 'pixel')],
-            dim = 1)
+        mask_lr = torch.ones_like(data_lr)
+        mask_hr = self.get_mask(data_hr.shape, mode = 'pixel')
+        mask = torch.cat((mask_lr, mask_hr), dim = 1)
         
         input_state = input_state * mask
         
@@ -501,17 +491,14 @@ class LitModel(pl.LightningModule):
                                'reco' : outputs.detach().cpu()})
         #end
         
-        # mask_loss = torch.zeros_like(data_hr)
-        # mask_loss[:,:, center_h - 10 : center_h + 10, center_w - 10 : center_w + 10] = 1.
         mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
         
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,24:,:,:]
-        # anomaly = data_hr - data_lr
-        reco_tot = ( reco_lr + reco_hr )
-        loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = None )
-        loss_hr = self.loss_fn( (reco_tot - data_hr),  mask = None )
+        reco = ( reco_lr + reco_hr )
+        loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
+        loss_hr = self.loss_fn( (reco - data_hr), mask = None )
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
                 
