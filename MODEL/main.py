@@ -156,6 +156,7 @@ class Experiment:
         print('Experiment\n')
         print('Model name          : {}'.format(self.model_name))
         print('Prior               : {}'.format(self.cparams.PRIOR))
+        print('Fixed point         : {}'.format(self.cparams.FIXED_POINT))
         print('Path source         : {}'.format(self.path_checkpoint_source))
         print('Model source        : {}'.format(self.name_source_model))
         print('Path target         : {}'.format(self.path_checkpoint))
