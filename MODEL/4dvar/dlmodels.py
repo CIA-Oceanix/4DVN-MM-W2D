@@ -511,7 +511,7 @@ class LitModel(pl.LightningModule):
         # anomaly = data_hr - data_lr
         reco_tot = reco_lr + reco_hr
         loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = None )
-        loss_hr = self.loss_fn( (reco_tot - 10 * data_hr),  mask = None )
+        loss_hr = self.loss_fn( (reco_tot - 2 * data_hr),  mask = None )
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
                 
