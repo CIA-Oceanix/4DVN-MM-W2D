@@ -498,7 +498,7 @@ class LitModel(pl.LightningModule):
         # Save reconstructions
         if phase == 'test':
             self.save_samples({'data' : data.detach().cpu(), 
-                               'reco' : outputs.detach().cpu()})
+                               'reco' : outputs.detach().cpu() / 3})
         #end
         
         # mask_loss = torch.zeros_like(data_hr)
@@ -509,9 +509,9 @@ class LitModel(pl.LightningModule):
         reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,24:,:,:]
         # anomaly = data_hr - data_lr
-        reco_tot = reco_lr + reco_hr
+        reco_tot = ( reco_lr + reco_hr ) * 3
         loss_lr = self.loss_fn( (reco_lr - data_lr),  mask = None )
-        loss_hr = self.loss_fn( (reco_tot - 2 * data_hr),  mask = None )
+        loss_hr = self.loss_fn( (reco_tot - data_hr),  mask = None )
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
                 
