@@ -24,7 +24,7 @@ class Phi_r(nn.Module):
     def __init__(self, shape_data, config_params):
         super(Phi_r, self).__init__()
         	
-        ts_length = shape_data[1] * 2
+        ts_length = shape_data[1] * 3
         img_H, img_W = shape_data[-2:]
         
         if config_params.PRIOR == 'CL':
@@ -463,15 +463,15 @@ class LitModel(pl.LightningModule):
                                           kernel_size = self.hparams.kernel_size, 
                                           padding = self.hparams.padding, 
                                           stride = self.hparams.stride)
-        input_data = torch.cat((data_lr, data_hr), dim = 1)
+        input_data = torch.cat((data_lr, data_hr, data_hr), dim = 1)
         
         # Prepare input state initialized
-        input_state = torch.cat((data_lr, data_hr), dim = 1)
+        input_state = torch.cat((data_lr, data_hr, data_hr), dim = 1)
         
         # Mask data
         mask_lr = torch.ones_like(data_lr)
         mask_hr = self.get_mask(data_hr.shape, mode = 'pixel')
-        mask = torch.cat((mask_lr, mask_hr), dim = 1)
+        mask = torch.cat((mask_lr, mask_hr, torch.zeros_like(data_hr)), dim = 1)
         
         input_state = input_state * mask
         
@@ -495,7 +495,7 @@ class LitModel(pl.LightningModule):
         
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
-        reco_hr = outputs[:,24:,:,:]
+        reco_hr = outputs[:,48:,:,:]
         reco = ( reco_lr + reco_hr )
         # grad_data = torch.gradient(data_hr, dim = (3,2))
         # grad_reco = torch.gradient(reco, dim = (3,2))
