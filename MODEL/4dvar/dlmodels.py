@@ -506,10 +506,10 @@ class LitModel(pl.LightningModule):
         loss_grad = loss_grad_x + loss_grad_y
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        loss += loss_grad * 1
+        loss += loss_grad * 1e-2
         
-        # regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
-        # loss += regularization * 1e-5
+        regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+        loss += regularization * 1e-3
         
         return dict({'loss' : loss}), outputs
     #end
