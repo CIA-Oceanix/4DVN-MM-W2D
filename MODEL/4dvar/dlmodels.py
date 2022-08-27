@@ -418,7 +418,7 @@ class LitModel(pl.LightningModule):
                               padding = self.hparams.padding, 
                               stride  = self.hparams.stride)
         pooled  = F.interpolate(pooled, size = tuple(img_size),
-                                mode = 'bilinear', align_corners = False)
+                                mode = 'bicubic', align_corners = False)
         
         if not data.shape == pooled.shape:
             raise ValueError('Original and Pooled_keepsize data shapes mismatch')
