@@ -411,11 +411,12 @@ class LitModel(pl.LightningModule):
         return optimizers
     #end
     
-    def avgpool2d_keepsize(self, data, kernel_size, padding, stride):
+    def avgpool2d_keepsize(self, data):
         
         img_size = data.shape[-2:]
-        pooled = F.avg_pool2d(data, kernel_size = kernel_size,
-                              padding = padding, stride = stride)
+        pooled = F.avg_pool2d(data, kernel_size = self.hparams.kernel_size,
+                              padding = self.hparams.padding, 
+                              stride  = self.hparams.stride)
         pooled  = F.interpolate(pooled, size = tuple(img_size),
                                 mode = 'bilinear', align_corners = False)
         
@@ -459,10 +460,7 @@ class LitModel(pl.LightningModule):
         
         # Prepare input data
         data_hr = data.clone()
-        data_lr = self.avgpool2d_keepsize(data_hr, 
-                                          kernel_size = self.hparams.kernel_size, 
-                                          padding = self.hparams.padding, 
-                                          stride = self.hparams.stride)
+        data_lr = self.avgpool2d_keepsize(data_hr)
         input_data = torch.cat((data_lr, data_hr, data_hr), dim = 1)
         
         # Prepare input state initialized
@@ -470,7 +468,7 @@ class LitModel(pl.LightningModule):
         
         # Mask data
         mask_lr = torch.ones_like(data_lr)
-        mask_hr = self.get_mask(data_hr.shape, mode = 'pixel')
+        mask_hr = self.get_mask(data_hr.shape, mode = 'patch')
         mask = torch.cat((mask_lr, mask_hr, torch.zeros_like(data_hr)), dim = 1)
         
         input_state = input_state * mask
