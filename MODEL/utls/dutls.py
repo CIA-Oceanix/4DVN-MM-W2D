@@ -116,7 +116,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size = self.batch_size, shuffle = True)
+        return DataLoader(self.train_dataset, batch_size = self.batch_size)
     #end
     
     def val_dataloader(self):
