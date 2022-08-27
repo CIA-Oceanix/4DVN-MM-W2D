@@ -489,7 +489,7 @@ class LitModel(pl.LightningModule):
                                'reco' : outputs.detach().cpu()})
         #end
         
-        mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
+        mask_loss = self.get_mask(data_lr.shape, mode = 'pixel')
         
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
