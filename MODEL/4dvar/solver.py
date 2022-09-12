@@ -488,7 +488,7 @@ class Solver_Grad_4DVarNN(nn.Module):
                                             learnable_params = varcost_learnable_params)
         
         self.stochastic = stochastic
-
+        
         with torch.no_grad():
             self.n_grad = int(n_iter_grad)
         #end
