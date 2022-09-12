@@ -494,7 +494,7 @@ class LitModel(pl.LightningModule):
         mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
         
         # Return loss, computed as reconstruction loss
-        reco_lr = data_lr # outputs[:,:24,:,:]
+        reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,48:,:,:]
         reco = ( reco_lr + reco_hr )
         grad_data = torch.gradient(data_hr, dim = (3,2))
