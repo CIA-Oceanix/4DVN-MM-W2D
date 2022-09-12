@@ -535,6 +535,7 @@ class Solver_Grad_4DVarNN(nn.Module):
     def var_cost(self, x, yobs, mask):
         
         data_fidelty = self.model_H(x, yobs, mask)
+        print('In var_cost = ', data_fidelty[0].mean(), data_fidelty[1].mean(), data_fidelty[2].mean())
         regularization = x - self.Phi(x)
         
         var_cost = self.model_VarCost(data_fidelty, regularization, mask)
