@@ -368,6 +368,7 @@ class model_GradUpdateLSTM(torch.nn.Module):
 
 
 # New module for the definition/computation of the variational cost
+# TIP
 class Model_Var_Cost(nn.Module):
     
     def __init__(self, m_NormObs, m_NormPhi, ShapeData,
@@ -427,15 +428,17 @@ class Model_Var_Cost(nn.Module):
         #end
     #end
     
+    # TIP : verifica che quel loop for non dia problemi !!!
     def forward(self, data_fidelty, regularization, mask_obs):
         
         loss = self.alphaReg.pow(2) * self.normPrior(regularization, mask_obs)
+        mask_obs_ = (mask_obs[:,:24,:,:], mask_obs[:,24:48,:,:], mask_obs[:,48:,:,:])
         
         if self.dim_obs == 1:
             loss += self.alphaObs[0].pow(2) * self.normObs(data_fidelty, mask_obs)
         else:
             for kk in range(0, self.dim_obs):
-                loss += self.alphaObs[0,kk].pow(2) * self.normObs(data_fidelty[kk], mask = mask_obs)
+                loss += self.alphaObs[0,kk].pow(2) * self.normObs(data_fidelty[kk], mask = mask_obs_[kk])
             #end
         #end
         

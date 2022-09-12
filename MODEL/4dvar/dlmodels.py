@@ -246,7 +246,9 @@ class ObsModel_Mask(nn.Module):
     
     def forward(self, x, y_obs, mask):
         
-        return (x - y_obs).mul(mask)
+        obs_term = (x - y_obs).mul(mask)
+        # divide the observation term in three devoted chunks
+        return (obs_term[:,:24,:,:], obs_term[:,24:48,:,:], obs_term[:,48:,:,:])
     #end
 #end
 
@@ -329,7 +331,7 @@ class LitModel(pl.LightningModule):
         
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             self.Phi,                                # Prior
-            ObsModel_Mask(shape_data, dim_obs = 1),  # Observation model
+            ObsModel_Mask(shape_data, dim_obs = 3),  # Observation model
             NN_4DVar.model_GradUpdateLSTM(           # Gradient solver
                 mgrad_shapedata,                       # m_Grad : Shape data
                 False,                                 # m_Grad : Periodic BCs
