@@ -495,7 +495,7 @@ class LitModel(pl.LightningModule):
         
         # Return loss, computed as reconstruction loss
         reco_lr = outputs[:,:24,:,:]
-        reco_hr = outputs[:,48:,:,:]
+        reco_hr = outputs[:,24:48,:,:]
         reco = ( reco_lr + reco_hr )
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco, dim = (3,2))
