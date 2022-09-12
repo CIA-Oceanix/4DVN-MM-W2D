@@ -497,21 +497,21 @@ class LitModel(pl.LightningModule):
         reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,48:,:,:]
         reco = ( reco_lr + reco_hr )
-        grad_data = torch.gradient(data_hr, dim = (3,2))
-        grad_reco = torch.gradient(reco, dim = (3,2))
+        # grad_data = torch.gradient(data_hr, dim = (3,2))
+        # grad_reco = torch.gradient(reco, dim = (3,2))
         
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco - data_hr), mask = None )
         
-        loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
-        loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
-        loss_grad = loss_grad_x + loss_grad_y
+        # loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
+        # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
+        # loss_grad = loss_grad_x + loss_grad_y
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        loss += loss_grad * 1e-2
+        # loss += loss_grad * 1e-2
         
-        regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
-        loss += regularization * 1e-3
+        # regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+        # loss += regularization * 1e-3
         
         return dict({'loss' : loss}), outputs
     #end
