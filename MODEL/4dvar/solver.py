@@ -527,7 +527,9 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         grad, hidden, cell = self.model_Grad(hidden, cell, var_cost_grad, normgrad_)
         grad *= 1./ self.n_grad
-        x_k_plus_1 = x_k - grad
+        x_k_plus_1 = x_k - grad * 100
+        
+        print('In solver_step : ', x_k.mean(), grad.mean())
         
         return x_k_plus_1, hidden, cell, normgrad_
     #end
