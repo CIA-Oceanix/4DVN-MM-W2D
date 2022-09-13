@@ -284,6 +284,39 @@ class NormLoss(nn.Module):
     #end
 #end
 
+class MVNormLoss(nn.Module):
+    
+    def __init__(self):
+        super(MVNormLoss, self).__init__()
+        
+    #end
+    
+    def forward(self, item, mask):
+        
+        # square
+        argument = item.pow(2)
+        if mask is None:
+            mask = torch.ones_like(item)
+        #end
+        
+        if mask.sum() == 0.:
+            n_items = 1.
+        else:
+            n_items = mask.sum()
+        #end
+        
+        # sum on: 
+        #   1. features planes; 
+        #   2. timesteps and batches
+        # Then mean over effective items
+        argument = argument.sum(dim = (2,3))
+        argument = argument.sum(dim = (1,0))
+        loss = argument.div(n_items)
+        
+        return loss
+    #end
+#end
+
 
 class LitModel(pl.LightningModule):
     
@@ -338,8 +371,8 @@ class LitModel(pl.LightningModule):
                 self.hparams.dim_grad_solver,          # m_Grad : Dim LSTM
                 self.hparams.dropout,                  # m_Grad : Dropout
             ),
-            NormLoss(dim_item = 2),                  # Norm Observation
-            NormLoss(dim_item = 2),                  # Norm Prior
+            MVNormLoss(),                            # Norm Observation
+            MVNormLoss(),                            # Norm Prior
             model_shapedata,                         # Shape data
             self.hparams.n_fourdvar_iter,            # Solver iterations
             alphaObs = alpha_obs,                    # alpha observations
@@ -348,7 +381,7 @@ class LitModel(pl.LightningModule):
     #end
     
     def save_test_loss(self, test_loss, batch_size):
-                
+        
         self.__test_loss.append(test_loss)
         self.__test_batches_size.append(batch_size)
     #end
