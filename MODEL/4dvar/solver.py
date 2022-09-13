@@ -529,7 +529,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         grad *= 1./ self.n_grad
         x_k_plus_1 = x_k - grad
         
-        # print('In solver_step : ', x_k.mean(), grad.mean())
+        print('In solver_step : ', x_k.mean(), grad.mean())
         
         return x_k_plus_1, hidden, cell, normgrad_
     #end
@@ -538,7 +538,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         data_fidelty = self.model_H(x, yobs, mask)
         regularization = x - self.Phi(x)
-        # print('in var_cost = ', data_fidelty[0].mean(), data_fidelty[1].mean(), data_fidelty[2].mean(), regularization.mean())
+        print('in var_cost = ', data_fidelty[0].mean(), data_fidelty[1].mean(), data_fidelty[2].mean(), regularization.mean())
         
         var_cost = self.model_VarCost(data_fidelty, regularization, mask)
         var_cost_grad = torch.autograd.grad(var_cost, x, create_graph = True)[0]
