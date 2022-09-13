@@ -335,13 +335,13 @@ class LitModel(pl.LightningModule):
             NN_4DVar.model_GradUpdateLSTM(           # Gradient solver
                 mgrad_shapedata,                       # m_Grad : Shape data
                 False,                                 # m_Grad : Periodic BCs
-                self.hparams.n_solver_iter,            # m_Grad : Dim LSTM
+                self.hparams.dim_grad_solver,          # m_Grad : Dim LSTM
                 self.hparams.dropout,                  # m_Grad : Dropout
             ),
             NormLoss(dim_item = 2),                  # Norm Observation
             NormLoss(dim_item = 2),                  # Norm Prior
             model_shapedata,                         # Shape data
-            self.hparams.n_fourdvar_iter,            # Solver iterations
+            self.hparams.n_solver_iter,              # Solver iterations
             alphaObs = alpha_obs,                    # alpha observations
             alphaReg = alpha_reg                     # alpha regularization
         )
