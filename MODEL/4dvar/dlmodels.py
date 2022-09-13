@@ -263,18 +263,22 @@ class NormLoss(nn.Module):
     
     def forward(self, item, mask):
         
+        if mask is None:
+            mask = torch.ones_like(item)
+        
         # square
         argument = item.pow(2)
         if mask is not None:
             argument = argument.mul(mask)
         #end
         
-        # feature-wise norm
-        if self.dim_item == 2:
-            argument = argument.mean(dim = (-2, -1))
-        elif self.dim_item == 1:
-            argument = argument.mean(dim = -1)
+        if mask.sum == 0.:
+            n_items = 1.
+        else:
+            n_items = mask.sum()
         #end
+        
+        argument = argument.div(n_items)
         
         # sum over time steps and batch-wise mean
         argument = argument.sum(dim = -1)
