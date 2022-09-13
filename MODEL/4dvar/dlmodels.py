@@ -265,6 +265,7 @@ class NormLoss(nn.Module):
         
         if mask is None:
             mask = torch.ones_like(item)
+        #end
         
         # square
         argument = item.pow(2)
@@ -278,7 +279,8 @@ class NormLoss(nn.Module):
             n_items = mask.sum()
         #end
         
-        argument = argument.div(n_items)
+        # weighted mean
+        argument = argument.sum(dim = (-2, -1)).div(n_items)
         
         # sum over time steps and batch-wise mean
         argument = argument.sum(dim = -1)
