@@ -272,7 +272,7 @@ class NormLoss(nn.Module):
             argument = argument.mul(mask)
         #end
         
-        if mask.sum == 0.:
+        if mask.sum() == 0.:
             n_items = 1.
         else:
             n_items = mask.sum()
