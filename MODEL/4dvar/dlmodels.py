@@ -263,24 +263,18 @@ class NormLoss(nn.Module):
     
     def forward(self, item, mask):
         
-        if mask is None:
-            mask = torch.ones_like(item)
-        #end
-        
         # square
         argument = item.pow(2)
         if mask is not None:
             argument = argument.mul(mask)
         #end
         
-        if mask.sum() == 0.:
-            n_items = 1.
-        else:
-            n_items = mask.sum()
+        # feature-wise norm
+        if self.dim_item == 2:
+            argument = argument.mean(dim = (-2, -1))
+        elif self.dim_item == 1:
+            argument = argument.mean(dim = -1)
         #end
-        
-        # weighted mean
-        argument = argument.sum(dim = (-2, -1)).div(n_items)
         
         # sum over time steps and batch-wise mean
         argument = argument.sum(dim = -1)
@@ -347,7 +341,7 @@ class LitModel(pl.LightningModule):
             NormLoss(dim_item = 2),                  # Norm Observation
             NormLoss(dim_item = 2),                  # Norm Prior
             model_shapedata,                         # Shape data
-            self.hparams.n_solver_iter,              # Solver iterations
+            self.hparams.n_fourdvar_iter,            # Solver iterations
             alphaObs = alpha_obs,                    # alpha observations
             alphaReg = alpha_reg                     # alpha regularization
         )
@@ -539,7 +533,7 @@ class LitModel(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         
-        metrics, out = self.compute_loss(batch, phase = 'val')
+        metrics, out = self.compute_loss(batch, phase = 'train')
         val_loss = metrics['loss']
         self.log('val_loss', val_loss)
         
