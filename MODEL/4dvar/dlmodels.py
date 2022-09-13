@@ -533,7 +533,7 @@ class LitModel(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         
-        metrics, out = self.compute_loss(batch, phase = 'train')
+        metrics, out = self.compute_loss(batch, phase = 'val')
         val_loss = metrics['loss']
         self.log('val_loss', val_loss)
         
