@@ -532,7 +532,7 @@ class LitModel(pl.LightningModule):
                 outputs = self.Phi(input_data)
             else:
                 # outputs = self.Phi(input_data)
-                outputs, hidden, cell, normgrad = self.model(input_data, input_data, mask)
+                outputs, hidden, cell, normgrad = self.model(input_state, input_data, mask)
             #end
         #end
         
