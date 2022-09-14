@@ -248,7 +248,8 @@ class ObsModel_Mask(nn.Module):
         
         obs_term = (x - y_obs).mul(mask)
         # divide the observation term in three devoted chunks
-        return (obs_term[:,:24,:,:], obs_term[:,24:48,:,:], obs_term[:,48:,:,:])
+        # return (obs_term[:,:24,:,:], obs_term[:,24:48,:,:], obs_term[:,48:,:,:])
+        return obs_term
     #end
 #end
 
