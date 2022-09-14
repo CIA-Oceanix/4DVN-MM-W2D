@@ -253,10 +253,10 @@ class ObsModel_Mask(nn.Module):
 #end
 
 
-class NormLoss(nn.Module):
+class _NormLoss(nn.Module):
     
     def __init__(self, dim_item = 2):
-        super(NormLoss, self).__init__()
+        super(_NormLoss, self).__init__()
         
         self.dim_item = dim_item
     #end
@@ -284,29 +284,32 @@ class NormLoss(nn.Module):
     #end
 #end
 
-class MVNormLoss(nn.Module):
+
+class NormLoss(nn.Module):
     
     def __init__(self):
-        super(MVNormLoss, self).__init__()
+        super(NormLoss, self).__init__()
         
     #end
     
     def forward(self, item, mask):
         
-        # square
-        argument = item.pow(2)
         if mask is None:
             mask = torch.ones_like(item)
         #end
         
+        # square
+        argument = item.pow(2)
+        argument = argument.mul(mask)
+        
         if mask.sum() == 0.:
             n_items = 1.
         else:
-            n_items = mask.sum()
+            n_items = mask.sum().div(24.)
         #end
         
         # sum on: 
-        #   1. features planes; 
+        #   1. features plane; 
         #   2. timesteps and batches
         # Then mean over effective items
         argument = argument.sum(dim = (2,3))
@@ -527,6 +530,8 @@ class LitModel(pl.LightningModule):
         mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
         
         # Return loss, computed as reconstruction loss
+        ''' NOTE : loss function is NormLoss but in these data 
+            there are no missing values!!! '''
         reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,48:,:,:]
         reco = ( reco_lr + reco_hr )
