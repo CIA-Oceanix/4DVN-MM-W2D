@@ -527,6 +527,7 @@ class LitModel(pl.LightningModule):
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
             else:
+                outputs = self.Phi(input_data)
                 outputs, hidden, cell, normgrad = self.model(input_state, input_data, mask)
             #end
         #end
