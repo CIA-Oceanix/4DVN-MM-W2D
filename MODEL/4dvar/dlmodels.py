@@ -35,7 +35,7 @@ class Phi_r(nn.Module):
                 nn.Conv2d(ts_length, 100, (3,3), 
                           padding = 'same', padding_mode = 'reflect', bias = False),
                 # Print(),
-                nn.ReLU(),
+                # nn.ReLU(),
                 nn.Conv2d(100, ts_length, (3,3), 
                           padding = 'same', bias = False),
                 # Print()
@@ -537,7 +537,7 @@ class LitModel(pl.LightningModule):
                                'reco' : outputs.detach().cpu()})
         #end
         
-        # mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
+        mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
         
         # Return loss, computed as reconstruction loss
         ''' NOTE : loss function is NormLoss but in these data 
