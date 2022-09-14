@@ -509,11 +509,11 @@ class LitModel(pl.LightningModule):
         # Prepare input data
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
-        input_data = torch.cat((data_lr, data_hr, data_hr), dim = 1)
+        input_data = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
         
         # Prepare input state initialized
         if init_state is None:
-            input_state = torch.cat((data_lr, data_hr, data_hr), dim = 1)
+            input_state = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
         else:
             input_state = init_state
         #end
