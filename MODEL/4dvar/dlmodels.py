@@ -374,8 +374,8 @@ class LitModel(pl.LightningModule):
                 self.hparams.dim_grad_solver,          # m_Grad : Dim LSTM
                 self.hparams.dropout,                  # m_Grad : Dropout
             ),
-            MVNormLoss(),                            # Norm Observation
-            MVNormLoss(),                            # Norm Prior
+            NormLoss(),                              # Norm Observation
+            NormLoss(),                              # Norm Prior
             model_shapedata,                         # Shape data
             self.hparams.n_fourdvar_iter,            # Solver iterations
             alphaObs = alpha_obs,                    # alpha observations
