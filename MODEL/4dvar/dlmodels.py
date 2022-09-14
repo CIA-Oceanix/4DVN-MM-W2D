@@ -492,14 +492,14 @@ class LitModel(pl.LightningModule):
         state_init = None
         for n in range(self.hparams.n_fourdvar_iter):
             
-            loss, outs = self.compute_loss(batch, phase = phase, init_state = state_init)
+            loss, outs = self.compute_loss(batch, iteration = n, phase = phase, init_state = state_init)
             state_init = outs.detach()
         #end
         
         return loss, outs
     #end
-        
-    def compute_loss(self, data, phase = 'train', init_state = None):
+    
+    def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
         # Prepare input data
         data_hr = data.clone()
@@ -531,7 +531,7 @@ class LitModel(pl.LightningModule):
         #end
         
         # Save reconstructions
-        if phase == 'test':
+        if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data.detach().cpu(), 
                                'reco' : outputs.detach().cpu()})
         #end
