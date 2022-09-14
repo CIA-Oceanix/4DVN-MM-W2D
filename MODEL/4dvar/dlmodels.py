@@ -439,7 +439,7 @@ class LitModel(pl.LightningModule):
                 {'params'       : self.model.Phi.parameters(),
                  'lr'           : self.hparams.prior_lr,
                  'weight_decay' : self.hparams.prior_wd},
-                {'params'       : self.model.model.model_VarCost.parameters(),
+                {'params'       : self.model.model_VarCost.parameters(),
                  'lr'           : 1e-4,
                  'weight_decay' : 1e-8}
             ]
