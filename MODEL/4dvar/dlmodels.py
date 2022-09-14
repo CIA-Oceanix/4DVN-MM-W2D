@@ -516,7 +516,7 @@ class LitModel(pl.LightningModule):
         
         # Mask data
         mask_lr = torch.ones_like(data_lr)
-        mask_hr = self.get_mask(data_hr.shape, mode = 'pixel')
+        mask_hr = torch.zeros_like(data_hr) # self.get_mask(data_hr.shape, mode = 'pixel')
         mask = torch.cat((mask_lr, mask_hr, torch.zeros_like(data_hr)), dim = 1)
         
         input_state = input_state * mask
