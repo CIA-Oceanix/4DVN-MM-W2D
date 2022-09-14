@@ -367,7 +367,7 @@ class LitModel(pl.LightningModule):
         
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             self.Phi,                                # Prior
-            ObsModel_Mask(shape_data, dim_obs = 3),  # Observation model
+            ObsModel_Mask(shape_data, dim_obs = 1),  # Observation model
             NN_4DVar.model_GradUpdateLSTM(           # Gradient solver
                 mgrad_shapedata,                       # m_Grad : Shape data
                 False,                                 # m_Grad : Periodic BCs
