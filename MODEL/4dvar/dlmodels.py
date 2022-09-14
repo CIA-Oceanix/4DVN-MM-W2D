@@ -426,14 +426,7 @@ class LitModel(pl.LightningModule):
         
         del self.__samples_to_save
     #end
-    
-    def forward(self, data):
         
-        print('Forward')
-        loss, out = self.compute_loss(data)
-        return loss, out
-    #end
-    
     def configure_optimizers(self):
         
         optimizers = torch.optim.Adam(
@@ -494,7 +487,19 @@ class LitModel(pl.LightningModule):
         return mask
     #end
     
-    def compute_loss(self, data, phase = 'train'):
+    def forward(self, batch, phase = 'train'):
+        
+        state_init = None
+        for n in range(self.hparams.n_fourdvar_iter):
+            
+            loss, outs = self.compute_loss(batch, phase = phase, init_state = state_init)
+            state_init = outs.detach()
+        #end
+        
+        return loss, outs
+    #end
+        
+    def compute_loss(self, data, phase = 'train', init_state = None):
         
         # Prepare input data
         data_hr = data.clone()
@@ -502,7 +507,11 @@ class LitModel(pl.LightningModule):
         input_data = torch.cat((data_lr, data_hr, data_hr), dim = 1)
         
         # Prepare input state initialized
-        input_state = torch.cat((data_lr, data_hr, data_hr), dim = 1)
+        if init_state is None:
+            input_state = torch.cat((data_lr, data_hr, data_hr), dim = 1)
+        else:
+            input_state = init_state
+        #end
         
         # Mask data
         mask_lr = torch.ones_like(data_lr)
@@ -556,7 +565,7 @@ class LitModel(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        metrics, out = self.compute_loss(batch, phase = 'train')
+        metrics, out = self.forward(batch, phase = 'train')
         loss = metrics['loss']
         self.log('loss', loss, on_step = True, on_epoch = True, prog_bar = True)
         
@@ -571,7 +580,7 @@ class LitModel(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         
-        metrics, out = self.compute_loss(batch, phase = 'train')
+        metrics, out = self.forward(batch, phase = 'train')
         val_loss = metrics['loss']
         self.log('val_loss', val_loss)
         
@@ -587,7 +596,7 @@ class LitModel(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         
         with torch.no_grad():
-            metrics, outs = self.compute_loss(batch, phase = 'test')
+            metrics, outs = self.forward(batch, phase = 'test')
             
             test_loss = metrics['loss']
             self.log('test_loss', test_loss.item())
