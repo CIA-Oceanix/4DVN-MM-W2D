@@ -524,6 +524,7 @@ class LitModel(pl.LightningModule):
         mask = torch.cat((mask_lr, mask_hr, torch.zeros_like(data_hr)), dim = 1)
         
         input_state = input_state * mask
+        input_data  = input_data * mask
         
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
