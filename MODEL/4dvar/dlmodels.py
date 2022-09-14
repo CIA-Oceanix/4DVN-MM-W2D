@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
-import solver as NN_4DVar
+import solver1 as NN_4DVar
 
 
 class Print(nn.Module):
@@ -528,7 +528,7 @@ class LitModel(pl.LightningModule):
                 outputs = self.Phi(input_data)
             else:
                 outputs = self.Phi(input_data)
-                outputs, hidden, cell, normgrad = self.model(input_state, input_data, mask)
+                outputs, hidden, cell, normgrad = self.model(outputs, input_data, mask)
             #end
         #end
         
