@@ -374,14 +374,14 @@ class LitModel(pl.LightningModule):
                 False,                                 # m_Grad : Periodic BCs
                 self.hparams.dim_grad_solver,          # m_Grad : Dim LSTM
                 self.hparams.dropout,                  # m_Grad : Dropout
-                varcost_learnable_params = True
             ),
             NormLoss(),                              # Norm Observation
             NormLoss(),                              # Norm Prior
             model_shapedata,                         # Shape data
             self.hparams.n_solver_iter,              # Solver iterations
             alphaObs = alpha_obs,                    # alpha observations
-            alphaReg = alpha_reg                     # alpha regularization
+            alphaReg = alpha_reg,                    # alpha regularization
+            varcost_learnable_params = True
         )
     #end
     
