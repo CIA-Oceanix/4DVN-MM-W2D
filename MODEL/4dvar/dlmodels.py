@@ -438,7 +438,10 @@ class LitModel(pl.LightningModule):
                  'weight_decay' : self.hparams.mgrad_wd},
                 {'params'       : self.model.Phi.parameters(),
                  'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd}
+                 'weight_decay' : self.hparams.prior_wd},
+                {'params'       : self.model.model.model_VarCost.parameters(),
+                 'lr'           : 1e-4,
+                 'weight_decay' : 1e-8}
             ]
         )
         return optimizers
@@ -528,7 +531,7 @@ class LitModel(pl.LightningModule):
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
             else:
-                outputs = self.Phi(input_data)
+                # outputs = self.Phi(input_data)
                 outputs, hidden, cell, normgrad = self.model(outputs, input_data, mask)
             #end
         #end
