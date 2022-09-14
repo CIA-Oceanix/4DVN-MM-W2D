@@ -378,7 +378,7 @@ class LitModel(pl.LightningModule):
             NormLoss(),                              # Norm Observation
             NormLoss(),                              # Norm Prior
             model_shapedata,                         # Shape data
-            self.hparams.n_fourdvar_iter,            # Solver iterations
+            self.hparams.n_solver_iter,              # Solver iterations
             alphaObs = alpha_obs,                    # alpha observations
             alphaReg = alpha_reg                     # alpha regularization
         )
