@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 import pytorch_lightning as pl
-import solver1 as NN_4DVar
+import solver as NN_4DVar
 
 
 class Print(nn.Module):
@@ -374,6 +374,7 @@ class LitModel(pl.LightningModule):
                 False,                                 # m_Grad : Periodic BCs
                 self.hparams.dim_grad_solver,          # m_Grad : Dim LSTM
                 self.hparams.dropout,                  # m_Grad : Dropout
+                varcost_learnable_params = True
             ),
             NormLoss(),                              # Norm Observation
             NormLoss(),                              # Norm Prior
