@@ -158,6 +158,7 @@ class Experiment:
         print('Prior                      : {}'.format(self.cparams.PRIOR))
         print('Fixed point                : {}'.format(self.cparams.FIXED_POINT))
         print('Trainable varcost params   : {}'.format(self.cparams.LEARN_VC_PARAMS))
+        print('Masking mode               : {}'.format(self.cparams.HR_MASK_MODE))
         print('Path source                : {}'.format(self.path_checkpoint_source))
         print('Model source               : {}'.format(self.name_source_model))
         print('Path target                : {}'.format(self.path_checkpoint))
