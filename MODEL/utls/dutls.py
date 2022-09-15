@@ -23,18 +23,14 @@ class W2DSimuDataset(Dataset):
         # normalization parameters, used to normalize and denormalize data
         self.pparams = dict()
         
-        # load data, convert to torch.Tensor and
-        # down-sample to obtain low-resoluted spatial fields
+        # load data, convert to torch.Tensor
         wind_2D_hr = data
         wind_2D_hr = torch.Tensor(wind_2D_hr).type(torch.float32).to(DEVICE)
-        # wind_2D_lr = torch.nn.AvgPool2d(lr_factor)(wind_2D_hr)
         
         # normalize
         wind_2D_hr = self.normalize(wind_2D_hr, 'wind_2D_hr')
-        # wind_2D_lr = self.normalize(wind_2D_lr, 'wind_2D_lr')
         
         self.wind2D_hr = wind_2D_hr
-        # self.wind2D_lr = wind_2D_lr
         
         self.numitems = wind_2D_hr.__len__()
     #end
@@ -46,7 +42,7 @@ class W2DSimuDataset(Dataset):
     
     def __getitem__(self, idx):
         
-        return self.wind2D_hr[idx] #, self.wind2D_lr[idx]
+        return self.wind2D_hr[idx]
     #end
     
     def normalize(self, data, name):

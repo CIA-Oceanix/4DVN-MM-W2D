@@ -152,15 +152,16 @@ class Experiment:
     
     def main(self, run):
         
-        print('###################################')
+        print('##############################################################')
         print('Experiment\n')
-        print('Model name          : {}'.format(self.model_name))
-        print('Prior               : {}'.format(self.cparams.PRIOR))
-        print('Fixed point         : {}'.format(self.cparams.FIXED_POINT))
-        print('Path source         : {}'.format(self.path_checkpoint_source))
-        print('Model source        : {}'.format(self.name_source_model))
-        print('Path target         : {}'.format(self.path_checkpoint))
-        print('###################################')
+        print('Model name                 : {}'.format(self.model_name))
+        print('Prior                      : {}'.format(self.cparams.PRIOR))
+        print('Fixed point                : {}'.format(self.cparams.FIXED_POINT))
+        print('Trainable varcost params   : {}'.format(self.cparams.LEARN_VC_PARAMS))
+        print('Path source                : {}'.format(self.path_checkpoint_source))
+        print('Model source               : {}'.format(self.name_source_model))
+        print('Path target                : {}'.format(self.path_checkpoint))
+        print('##############################################################')
         
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams.BATCH_SIZE)
