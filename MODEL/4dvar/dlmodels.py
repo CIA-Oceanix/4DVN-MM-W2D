@@ -34,9 +34,12 @@ class Phi_r(nn.Module):
             self.net = nn.Sequential(
                 nn.Conv2d(ts_length, 100, (3,3), 
                           padding = 'same', padding_mode = 'reflect', bias = False),
-                # nn.ReLU(),
+                nn.BatchNorm2d(100),
+                nn.ReLU(), # ou leaky
                 nn.Conv2d(100, ts_length, (3,3), 
-                          padding = 'same', bias = False)
+                          padding = 'same', bias = False),
+                nn.BatchNorm2d(ts_length),
+                nn.LeakyReLU()
             )
         
         elif config_params.PRIOR == 'AE':
