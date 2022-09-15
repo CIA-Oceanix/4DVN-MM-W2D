@@ -77,159 +77,6 @@ class Phi_r(nn.Module):
 #end
 
 
-# class Encoder(nn.Module):
-#     def __init__(self, shape_data, config_params):
-#         super(Encoder, self).__init__()
-        
-#         # encoder
-#         self.enc_avgpool1 = nn.AvgPool2d(3)
-#         self.enc_conv1 = nn.Conv2d(48, 2 * 48, (3,3), padding = 0)
-#         self.enc_conv2 = nn.Conv2d(2 * 48, 3 * 48, (3,3), padding = 0)
-        
-#         # decoder
-#         # lr net
-#         self.dec_convt1_lr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
-#         self.dec_convt2_lr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
-#         self.dec_convt3_lr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
-        
-#         # hr net
-#         self.dec_convt1_hr = nn.ConvTranspose2d(3 * 48, 2 * 48, (3,3), padding = 3, stride = 3)
-#         self.dec_convt2_hr = nn.ConvTranspose2d(2 * 48, 48, (3,3), padding = 3, stride = 3)
-#         self.dec_convt3_hr = nn.ConvTranspose2d(48, 24, (3,3), padding = 3)
-#     #end
-    
-#     def forward(self, data):
-        
-#         # print('Data : {}'.format(data.shape))
-#         #encoder
-#         data = self.enc_avgpool1(data)
-#         latent = self.enc_conv1(data)
-#         latent = self.enc_conv2(latent)
-#         # print('latent : {}'.format(latent.shape))
-        
-#         # decoder lr
-#         reco = self.dec_convt1_lr(F.relu(latent))
-#         reco = self.dec_convt2_lr(F.relu(reco))
-#         reco_lr = self.dec_convt3_lr(F.relu(reco))
-#         # print('LR output : {}'.format(reco_lr.shape))
-        
-#         # decoder hr
-#         reco = self.dec_convt1_hr(F.relu(latent))
-#         reco = self.dec_convt2_hr(F.relu(reco))
-#         reco_hr = self.dec_convt3_hr(F.relu(reco))
-#         # print('HR output : {}'.format(reco_hr.shape))
-        
-#         reco = torch.cat((reco_lr, reco_hr), dim = 1)
-#         # print(reco.shape)
-#         return reco
-#     #end
-# #end
-
-
-# class BiLinUnit(torch.nn.Module):
-#     def __init__(self, dim_in, dim_out, dim, dw, dw2, dropout=0.):
-#         super(BiLinUnit, self).__init__()
-#         self.conv1 = torch.nn.Conv2d(dim_in, 2 * dim, (2 * dw + 1, 2 * dw + 1), padding=dw, bias=False)
-#         self.conv2 = torch.nn.Conv2d(2 * dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
-#         self.conv3 = torch.nn.Conv2d(2 * dim, dim_out, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
-#         self.bilin0 = torch.nn.Conv2d(dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
-#         self.bilin1 = torch.nn.Conv2d(dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
-#         self.bilin2 = torch.nn.Conv2d(dim, dim, (2 * dw2 + 1, 2 * dw2 + 1), padding=dw2, bias=False)
-#         self.dropout = torch.nn.Dropout(dropout)
-#     #end
-    
-#     def forward(self, xin):
-#         x = self.conv1(xin)
-#         x = self.dropout(x)
-#         x = self.conv2(F.relu(x))
-#         x = self.dropout(x)
-#         x = torch.cat((self.bilin0(x), self.bilin1(x) * self.bilin2(x)), dim=1)
-#         x = self.dropout(x)
-#         x = self.conv3(x)
-#         return x
-#     #end
-# #end
-
-# class Encoder(torch.nn.Module):
-#     def __init__(self, shape_data, config_params,
-#                   dim_inp     = 48,
-#                   dim_out     = 24,
-#                   dim_ae      = 24,
-#                   dw          = 6,
-#                   dw2         = 6,
-#                   ss          = 5,
-#                   nb_blocks   = 3,
-#                   rateDropout = 0.):
-#         super(Encoder, self).__init__()
-        
-#         self.nb_blocks = nb_blocks
-#         self.dim_ae = dim_ae
-#         self.pool1 = torch.nn.AvgPool2d(ss)
-#         print(dim_inp, dim_out, dim_ae, dw, dw2, ss, nb_blocks, rateDropout)
-#         self.conv_tr = torch.nn.ConvTranspose2d(dim_out, dim_out, (ss, ss),
-#                                                 stride = (ss, ss),
-#                                                 bias = False)
-        
-#         self.nn_lr = self.__make_BilinNN(dim_inp, dim_out, self.dim_ae, dw, dw2, self.nb_blocks, rateDropout)
-#         self.nn_hr = self.__make_BilinNN(dim_inp, dim_out, self.dim_ae, dw, dw2, self.nb_blocks, rateDropout)
-#         self.dropout = torch.nn.Dropout(rateDropout)
-#     #end
-    
-#     def __make_BilinNN(self, dim_inp, dim_out, dim_ae, dw, dw2, 
-#                         nb_blocks = 2,
-#                         dropout = 0.):
-#         layers = []
-#         layers.append(BiLinUnit(dim_inp, dim_out, dim_ae, dw, dw2, dropout))
-#         for kk in range(0, nb_blocks - 1):
-#             layers.append(BiLinUnit(dim_ae, dim_out, dim_ae, dw, dw2, dropout))
-#         return torch.nn.Sequential(*layers)
-#     #end
-    
-#     def forward(self, xinp):
-#         ## LR component
-#         x_lr = self.nn_lr(self.pool1(xinp))
-#         x_lr = self.dropout(x_lr)
-#         x_lr = self.conv_tr(x_lr)
-        
-#         # HR component
-#         x_hr = self.nn_hr(xinp)
-        
-#         # print(x_lr.shape, x_hr.shape)
-#         # return x_lr + x_hr
-#         return torch.cat((x_lr, x_hr), dim = 1)
-#     #end
-# #end
-
-
-# class Decoder(nn.Module):
-#     def __init__(self):
-#         super(Decoder, self).__init__()
-#     #end
-    
-#     def forward(self, data):
-        
-#         return torch.mul(1., data)
-#     #end
-# #end
-
-
-# class Phi_r(nn.Module):
-#     def __init__(self, shape_data, config_params):
-#         super(Phi_r, self).__init__()
-        
-#         self.encoder = Encoder(shape_data, config_params)
-#         self.decoder = Decoder()
-#     #end
-    
-#     def forward(self, data):
-        
-#         latent = self.encoder(data)
-#         reco = self.decoder(latent)
-#         return reco
-#     #end
-# #end
-
-
 class ObsModel_Mask(nn.Module):
     ''' Observation model '''
     
@@ -245,8 +92,6 @@ class ObsModel_Mask(nn.Module):
     def forward(self, x, y_obs, mask):
         
         obs_term = (x - y_obs).mul(mask)
-        # divide the observation term in three devoted chunks
-        # return (obs_term[:,:24,:,:], obs_term[:,24:48,:,:], obs_term[:,48:,:,:])
         return obs_term
     #end
 #end
@@ -342,6 +187,9 @@ class LitModel(pl.LightningModule):
         self.hparams.mgrad_wd               = config_params.SOLVER_WD
         self.hparams.prior_lr               = config_params.PHI_LR
         self.hparams.prior_wd               = config_params.PHI_WD
+        self.hparams.learn_varcost_params   = config_params.LEARN_VC_PARAMS
+        self.hparams.varcost_lr             = config_params.VARCOST_LR
+        self.hparams.varcost_wd             = config_params.VARCOST_WD
         self.hparams.dim_grad_solver        = config_params.DIM_LSTM
         self.hparams.dropout                = config_params.SOL_DROPOUT
         self.hparams.n_solver_iter          = config_params.NSOL_ITER
@@ -365,21 +213,21 @@ class LitModel(pl.LightningModule):
         alpha_reg = config_params.ALPHA_REG
         
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
-            self.Phi,                                # Prior
-            ObsModel_Mask(shape_data, dim_obs = 1),  # Observation model
-            NN_4DVar.model_GradUpdateLSTM(           # Gradient solver
-                mgrad_shapedata,                       # m_Grad : Shape data
-                False,                                 # m_Grad : Periodic BCs
-                self.hparams.dim_grad_solver,          # m_Grad : Dim LSTM
-                self.hparams.dropout,                  # m_Grad : Dropout
+            self.Phi,                                                       # Prior
+            ObsModel_Mask(shape_data, dim_obs = 1),                         # Observation model
+            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
+                mgrad_shapedata,                                              # m_Grad : Shape data
+                False,                                                        # m_Grad : Periodic BCs
+                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
+                self.hparams.dropout,                                         # m_Grad : Dropout
             ),
-            NormLoss(),                              # Norm Observation
-            NormLoss(),                              # Norm Prior
-            model_shapedata,                         # Shape data
-            self.hparams.n_solver_iter,              # Solver iterations
-            alphaObs = alpha_obs,                    # alpha observations
-            alphaReg = alpha_reg,                    # alpha regularization
-            varcost_learnable_params = True
+            NormLoss(),                                                     # Norm Observation
+            NormLoss(),                                                     # Norm Prior
+            model_shapedata,                                                # Shape data
+            self.hparams.n_solver_iter,                                     # Solver iterations
+            alphaObs = alpha_obs,                                           # alpha observations
+            alphaReg = alpha_reg,                                           # alpha regularization
+            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
         )
     #end
     
@@ -426,7 +274,7 @@ class LitModel(pl.LightningModule):
         
         del self.__samples_to_save
     #end
-        
+    
     def configure_optimizers(self):
         
         optimizers = torch.optim.Adam(
@@ -438,8 +286,8 @@ class LitModel(pl.LightningModule):
                  'lr'           : self.hparams.prior_lr,
                  'weight_decay' : self.hparams.prior_wd},
                 {'params'       : self.model.model_VarCost.parameters(),
-                 'lr'           : 1e-4,
-                 'weight_decay' : 1e-8}
+                 'lr'           : self.hparams.varcost_lr,
+                 'weight_decay' : self.hparams.varcost_wd}
             ]
         )
         return optimizers
