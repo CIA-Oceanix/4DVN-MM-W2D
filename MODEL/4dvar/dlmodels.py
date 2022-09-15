@@ -34,11 +34,9 @@ class Phi_r(nn.Module):
             self.net = nn.Sequential(
                 nn.Conv2d(ts_length, 100, (3,3), 
                           padding = 'same', padding_mode = 'reflect', bias = False),
-                # Print(),
-                # nn.ReLU(),
+                nn.ReLU(),
                 nn.Conv2d(100, ts_length, (3,3), 
                           padding = 'same', bias = False),
-                # Print()
             )
         
         elif config_params.PRIOR == 'AE':
@@ -532,7 +530,6 @@ class LitModel(pl.LightningModule):
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
             else:
-                # outputs = self.Phi(input_data)
                 outputs, hidden, cell, normgrad = self.model(input_state, input_data, mask)
             #end
         #end
