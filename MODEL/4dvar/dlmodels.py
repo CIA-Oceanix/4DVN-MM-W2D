@@ -181,6 +181,7 @@ class LitModel(pl.LightningModule):
         self.hparams.padding                = 0     # config_params.PADDING
         self.hparams.stride                 = (6,6) # tuple(config_params.STRIDE)
         self.hparams.fixed_point            = config_params.FIXED_POINT
+        self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.weight_hres            = config_params.WEIGHT_HRES
         self.hparams.weight_lres            = config_params.WEIGHT_LRES
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
@@ -317,7 +318,7 @@ class LitModel(pl.LightningModule):
     
     def get_mask(self, data_shape, mode):
         
-        if mode == 'pixel':
+        if mode == 'center':
             
             center_h, center_w = data_shape[-2] // 2, data_shape[-1] // 2
             mask = torch.zeros(data_shape)
@@ -331,6 +332,16 @@ class LitModel(pl.LightningModule):
             mask[:,:, center_h - delta_x : center_h + delta_x, 
                  center_w - delta_x : center_w + delta_x] = 1.
             
+        elif mode == 'zeroes':
+            
+            mask = torch.zeros(data_shape)
+            
+        elif mode == 'points':
+            
+            mask = torch.zeros(data_shape)
+            points_x = [4, 4, 30, 30]
+            points_y = [4, 30, 4, 30]
+            mask[:,:,points_x, points_y] = 1.
         else:
             raise ValueError('Mask mode not impletemented.')
         #end
@@ -366,7 +377,7 @@ class LitModel(pl.LightningModule):
         
         # Mask data
         mask_lr = torch.ones_like(data_lr)
-        mask_hr = torch.zeros_like(data_hr) # self.get_mask(data_hr.shape, mode = 'pixel')
+        mask_hr = self.get_mask(data_hr.shape, mode = self.hparams.hr_mask_mode)
         mask = torch.cat((mask_lr, mask_hr, torch.zeros_like(data_hr)), dim = 1)
         
         input_state = input_state * mask
