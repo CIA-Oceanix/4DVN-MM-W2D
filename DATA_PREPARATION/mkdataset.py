@@ -13,6 +13,12 @@ PATH_DATA  = os.getenv('PATH_DATA')
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', type = int, default = 1)
 parser.add_argument('-f', type = int, default = 1)
+parser.add_argument('-dinit', type = int)
+parser.add_argument('-minit', type = int)
+parser.add_argument('-yinit', type = int)
+parser.add_argument('-dend', type = int)
+parser.add_argument('-mend', type = int)
+parser.add_argument('-yend', type = int)
 args = parser.parse_args()
 
 if args.c > 1:
@@ -58,8 +64,8 @@ def size_obj(obj, unit = 'MiB'):
 # 01/01/2019 — 01/01/2021     #
 # --------------------------- #
 
-day_start, month_start, year_start = 1, 1, 2019
-day_end,   month_end,   year_end   = 1, 1, 2021
+day_start, month_start, year_start = args.dinit, args.minit, args.yinit
+day_end,   month_end,   year_end   = args.dend, args.mend, args.yend
 
 date_end   = pd.to_datetime(f'{year_end}-{month_end}-{day_end} 23:00:00', format = '%Y-%m-%d %H:%M:%S')
 date_start = pd.to_datetime(f'{year_start}-{month_start}-{day_start} 00:00:00', format = '%Y-%m-%d %H:%M:%S')
@@ -70,10 +76,10 @@ delta_days = timedelta.days
 delta_hours = np.int32(timedelta / np.timedelta64(1, 'h'))
 print('Hours since {} to {} : {}'.format(date_start, date_end, delta_hours+1))
 
-XLAT_MIN   = 289
+XLAT_MIN   = 0 #289
 XLAT_MAX   = 323
 XLAT_STEP  = 1
-XLONG_MIN  = 289
+XLONG_MIN  = 0 #289
 XLONG_MAX  = 323
 XLONG_STEP = 1
 TIME_MIN   = 0
@@ -121,32 +127,32 @@ for var in dataset.variables.values():
 DS_CREATE = args.c
 DS_FETCH  = args.f
 
-U10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
+# U10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
+# V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
 
-if np.bool_(DS_CREATE):
+# if np.bool_(DS_CREATE):
     
-    for i in tqdm(range(delta_hours + 1)):
+#     for i in tqdm(range(delta_hours + 1)):
         
-        U10[i,:,:] = dataset['U10'][i,:,:]
-        V10[i,:,:] = dataset['V10'][i,:,:]
-    #end
+#         U10[i,:,:] = dataset['U10'][i,:,:]
+#         V10[i,:,:] = dataset['V10'][i,:,:]
+#     #end
     
-    wind = np.sqrt((U10**2 + V10**2))
-    print('Scalar wind shape : ', wind.shape)
-    print('Size of scalar wind in MiB : ', size_obj(wind, unit = 'MiB'))
+#     wind = np.sqrt((U10**2 + V10**2))
+#     print('Scalar wind shape : ', wind.shape)
+#     print('Size of scalar wind in MiB : ', size_obj(wind, unit = 'MiB'))
     
-    with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'wb') as f:
-        np.save(f, wind, allow_pickle = True)
-    f.close()
-#end
+#     with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'wb') as f:
+#         np.save(f, wind, allow_pickle = True)
+#     f.close()
+# #end
 
-if np.bool_(DS_FETCH):
+# if np.bool_(DS_FETCH):
     
-    with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'rb') as f:
-        wind = np.load(f)
-    f.close()
-#end
+#     with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'rb') as f:
+#         wind = np.load(f)
+#     f.close()
+# #end
 
 lat   = np.array(lat)
 lon   = np.array(lon)
@@ -157,15 +163,74 @@ lon_max = lon.max()
 lat_min = lat.min()
 lat_max = lat.max()
 
-print(f'Longitude range [ {lon_min:.4f} : {lon_max:.4f} ] — shape : {lon.shape}')
-print(f'Latitude  range [ {lat_min:.4f} : {lat_max:.4f} ] — shape : {lat.shape}')
-print(f'Time range [ {times.min()} : {times.max()} ] — shape : {times.shape}')
-print(f'u10 , v10 shapes : {U10.shape} , {V10.shape}')
+# print(f'Longitude range [ {lon_min:.4f} : {lon_max:.4f} ] — shape : {lon.shape}')
+# print(f'Latitude  range [ {lat_min:.4f} : {lat_max:.4f} ] — shape : {lat.shape}')
+# print(f'Time range [ {times.min()} : {times.max()} ] — shape : {times.shape}')
+# print(f'u10 , v10 shapes : {U10.shape} , {V10.shape}')
 
-sizew = size_obj(wind, unit = 'KiB')
-print(f'Velocity field memory space : {sizew:.4f} KiB')
-sizew = size_obj(wind, unit = 'MiB')
-print(f'Velocity field memory space : {sizew:.4f} MiB')
+# sizew = size_obj(wind, unit = 'KiB')
+# print(f'Velocity field memory space : {sizew:.4f} KiB')
+# sizew = size_obj(wind, unit = 'MiB')
+# print(f'Velocity field memory space : {sizew:.4f} MiB')
+
+if np.bool_(DS_CREATE):
+    
+    for i in tqdm(range(delta_hours)):
+        
+        # U10[i,:,:] = dataset['U10'][i,:,:]
+        # V10[i,:,:] = dataset['V10'][i,:,:]
+        _u10 = dataset['U10'][i,:,:].data
+        _v10 = dataset['V10'][i,:,:].data
+        
+        w = np.sqrt((_u10**2 + _v10**2))
+        with open(os.path.join(PATH_DATA, 'w{}.npy'.format(i)), 'wb') as f:
+            np.save(f, w, allow_pickle = True)
+        f.close()
+    #end
+    
+    print('***FILES SAVED SUCCESS***')
+    
+    # wind = np.sqrt((u10**2 + v10**2))
+    # print('Scalar wind shape : ', wind.shape)
+    # print('Size of scalar wind in MiB : ', size_obj(wind, unit = 'MiB'))
+    
+    # with open(os.path.join(PATH_DATA, 'MABay', 'winds_24h', 'patch_modwind2D_24h.npy'), 'wb') as f:
+    #     np.save(f, wind, allow_pickle = True)
+    # f.close()
+#end
+
+if np.bool_(DS_FETCH):
+    
+    wind = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
+    # with open('./data/MABay/winds_24h/patch_modwind2D_24h.npy', 'rb') as f:
+    #     wind = np.load(f)
+    # #end
+    for i in tqdm(range(delta_hours)):
+        
+        with open(os.path.join(PATH_DATA, 'w{}.npy'.format(i)), 'rb') as f:
+            wind[i,:,:] = np.load(f)
+        f.close()
+    #end
+    
+    print('***FILES IMPORTED SUCCESS***')
+    
+    filename = f'patch_modw_{day_start:02d}{month_start:02d}{year_start}-{day_end:02d}{month_end:02d}{year_end}.npy'
+    with open(os.path.join(PATH_DATA, filename), 'wb') as f:
+        np.save(f, wind, allow_pickle = True)
+    f.close()
+    
+    print('***FILES RESAVE COMPACT SUCCESS***')
+    
+    print(f'Longitude range [ {lon_min:.4f} : {lon_max:.4f} ] — shape : {lon.shape}')
+    print(f'Latitude  range [ {lat_min:.4f} : {lat_max:.4f} ] — shape : {lat.shape}')
+    print(f'Time range [ {times.min()} : {times.max()} ] — shape : {times.shape}')
+    print(f'Wind array shape : {wind.shape}')
+
+    sizew = size_obj(wind, unit = 'KiB')
+    print(f'Velocity field memory space : {sizew:.4f} KiB')
+    sizew = size_obj(wind, unit = 'MiB')
+    print(f'Velocity field memory space : {sizew:.4f} MiB')
+#end
 
 
 width  = distance_km_from_lat_lon(lat[0,0], lat[0,-1], lon[0,0], lon[0,-1])
