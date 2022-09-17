@@ -32,11 +32,11 @@ class Phi_r(nn.Module):
             # 1 couche conv
             self.prior = 'cl'
             self.net = nn.Sequential(
-                nn.Conv2d(ts_length, 100, (3,3), 
+                nn.Conv2d(ts_length, 100, (30,30), 
                           padding = 'same', padding_mode = 'reflect', bias = False),
                 nn.BatchNorm2d(100),
                 nn.LeakyReLU(0.1),
-                nn.Conv2d(100, ts_length, (3,3), 
+                nn.Conv2d(100, ts_length, (30,30), 
                           padding = 'same', bias = False),
                 nn.BatchNorm2d(ts_length),
                 nn.LeakyReLU(0.1)
