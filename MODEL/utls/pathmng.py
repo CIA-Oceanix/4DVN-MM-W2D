@@ -118,7 +118,15 @@ class PathManager:
         #end
     #end
     
-    def save_model_output(self, outputs, cparams, train_losses, val_losses):
+    def save_model_output(self, outputs, nbatches, cparams, train_losses, val_losses):
+        
+        if nbatches is not None:
+            img_dim = outputs[0]['reco'].shape[-2:]
+            outputs = [ 
+                {'data' : outputs[0]['data'][0,:,:,:].reshape(1,-1, *tuple(img_dim)),
+                 'reco' : outputs[0]['reco'][0,:,:,:].reshape(1,-1, *tuple(img_dim))}
+            ]
+        #end
         
         with open(os.path.join(self.path_modeloutput, 'reconstructions.pkl'), 'wb') as f:
             pickle.dump(outputs, f)
