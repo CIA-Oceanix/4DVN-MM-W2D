@@ -131,16 +131,18 @@ class PathManager:
             reco_hr = reco[:,48:,:,:]
             reco = reco_lr + reco_hr
             
-            outputs = [
+            outputs_save = [
                 {
                     'data' : data[0,:,:,:].reshape(1,-1, *tuple(img_dim)),
                     'reco' : reco[0,:,:,:].reshape(1,-1, *tuple(img_dim))
                 }
             ]
+        else:
+            outputs_save = outputs
         #end
         
         with open(os.path.join(self.path_modeloutput, 'reconstructions.pkl'), 'wb') as f:
-            pickle.dump(outputs, f)
+            pickle.dump(outputs_save, f)
         f.close()
         
         with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:
