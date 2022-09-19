@@ -410,21 +410,24 @@ class LitModel(pl.LightningModule):
         reco_lr = outputs[:,:24,:,:]
         reco_hr = outputs[:,48:,:,:]
         reco = ( reco_lr + reco_hr )
-        grad_data = torch.gradient(data_hr, dim = (3,2))
-        grad_reco = torch.gradient(reco, dim = (3,2))
         
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco - data_hr), mask = None )
-        
-        loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
-        loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
-        loss_grad = loss_grad_x + loss_grad_y
-        
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        loss += loss_grad * 1e-3
         
-        regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
-        loss += regularization * 1e-2
+        if not phase == 'test':
+            grad_data = torch.gradient(data_hr, dim = (3,2))
+            grad_reco = torch.gradient(reco, dim = (3,2))
+            
+            loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
+            loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
+            loss_grad = loss_grad_x + loss_grad_y
+            
+            loss += loss_grad * 1e-3
+            
+            regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+            loss += regularization * 1e-2
+        #end
         
         return dict({'loss' : loss}), outputs
     #end
@@ -472,4 +475,95 @@ class LitModel(pl.LightningModule):
         return metrics, outs
     #end
     
+    def get_eval_metrics(self):
+        
+        data_reco = self.get_saved_samples()
+        
+        data = torch.cat([_d_r['data'] for _d_r in data_reco], dim = 1)
+        reco = torch.cat([_d_r['reco'] for _d_r in data_reco], dim = 1)
+        reco_lr = reco[:,:24,:,:]
+        reco_hr = reco[:,48:,:,:]
+        reco = reco_lr + reco_hr
+        cp_data = crop_central_patch(data, length = 10)
+        cp_reco = crop_central_patch(reco, length = 10)
+        
+        hist_data = get_batched_histograms(data, bins = 30)
+        hist_reco = get_batched_histograms(reco, bins = 30)
+        cp_hist_data = get_batched_histograms(cp_data, bins = 30)
+        cp_hist_reco = get_batched_histograms(cp_reco, bins = 30)
+        
+        mse_complete = NormLoss()((data - reco), mask = None)
+        mse_central  = NormLoss()((cp_data - cp_reco), mask = None)
+        bdist_complete = bhattacharyya_distance(hist_data, hist_reco)
+        bdist_central = bhattacharyya_distance(cp_hist_data, cp_hist_reco)
+        
+        perf_metrics_dict = {
+            'mse_central'  : mse_central.item(),
+            'mse_complete' : mse_complete.item(),
+            'bd_central'   : bdist_central.item(),
+            'bd_complete'  : bdist_complete.item()
+        }
+        return perf_metrics_dict
+    #end
+    
+#end
+
+
+# Define evaluation metrics : Bhattacharyya distance, MSE
+
+def bhattacharyya_distance(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
+    
+    if reduction_dim is None and h_target.shape.__len__() > 1:
+        reduction_dim = 1
+    elif reduction_dim is None and h_target.shape.__len__() <= 1:
+        reduction_dim = 0
+    #end
+    
+    eps = 1e-5
+    b_coefficient = torch.sum((h_target * h_output).sqrt(), dim = reduction_dim)
+    if torch.any(b_coefficient > 1) or torch.any(b_coefficient < 0):
+        raise ValueError('BC can not be > 1 or < 0')
+    #end
+    
+    b_coefficient[b_coefficient < eps] = eps
+    
+    if mode == 'log':
+        b_distance = -1. * torch.log(b_coefficient)
+    elif mode == 'trineq':
+        b_distance = torch.sqrt(1 - b_coefficient)
+    else:
+        raise NotImplementedError('Metric selected not valid. Consider setting "log" or "trineq"')
+    #end
+    
+    return b_distance.mean()
+#end
+
+def mse(target, output, divide_std = True):
+    
+    mserror = (target - output).pow(2).mean(dim = (2,3)).sum(dim = 1).mean()
+    if divide_std:
+        mserror = mserror / target.std()
+    #end
+    
+    return mserror
+#end
+
+# Crop central patch
+def crop_central_patch(img_ts, length = 10):
+    
+    center_h, center_w = img_ts[0,0].shape[-2] // 2, img_ts[0,0].shape[-1] // 2
+    cp_img = img_ts[:,:, center_h - length : center_h + length, center_w - length : center_w + length]
+    return cp_img
+#end
+
+# B-distances
+def get_batched_histograms(img_ts, bins = 30):
+    
+    img_H, img_W = img_ts[0,0].shape
+    img = img_ts.reshape(-1, img_H, img_W)
+    hist = torch.cat([torch.histc(img[i], bins = bins).unsqueeze(0) for i in range(img.shape[0])], dim = 0)
+    for i in range(hist.shape[0]):
+        hist[i] = hist[i] / hist[i].sum()
+    #end
+    return hist
 #end

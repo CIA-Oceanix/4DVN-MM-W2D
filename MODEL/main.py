@@ -212,18 +212,20 @@ class Experiment:
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
         trainer.test(lit_model, w2d_dm.test_dataloader())
         test_loss = lit_model.get_test_loss()
+        lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
-        perf_dict = {'mse' : test_loss.item()}
+        
+        perf_dict_metrics = lit_model.get_eval_metrics()
+        perf_dict_metrics.update({'mse_test' : test_loss.item()})
         
         # save reports and reconstructions in the proper target directory
-        
         self.path_manager.save_configfiles(self.cparams, 'config_params')
-        self.path_manager.save_model_output(lit_model.get_saved_samples(), 1,
-                                            self.cparams,
-                                            *lit_model.get_learning_curves())
+        # self.path_manager.save_model_output(lit_model.get_saved_samples(), 1,
+        #                                     self.cparams,
+        #                                     *lit_model.get_learning_curves())
         lit_model.remove_saved_outputs()
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
-        self.path_manager.print_evalreport(perf_dict)
+        self.path_manager.print_evalreport(perf_dict_metrics)
     #end
 #end
 
