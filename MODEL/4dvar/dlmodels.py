@@ -479,8 +479,8 @@ class LitModel(pl.LightningModule):
         
         data_reco = self.get_saved_samples()
         
-        data = torch.cat([_d_r['data'] for _d_r in data_reco], dim = 1)
-        reco = torch.cat([_d_r['reco'] for _d_r in data_reco], dim = 1)
+        data = torch.cat([_d_r['data'] for _d_r in data_reco], dim = 0)
+        reco = torch.cat([_d_r['reco'] for _d_r in data_reco], dim = 0)
         reco_lr = reco[:,:24,:,:]
         reco_hr = reco[:,48:,:,:]
         reco = reco_lr + reco_hr
