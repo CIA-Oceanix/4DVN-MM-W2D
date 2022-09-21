@@ -166,7 +166,7 @@ class Experiment:
     
     def main(self, run):
         
-        start_time = datetime.now()
+        start_time = datetime.datetime.now()
         print('\nRun start at {}\n'.format(start_time))
         
         # DATAMODULE : initialize
@@ -234,7 +234,7 @@ class Experiment:
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
         self.path_manager.print_evalreport(perf_dict_metrics)
         
-        end_time = datetime.now()
+        end_time = datetime.datetime.now()
         print('\nRun end at {}\n'.format(end_time))
         print('\nRun time = {}'.format(end_time - start_time))
     #end
