@@ -120,16 +120,16 @@ class PathManager:
     
     def save_model_output(self, outputs, cparams, train_losses, val_losses,
                           save_only_one_batch = True):
+                    
+        img_dim = outputs[0]['reco'].shape[-2:]
+        data = torch.cat([item['data'] for item in outputs], dim = 0)
+        reco = torch.cat([item['reco'] for item in outputs], dim = 0)
+        
+        reco_lr = reco[:,:24,:,:]
+        reco_hr = reco[:,48:,:,:]
+        reco = reco_lr + reco_hr
         
         if save_only_one_batch:
-            
-            img_dim = outputs[0]['reco'].shape[-2:]
-            data = torch.cat([item['data'] for item in outputs], dim = 0)
-            reco = torch.cat([item['reco'] for item in outputs], dim = 0)
-            
-            reco_lr = reco[:,:24,:,:]
-            reco_hr = reco[:,48:,:,:]
-            reco = reco_lr + reco_hr
             
             outputs_save = [
                 {
@@ -138,11 +138,16 @@ class PathManager:
                 }
             ]
         else:
-            outputs_save = outputs
+            outputs_save = [
+                {
+                    'data' : data,
+                    'reco' : reco
+                }
+            ]
         #end
         
         with open(os.path.join(self.path_modeloutput, 'reconstructions.pkl'), 'wb') as f:
-            pickle.dump(outputs_save, f)
+            torch.save(outputs_save, f)
         f.close()
         
         with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:
