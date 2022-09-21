@@ -86,7 +86,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     def setup(self):
         
         wind_2D_hr = np.load(open(os.path.join(self.path_data, 
-                                  'patch_modw_01012019-31122019.npy'), 'rb'))
+                                  'patch_modwind2D_24h.npy'), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
         wind_2D_hr = wind_2D_hr.reshape(-1, 24, shape[0], shape[1])
