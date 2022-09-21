@@ -5,6 +5,7 @@ sys.path.append(os.path.join(os.getcwd(), 'utls'))
 sys.path.append(os.path.join(os.getcwd(), '4dvar'))
 
 from dotenv import load_dotenv
+import datetime
 import glob
 import json
 import argparse
@@ -134,6 +135,19 @@ class Experiment:
         self.path_manager = path_manager
         self.path_checkpoint = path_manager.get_path('ckpt')
         
+        # Print experiment details
+        print('##############################################################')
+        print('Experiment\n')
+        print('Model name                 : {}'.format(self.model_name))
+        print('Prior                      : {}'.format(self.cparams.PRIOR))
+        print('Fixed point                : {}'.format(self.cparams.FIXED_POINT))
+        print('Trainable varcost params   : {}'.format(self.cparams.LEARN_VC_PARAMS))
+        print('Masking mode               : {}'.format(self.cparams.HR_MASK_MODE))
+        print('Path source                : {}'.format(self.path_checkpoint_source))
+        print('Model source               : {}'.format(self.name_source_model))
+        print('Path target                : {}'.format(self.path_checkpoint))
+        print('##############################################################')
+        
         if self.versioning:
             
             # grid search for optimal hyper-params
@@ -152,17 +166,8 @@ class Experiment:
     
     def main(self, run):
         
-        print('##############################################################')
-        print('Experiment\n')
-        print('Model name                 : {}'.format(self.model_name))
-        print('Prior                      : {}'.format(self.cparams.PRIOR))
-        print('Fixed point                : {}'.format(self.cparams.FIXED_POINT))
-        print('Trainable varcost params   : {}'.format(self.cparams.LEARN_VC_PARAMS))
-        print('Masking mode               : {}'.format(self.cparams.HR_MASK_MODE))
-        print('Path source                : {}'.format(self.path_checkpoint_source))
-        print('Model source               : {}'.format(self.name_source_model))
-        print('Path target                : {}'.format(self.path_checkpoint))
-        print('##############################################################')
+        start_time = datetime.now()
+        print('\nRun start at {}\n'.format(start_time))
         
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams.BATCH_SIZE)
@@ -228,6 +233,10 @@ class Experiment:
         lit_model.remove_saved_outputs()
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
         self.path_manager.print_evalreport(perf_dict_metrics)
+        
+        end_time = datetime.now()
+        print('\nRun end at {}\n'.format(end_time))
+        print('\nRun time = {}'.format(end_time - start_time))
     #end
 #end
 
