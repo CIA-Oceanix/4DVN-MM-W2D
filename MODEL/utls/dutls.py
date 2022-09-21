@@ -104,17 +104,20 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
-        print('TRAIN:', self.train_dataset.wind2D_hr.device)
-        return DataLoader(self.train_dataset, batch_size = self.batch_size, shuffle = True)
+        self.train_dataset.wind2D_hr.to(DEVICE)
+        print('TRAIN DATASET DEVICE:', self.train_dataset.wind2D_hr.device)
+        return DataLoader(self.train_dataset, batch_size = self.batch_size)
     #end
     
     def val_dataloader(self):
-        print('VAL:', self.val_dataset.wind2D_hr.device)
+        self.val_dataset.wind2D_hr.to(DEVICE)
+        print('VAL DATASET DEVICE:', self.val_dataset.wind2D_hr.device)
         return DataLoader(self.val_dataset, batch_size = self.batch_size, shuffle = False)
     #end
     
     def test_dataloader(self):
-        print('TEST: ', self.wind2D_hr.device)
+        self.test_dataset.wind2D_hr.to(DEVICE)
+        print('TEST DATASET DEVICE: ', self.wind2D_hr.device)
         return DataLoader(self.test_dataset, batch_size = self.batch_size, shuffle = False)
     #end
 #end
