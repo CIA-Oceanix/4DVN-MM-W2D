@@ -68,7 +68,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def __init__(self, path_data, batch_size, 
                  ttsplit = 0.33, 
-                 tvsplit = 0.4,
+                 tvsplit = 0.5,
                  normalize = True):
         super(W2DSimuDataModule, self).__init__()
         
