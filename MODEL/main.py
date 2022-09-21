@@ -210,6 +210,7 @@ class Experiment:
         
         ## Test
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
+        lit_model.eval()
         trainer.test(lit_model, w2d_dm.test_dataloader())
         test_loss = lit_model.get_test_loss()
         lit_model.get_test_loss()
@@ -222,7 +223,8 @@ class Experiment:
         self.path_manager.save_configfiles(self.cparams, 'config_params')
         self.path_manager.save_model_output(lit_model.get_saved_samples(),
                                             self.cparams,
-                                            *lit_model.get_learning_curves())
+                                            *lit_model.get_learning_curves(),
+                                            save_only_one_batch = False)
         lit_model.remove_saved_outputs()
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
         self.path_manager.print_evalreport(perf_dict_metrics)

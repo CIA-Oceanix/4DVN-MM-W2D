@@ -18,7 +18,7 @@ else:
 
 class W2DSimuDataset(Dataset):
     
-    def __init__(self, data, lr_factor, normalize):
+    def __init__(self, data, normalize):
         
         # normalization parameters, used to normalize and denormalize data
         self.pparams = dict()
@@ -68,8 +68,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def __init__(self, path_data, batch_size, 
                  ttsplit = 0.33, 
-                 tvsplit = 0.15,
-                 lr_factor = 6, 
+                 tvsplit = 0.4,
                  normalize = True):
         super(W2DSimuDataModule, self).__init__()
         
@@ -77,7 +76,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.ttsplit    = ttsplit
         self.tvsplit    = tvsplit
-        self.lr_factor  = lr_factor
         self.normalize  = normalize
         
         self.setup()
@@ -112,7 +110,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size = self.batch_size)
+        return DataLoader(self.train_dataset, batch_size = self.batch_size, shuffle = True)
     #end
     
     def val_dataloader(self):
