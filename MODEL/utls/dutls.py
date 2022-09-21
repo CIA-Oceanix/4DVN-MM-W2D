@@ -98,15 +98,9 @@ class W2DSimuDataModule(pl.LightningDataModule):
         val_set   = wind_2D_hr[n_train : n_train + n_val, :, :]
         test_set  = wind_2D_hr[n_train + n_val : n_train + n_val + n_test, :, :]
         
-        self.train_dataset = W2DSimuDataset(train_set,
-                                            lr_factor = self.lr_factor, 
-                                            normalize = self.normalize)
-        self.val_dataset = W2DSimuDataset(val_set,
-                                          lr_factor = self.lr_factor, 
-                                          normalize = self.normalize)
-        self.test_dataset = W2DSimuDataset(test_set,
-                                           lr_factor = self.lr_factor, 
-                                           normalize = self.normalize)
+        self.train_dataset = W2DSimuDataset(train_set, normalize = self.normalize)
+        self.val_dataset = W2DSimuDataset(val_set, normalize = self.normalize)
+        self.test_dataset = W2DSimuDataset(test_set, normalize = self.normalize)
     #end
     
     def train_dataloader(self):
