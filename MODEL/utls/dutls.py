@@ -105,7 +105,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def train_dataloader(self):
         print('TRAIN:', self.train_dataset.wind2D_hr.device)
-        return DataLoader(self.train_dataset, batch_size = self.batch_size)
+        return DataLoader(self.train_dataset, batch_size = self.batch_size, shuffle = True)
     #end
     
     def val_dataloader(self):
