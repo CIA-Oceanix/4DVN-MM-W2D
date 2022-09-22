@@ -75,8 +75,18 @@ class W2DSimuDataModule:
         self.tvsplit    = cparams.TR_VA_SPLIT
         self.normalize  = normalize
         self.data_name  = cparams.DATASET_NAME
+        self.shapeData  = None
         
         self.setup()
+    #end
+    
+    def get_shapeData(self):
+        
+        if self.shapeData is not None:
+            return self.shapeData
+        else:
+            raise ValueError('Shape data is None, likely not initialized instance')
+        #end
     #end
     
     def setup(self):
@@ -84,7 +94,8 @@ class W2DSimuDataModule:
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
-        wind_2D_hr = wind_2D_hr.reshape(-1, 24, shape[0], shape[1])
+        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))
+        self.shapeData = (self.batch_size, 24, *tuple(shape))
         
         n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)
         n_train = np.int32(wind_2D_hr.__len__() - n_test)

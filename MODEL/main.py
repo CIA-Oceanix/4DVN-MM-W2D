@@ -175,7 +175,8 @@ class Experiment:
         # MODELS : initialize and configure
         ## Obtain shape data
         # batch_size, ts_length, height, width
-        shape_data = tuple( next(iter(w2d_dm.train_dataloader())).shape )
+        # shape_data = tuple( next(iter(w2d_dm.train_dataloader())).shape )
+        shape_data = w2d_dm.get_shapeData()
         
         ## Instantiate dynamical prior and lit model
         Phi = Phi_r(shape_data, self.cparams)
