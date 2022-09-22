@@ -24,8 +24,8 @@ class W2DSimuDataset(Dataset):
         self.pparams = dict()
         
         # load data, convert to torch.Tensor
-        wind_2D_hr = data
-        wind_2D_hr = torch.Tensor(wind_2D_hr).type(torch.float32).to(DEVICE)
+        # wind_2D_hr = data
+        wind_2D_hr = torch.Tensor(data).type(torch.float32).to(DEVICE)
         
         # normalize
         wind_2D_hr = self.normalize(wind_2D_hr, 'wind_2D_hr')
@@ -111,22 +111,28 @@ class W2DSimuDataModule:
         print('Test  dataset shape : ', test_set.shape)
         
         self.train_dataset = W2DSimuDataset(train_set, normalize = self.normalize)
-        self.val_dataset = W2DSimuDataset(val_set, normalize = self.normalize)
-        self.test_dataset = W2DSimuDataset(test_set, normalize = self.normalize)
+        self.val_dataset   = W2DSimuDataset(val_set, normalize = self.normalize)
+        self.test_dataset  = W2DSimuDataset(test_set, normalize = self.normalize)
     #end
     
     def train_dataloader(self):
-        self.train_dataset.wind2D_hr.to(DEVICE)
-        return DataLoader(self.train_dataset, batch_size = self.batch_size, shuffle = True)
+        return DataLoader(self.train_dataset,
+                          batch_size = self.batch_size,
+                          generator = torch.Generator(device = DEVICE),
+                          shuffle = True)
     #end
     
     def val_dataloader(self):
-        self.val_dataset.wind2D_hr.to(DEVICE)
-        return DataLoader(self.val_dataset, batch_size = self.batch_size, shuffle = False)
+        return DataLoader(self.val_dataset,
+                          batch_size = self.batch_size,
+                          generator = torch.Generator(device = DEVICE),
+                          shuffle = False)
     #end
     
     def test_dataloader(self):
-        self.test_dataset.wind2D_hr.to(DEVICE)
-        return DataLoader(self.test_dataset, batch_size = self.batch_size, shuffle = False)
+        return DataLoader(self.test_dataset,
+                          batch_size = self.batch_size,
+                          generator = torch.Generator(device = DEVICE),
+                          shuffle = False)
     #end
 #end
