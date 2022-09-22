@@ -64,7 +64,7 @@ class W2DSimuDataset(Dataset):
 #end
 
 
-class W2DSimuDataModule:
+class W2DSimuDataModule(pl.LightningDataModule):
     
     def __init__(self, path_data, cparams, normalize = True):
         super(W2DSimuDataModule, self).__init__()
