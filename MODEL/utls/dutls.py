@@ -64,27 +64,24 @@ class W2DSimuDataset(Dataset):
 #end
 
 
-class W2DSimuDataModule(pl.LightningDataModule):
+class W2DSimuDataModule:
     
-    def __init__(self, path_data, batch_size, 
-                 ttsplit = 0.33, 
-                 tvsplit = 0.5,
-                 normalize = True):
+    def __init__(self, path_data, cparams, normalize = True):
         super(W2DSimuDataModule, self).__init__()
         
         self.path_data  = path_data
-        self.batch_size = batch_size
-        self.ttsplit    = ttsplit
-        self.tvsplit    = tvsplit
+        self.batch_size = cparams.BATCH_SIZE
+        self.ttsplit    = cparams.TR_TE_SPLIT
+        self.tvsplit    = cparams.TR_VA_SPLIT
         self.normalize  = normalize
+        self.data_name  = cparams.DATASET_NAME
         
         self.setup()
     #end
     
     def setup(self):
         
-        wind_2D_hr = np.load(open(os.path.join(self.path_data, 
-                                  'patch_modw_01012019-01012021.npy'), 'rb'))
+        wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
         wind_2D_hr = wind_2D_hr.reshape(-1, 24, shape[0], shape[1])
@@ -109,7 +106,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def train_dataloader(self):
         self.train_dataset.wind2D_hr.to(DEVICE)
-        return DataLoader(self.train_dataset, batch_size = self.batch_size)
+        return DataLoader(self.train_dataset, batch_size = self.batch_size, shuffle = True)
     #end
     
     def val_dataloader(self):

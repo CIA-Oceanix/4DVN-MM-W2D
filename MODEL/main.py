@@ -57,7 +57,7 @@ class Experiment:
     
     def get_model(self):
         
-        model_name = self.cparams.VNAME
+        model_name = f'{self.cparams.VNAME}-{self.cparams.HR_MASK_MODE}'
         
         if self.cparams.GS_TRAIN and not self.versioning:
             
@@ -170,7 +170,7 @@ class Experiment:
         print('\nRun start at {}\n'.format(start_time))
         
         # DATAMODULE : initialize
-        w2d_dm = W2DSimuDataModule(self.path_data, self.cparams.BATCH_SIZE)
+        w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
         
         # MODELS : initialize and configure
         ## Obtain shape data
@@ -228,8 +228,7 @@ class Experiment:
         self.path_manager.save_configfiles(self.cparams, 'config_params')
         self.path_manager.save_model_output(lit_model.get_saved_samples(),
                                             self.cparams,
-                                            *lit_model.get_learning_curves(),
-                                            save_only_one_batch = False)
+                                            *lit_model.get_learning_curves())
         lit_model.remove_saved_outputs()
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
         self.path_manager.print_evalreport(perf_dict_metrics)

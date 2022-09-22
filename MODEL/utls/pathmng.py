@@ -118,8 +118,7 @@ class PathManager:
         #end
     #end
     
-    def save_model_output(self, outputs, cparams, train_losses, val_losses,
-                          save_only_one_batch = True):
+    def save_model_output(self, outputs, cparams, train_losses, val_losses):
                     
         img_dim = outputs[0]['reco'].shape[-2:]
         data = torch.cat([item['data'] for item in outputs], dim = 0)
@@ -129,7 +128,7 @@ class PathManager:
         reco_hr = reco[:,48:,:,:]
         reco = reco_lr + reco_hr
         
-        if save_only_one_batch:
+        if cparams.SAVE1TESTBATCH:
             
             outputs_save = [
                 {
