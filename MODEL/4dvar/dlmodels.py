@@ -485,7 +485,10 @@ class LitModel(pl.LightningModule):
         loss_hr = self.loss_fn( (reco - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
-        # if not phase == 'test':
+        if not phase == 'test':
+            print(data_hr.shape)
+        #end
+        
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco, dim = (3,2))
         
