@@ -21,9 +21,10 @@ from dutls import W2DSimuDataModule
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    print('Try to free CUDA cache')
     torch.cuda.empty_cache()
     gpus = -1
-    print('Program runs using device : {}'.format(DEVICE))
+    print('Program runs using device : {}\n'.format(DEVICE))
 else:
     DEVICE = torch.device('cpu')
     gpus = 0
@@ -222,7 +223,6 @@ class Experiment:
         lit_model.eval()
         trainer.test(lit_model, w2d_dm.test_dataloader())
         test_loss = lit_model.get_test_loss()
-        lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
         
         perf_dict_metrics = lit_model.get_eval_metrics()
