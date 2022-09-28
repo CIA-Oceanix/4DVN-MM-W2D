@@ -23,9 +23,11 @@ if torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.cuda.empty_cache()
     gpus = -1
+    print('Program runs using device : {}'.format(DEVICE))
 else:
     DEVICE = torch.device('cpu')
     gpus = 0
+    print('Program runs using device : {}'.format(DEVICE))
 #end
 
 class Experiment:
