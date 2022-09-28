@@ -18,11 +18,81 @@ class Print(nn.Module):
     #end
 #end
 
+
+class dw_conv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, stride, groups, bias):
+        super(dw_conv2d, self).__init__()
+        
+        self.conv_depthwise = nn.Conv2d(in_channels, in_channels,
+                                        kernel_size = kernel_size,
+                                        padding = padding,
+                                        stride = stride,
+                                        groups = in_channels,
+                                        bias = False)
+        self.conv_pointwise = nn.Conv2d(in_channels, out_channels,
+                                        kernel_size = 1,
+                                        bias = False)
+    #end
+    
+    def forward(self, data):
+        
+        spatial_out = self.conv_depthwise(data)
+        output = self.conv_pointwise(spatial_out)
+        return output
+    #end
+#end
+
+
+class RBlock(nn.Module):
+    def __init__(self):
+        super(RBlock, self).__init__()
+        
+        self.block = nn.Sequential(
+            # nn.Conv2d(24, 24, (3,3), padding = 1, stride = 1, bias = False),
+            dw_conv2d(72, 100, (3,3), padding = 1, stride = 1, groups = 72, bias = False),
+            nn.BatchNorm2d(100),
+            nn.LeakyReLU(0.1),
+            
+            # nn.Conv2d(24, 24, (3,3), padding = 1, stride = 1, bias = False),
+            dw_conv2d(100, 72, (3,3), padding = 1, stride = 1, groups = 100, bias = False),
+            nn.BatchNorm2d(72),
+            nn.LeakyReLU(0.1)
+        )
+        
+        self.shortcut = nn.Identity()
+    #end
+    
+    def forward(self, data):
+        
+        out = self.block(data)
+        out = out.add(self.shortcut(data))
+        return out
+    #end
+#end
+
+
 class Phi_r(nn.Module):
+    def __init__(self, shape_data, config_params):
+        super(Phi_r, self).__init__()
+        
+        self.rnet = nn.Sequential(
+            RBlock(),
+            RBlock()
+        )
+    #end
+    
+    def forward(self, data):
+        
+        return self.rnet(data)
+    #end
+#end
+
+
+class Phi(nn.Module):
     ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
-        super(Phi_r, self).__init__()
+        super(Phi, self).__init__()
         	
         ts_length = shape_data[1] * 3
         img_H, img_W = shape_data[-2:]
