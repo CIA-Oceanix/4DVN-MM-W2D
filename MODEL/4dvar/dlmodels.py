@@ -48,13 +48,13 @@ class RBlock(nn.Module):
         super(RBlock, self).__init__()
         
         self.block = nn.Sequential(
-            # nn.Conv2d(24, 24, (3,3), padding = 1, stride = 1, bias = False),
-            dw_conv2d(72, 100, (3,3), padding = 1, stride = 1, groups = 72, bias = False),
+            nn.Conv2d(72, 100, (3,3), padding = 1, stride = 1, bias = False),
+            # dw_conv2d(72, 100, (3,3), padding = 1, stride = 1, groups = 72, bias = False),
             nn.BatchNorm2d(100),
             nn.LeakyReLU(0.1),
             
-            # nn.Conv2d(24, 24, (3,3), padding = 1, stride = 1, bias = False),
-            dw_conv2d(100, 72, (3,3), padding = 1, stride = 1, groups = 100, bias = False),
+            nn.Conv2d(100, 72, (3,3), padding = 1, stride = 1, bias = False),
+            # dw_conv2d(100, 72, (3,3), padding = 1, stride = 1, groups = 100, bias = False),
             nn.BatchNorm2d(72),
             nn.LeakyReLU(0.1)
         )
