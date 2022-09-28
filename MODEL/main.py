@@ -182,8 +182,8 @@ class Experiment:
         shape_data = w2d_dm.get_shapeData()
         
         ## Instantiate dynamical prior and lit model
-        Phi = Phi_r(shape_data, self.cparams)
-        lit_model = LitModel(Phi, shape_data, self.cparams)
+        Phi = Phi_r(shape_data, self.cparams).to(DEVICE)
+        lit_model = LitModel(Phi, shape_data, self.cparams).to(DEVICE)
         
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')
