@@ -21,6 +21,7 @@ from dutls import W2DSimuDataModule
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.cuda.empty_cache()
     gpus = -1
 else:
     DEVICE = torch.device('cpu')
