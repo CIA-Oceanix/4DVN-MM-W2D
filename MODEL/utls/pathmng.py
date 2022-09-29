@@ -124,9 +124,9 @@ class PathManager:
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
         
-        reco_lr = reco[:,:24,:,:]
-        reco_hr = reco[:,48:,:,:]
-        reco = reco_lr + reco_hr
+        # reco_lr = reco[:,:24,:,:]
+        # reco_hr = reco[:,48:,:,:]
+        # reco = reco_lr + reco_hr
         
         if cparams.SAVE1TESTBATCH:
             

@@ -18,45 +18,15 @@ class Print(nn.Module):
     #end
 #end
 
-
-class dw_conv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, padding, stride, groups, bias):
-        super(dw_conv2d, self).__init__()
-        
-        self.conv_depthwise = nn.Conv2d(in_channels, in_channels,
-                                        kernel_size = kernel_size,
-                                        padding = padding,
-                                        stride = stride,
-                                        groups = in_channels,
-                                        bias = False)
-        self.conv_pointwise = nn.Conv2d(in_channels, out_channels,
-                                        kernel_size = 1,
-                                        bias = False)
-    #end
-    
-    def forward(self, data):
-        
-        spatial_out = self.conv_depthwise(data)
-        output = self.conv_pointwise(spatial_out)
-        return output
-    #end
-#end
-
-
 class RBlock(nn.Module):
     def __init__(self):
         super(RBlock, self).__init__()
         
         self.block = nn.Sequential(
             nn.Conv2d(72, 100, (3,3), padding = 1, stride = 1, bias = False),
-            # dw_conv2d(72, 100, (3,3), padding = 1, stride = 1, groups = 72, bias = False),
             nn.BatchNorm2d(100),
             nn.LeakyReLU(0.1),
-            
             nn.Conv2d(100, 72, (3,3), padding = 1, stride = 1, bias = False),
-            # dw_conv2d(100, 72, (3,3), padding = 1, stride = 1, groups = 100, bias = False),
-            nn.BatchNorm2d(72),
-            nn.LeakyReLU(0.1)
         )
         
         self.shortcut = nn.Identity()
@@ -71,7 +41,7 @@ class RBlock(nn.Module):
 #end
 
 
-class Phi_r(nn.Module):
+class Phi(nn.Module):
     def __init__(self, shape_data, config_params):
         super(Phi_r, self).__init__()
         
@@ -88,64 +58,30 @@ class Phi_r(nn.Module):
 #end
 
 
-class Phi(nn.Module):
+class Phi_r(nn.Module):
     ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
-        super(Phi, self).__init__()
+        super(Phi_r, self).__init__()
         	
         ts_length = shape_data[1] * 3
         img_H, img_W = shape_data[-2:]
         
-        if config_params.PRIOR == 'CL':
-            
-            # 1 couche conv
-            self.prior = 'cl'
-            self.net = nn.Sequential(
-                nn.Conv2d(ts_length, 100, (3,3),#(15,15), 
-                          padding = 'same', padding_mode = 'reflect', bias = False),
-                nn.BatchNorm2d(100),
-                nn.LeakyReLU(0.1),
-                nn.Conv2d(100, ts_length, (3,3), #(15,15), 
-                          padding = 'same', bias = False),
-                nn.BatchNorm2d(ts_length),
-                nn.LeakyReLU(0.1)
+        self.net = nn.Sequential(
+            nn.Conv2d(ts_length, 100, (3,3),
+                      padding = 'same', padding_mode = 'reflect', bias = False),
+            nn.BatchNorm2d(100),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(100, ts_length, (3,3),
+                      padding = 'same', bias = False
             )
-        
-        elif config_params.PRIOR == 'AE':
-            
-            # Conv2D-AE
-            self.prior = 'ae'
-            self.encoder = nn.Sequential(
-                nn.AvgPool2d(3),
-                nn.Conv2d(ts_length, 72, (3,3), padding = 'same'),
-                nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU()
-            )
-            self.decoder = nn.Sequential(
-                nn.ConvTranspose2d(72, ts_length, (3,3), padding = 0)#,
-                # nn.Dropout(config_params.PHI_DROPOUT), nn.ReLU(),
-            )
-        
-        else:
-            
-            raise NotImplementedError('No valid prior chosen')
-        #end
+        )
     #end
     
     def forward(self, data):
         
-        if self.prior == 'cl':
-            reco = self.net(data)
-            return reco
-        
-        elif self.prior == 'ae':
-            latent = self.encoder(data)
-            reco = self.decoder(latent)
-            return reco
-            
-        else:
-            raise NotImplementedError('No valid prior chosen')
-        #end
+        reco = self.net(data)
+        return reco
     #end
 #end
 
@@ -250,9 +186,9 @@ class LitModel(pl.LightningModule):
         self.loss_fn = NormLoss()
         
         # Hyper-parameters, learning and workflow
-        self.hparams.kernel_size            = (6,6) # tuple(config_params.KERNEL_SIZE)
-        self.hparams.padding                = 0     # config_params.PADDING
-        self.hparams.stride                 = (6,6) # tuple(config_params.STRIDE)
+        self.hparams.lr_kernel_size         = 31
+        self.hparams.lr_padding             = 0
+        self.hparams.lr_stride              = 1
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.weight_hres            = config_params.WEIGHT_HRES
@@ -370,11 +306,11 @@ class LitModel(pl.LightningModule):
     def avgpool2d_keepsize(self, data):
         
         img_size = data.shape[-2:]
-        pooled = F.avg_pool2d(data, kernel_size = self.hparams.kernel_size,
-                              padding = self.hparams.padding, 
-                              stride  = self.hparams.stride)
-        pooled  = F.interpolate(pooled, size = tuple(img_size),
-                                mode = 'bicubic', align_corners = False)
+        pooled = F.avg_pool2d(data, 
+                              kernel_size = self.hparams.lr_kernel_size,
+                              padding = self.hparams.lr_padding, 
+                              stride = self.hparams.lr_stride)
+        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic')
         
         if not data.shape == pooled.shape:
             raise ValueError('Original and Pooled_keepsize data shapes mismatch')
@@ -440,7 +376,7 @@ class LitModel(pl.LightningModule):
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
         input_data = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
-        
+                
         # Prepare input state initialized
         if init_state is None:
             input_state = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
@@ -461,34 +397,36 @@ class LitModel(pl.LightningModule):
             
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
+                reco_lr = data_lr.clone()
+                reco_hr = outputs[:,48:,:,:]
+                reco = data_lr + reco_hr
             else:
                 outputs, hidden, cell, normgrad = self.model(input_state, input_data, mask)
+                reco_lr = outputs[:,:24,:,:]
+                reco_hr = outputs[:,48:,:,:]
+                reco = reco_lr + reco_hr
             #end
         #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data.detach().cpu(), 
-                               'reco' : outputs.detach().cpu()})
+                               'reco' : reco.detach().cpu()})
         #end
         
         # mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
         
         # Return loss, computed as reconstruction loss
-        ''' NOTE : loss function is NormLoss but in these data 
-            there are no missing values!!! '''
-        reco_lr = outputs[:,:24,:,:]
-        reco_hr = outputs[:,48:,:,:]
-        reco = ( reco_lr + reco_hr )
+        # ''' NOTE : loss function is NormLoss but in these data 
+        #     there are no missing values!!! '''
+        # reco_lr = outputs[:,:24,:,:]
+        # reco_hr = outputs[:,48:,:,:]
+        # reco = ( reco_lr + reco_hr )
         
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        
-        if phase == 'test':
-            print(data_hr.shape)
-        #end
-        
+                
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco, dim = (3,2))
         
@@ -554,9 +492,9 @@ class LitModel(pl.LightningModule):
         
         data = torch.cat([item['data'] for item in data_reco], dim = 0)
         reco = torch.cat([item['reco'] for item in data_reco], dim = 0)
-        reco_lr = reco[:,:24,:,:]
-        reco_hr = reco[:,48:,:,:]
-        reco = reco_lr + reco_hr
+        # reco_lr = reco[:,:24,:,:]
+        # reco_hr = reco[:,48:,:,:]
+        # reco = reco_lr + reco_hr
         cp_data = crop_central_patch(data, length = 10)
         cp_reco = crop_central_patch(reco, length = 10)
         
