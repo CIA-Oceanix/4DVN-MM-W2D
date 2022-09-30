@@ -29,10 +29,10 @@ class W2DSimuDataset(Dataset):
         # print('device check in init: ', wind_2D_hr.device)
         
         # normalize
-        wind_2D_hr = self.normalize(data, 'wind_2D_hr')
-        self.wind2D_hr = wind_2D_hr
+        wind2D_hr = self.normalize(data, 'wind_2D_hr')
+        self.wind2D_hr = wind2D_hr
         
-        self.numitems = wind_2D_hr.__len__()
+        self.numitems = wind2D_hr.__len__()
         self.to_tensor()
     #end
     
@@ -125,25 +125,25 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def train_dataloader(self):
         return DataLoader(self.train_dataset,
-                          batch_size = self.batch_size,
-                           generator = torch.Generator(device = DEVICE),
+                          batch_size = self.batch_size)#,
+                           # generator = torch.Generator(device = DEVICE),
                           # shuffle = True,
-                          num_workers = WORKERS)
+                          # num_workers = WORKERS)
     #end
     
     def val_dataloader(self):
         return DataLoader(self.val_dataset,
-                          batch_size = self.batch_size,
-                           generator = torch.Generator(device = DEVICE),
+                          batch_size = self.batch_size)#,
+                           # generator = torch.Generator(device = DEVICE),
                           # shuffle = False,
-                          num_workers = WORKERS)
+                          # num_workers = WORKERS)
     #end
     
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
-                          batch_size = self.batch_size,
-                           generator = torch.Generator(device = DEVICE),
+                          batch_size = self.batch_size)#,
+                           # generator = torch.Generator(device = DEVICE),
                           # shuffle = False,
-                          num_workers = WORKERS)
+                          # num_workers = WORKERS)
     #end
 #end
