@@ -60,7 +60,7 @@ class W2DSimuDataset(Dataset):
     
     def to_tensor(self):
         
-        self.wind2D_hr = torch.Tensor(self.wind2D_hr).type(torch.float32).to(DEVICE)
+        self.wind2D_hr = torch.Tensor(self.wind2D_hr).type(torch.float16).to(DEVICE)
     #end
 #end
 
@@ -120,20 +120,23 @@ class W2DSimuDataModule(pl.LightningDataModule):
         return DataLoader(self.train_dataset,
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
-                          shuffle = True)
+                          shuffle = True,
+                          num_workers = WORKERS, pin_memory = True)
     #end
     
     def val_dataloader(self):
         return DataLoader(self.val_dataset,
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
-                          shuffle = False)
+                          shuffle = False,
+                          num_workers = WORKERS, pin_memory = True)
     #end
     
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
-                          shuffle = False)
+                          shuffle = False,
+                          num_workers = WORKERS, pin_memory = True)
     #end
 #end
