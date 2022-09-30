@@ -68,11 +68,11 @@ class Phi_r(nn.Module):
         img_H, img_W = shape_data[-2:]
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 100, (3,3),
+            nn.Conv2d(ts_length, 20, (3,3),
                       padding = 'same', padding_mode = 'reflect', bias = False),
-            nn.BatchNorm2d(100),
+            nn.BatchNorm2d(20),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(100, ts_length, (3,3),
+            nn.Conv2d(20, ts_length, (3,3),
                       padding = 'same', bias = False
             )
         )
