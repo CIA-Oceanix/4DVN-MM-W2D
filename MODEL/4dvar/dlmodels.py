@@ -6,6 +6,13 @@ from torch.nn import functional as F
 import pytorch_lightning as pl
 import solver as NN_4DVar
 
+if torch.cuda.is_available():
+    DEVICE = torch.device('cuda')
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+else:
+    DEVICE = torch.device('cpu')
+#end
+
 
 class Print(nn.Module):
     def __init__(self):
@@ -373,7 +380,7 @@ class LitModel(pl.LightningModule):
     def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
         # Prepare input data
-        data_hr = data.clone()
+        data_hr = data.clone().to(DEVICE)
         data_lr = self.avgpool2d_keepsize(data_hr)
         input_data = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
                 
