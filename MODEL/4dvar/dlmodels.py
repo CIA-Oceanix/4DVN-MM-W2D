@@ -30,10 +30,10 @@ class RBlock(nn.Module):
         super(RBlock, self).__init__()
         
         self.block = nn.Sequential(
-            nn.Conv2d(72, 100, (3,3), padding = 1, stride = 1, bias = False),
+            nn.Conv2d(72, 50, (3,3), padding = 1, stride = 1, bias = False),
             nn.BatchNorm2d(100),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(100, 72, (3,3), padding = 1, stride = 1),
+            nn.Conv2d(50, 72, (3,3), padding = 1, stride = 1),
         )
         
         self.shortcut = nn.Identity()
