@@ -116,23 +116,29 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
+        self.train_dataset.wind2D_hr.to(DEVICE)
         return DataLoader(self.train_dataset,
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
-                          shuffle = True)
+                          shuffle = True,
+                          num_workers = WORKERS)
     #end
     
     def val_dataloader(self):
+        self.val_dataset.wind2D_hr.to(DEVICE)
         return DataLoader(self.val_dataset,
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
-                          shuffle = False)
+                          shuffle = False,
+                          num_workers = WORKERS)
     #end
     
     def test_dataloader(self):
+        self.test_dataset.wind2D_hr.to(DEVICE)
         return DataLoader(self.test_dataset,
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
-                          shuffle = False)
+                          shuffle = False,
+                          num_workers = WORKERS)
     #end
 #end
