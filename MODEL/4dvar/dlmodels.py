@@ -31,7 +31,7 @@ class RBlock(nn.Module):
         
         self.block = nn.Sequential(
             nn.Conv2d(72, 50, (3,3), padding = 1, stride = 1, bias = False),
-            nn.BatchNorm2d(100),
+            nn.BatchNorm2d(50),
             nn.LeakyReLU(0.1),
             nn.Conv2d(50, 72, (3,3), padding = 1, stride = 1),
         )
