@@ -48,9 +48,9 @@ class RBlock(nn.Module):
 #end
 
 
-class Phi_r(nn.Module):
+class Phi(nn.Module):
     def __init__(self, shape_data, config_params):
-        super(Phi_r, self).__init__()
+        super(Phi, self).__init__()
         
         self.rnet = nn.Sequential(
             RBlock()
@@ -64,11 +64,11 @@ class Phi_r(nn.Module):
 #end
 
 
-class Phi(nn.Module):
+class Phi_r(nn.Module):
     ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
-        super(Phi, self).__init__()
+        super(Phi_r, self).__init__()
         	
         ts_length = shape_data[1] * 3
         img_H, img_W = shape_data[-2:]
