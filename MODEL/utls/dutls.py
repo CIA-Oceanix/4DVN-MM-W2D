@@ -60,7 +60,7 @@ class W2DSimuDataset(Dataset):
     
     def to_tensor(self):
         
-        self.wind2D_hr = torch.Tensor(self.wind2D_hr).type(torch.float16).to(DEVICE)
+        self.wind2D_hr = torch.Tensor(self.wind2D_hr).type(torch.float32).to(DEVICE)
     #end
 #end
 
