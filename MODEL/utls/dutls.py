@@ -33,6 +33,10 @@ class W2DSimuDataset(Dataset):
         self.wind2D_hr = wind_2D_hr
         
         self.numitems = wind_2D_hr.__len__()
+        
+        if torch.cuda.is_available():
+            self.move_to_cuda()
+        #end
     #end
     
     def __len__(self):
@@ -60,6 +64,11 @@ class W2DSimuDataset(Dataset):
         dmax = self.pparams[name]['max']
         
         return dmin + (dmax - dmin) * data
+    #end
+    
+    def move_to_cuda(self):
+        
+        self.wind_2D_hr = torch.Tensor(self.wind_2D_hr).to(DEVICE)
     #end
 #end
 
@@ -116,7 +125,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
-        self.train_dataset.wind2D_hr.to(DEVICE)
         return DataLoader(self.train_dataset,
                           batch_size = self.batch_size,
                           # generator = torch.Generator(device = DEVICE),
@@ -125,7 +133,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def val_dataloader(self):
-        self.val_dataset.wind2D_hr.to(DEVICE)
         return DataLoader(self.val_dataset,
                           batch_size = self.batch_size,
                           # generator = torch.Generator(device = DEVICE),
@@ -134,7 +141,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def test_dataloader(self):
-        self.test_dataset.wind2D_hr.to(DEVICE)
         return DataLoader(self.test_dataset,
                           batch_size = self.batch_size,
                           # generator = torch.Generator(device = DEVICE),
