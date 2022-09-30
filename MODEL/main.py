@@ -202,9 +202,8 @@ class Experiment:
                            'log_every_n_steps' : 1}
         
         if torch.cuda.is_available():
-            profiler_kwargs.update({'gpus'        : gpus})
-            # profiler_kwargs.update({'accelerator' : 'ddp'})
-            profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
+            profiler_kwargs.update({'gpus'      : gpus})
+            profiler_kwargs.update({'precision' : self.cparams.PRECISION})
         #end
         
         ## Checkpoint callback
