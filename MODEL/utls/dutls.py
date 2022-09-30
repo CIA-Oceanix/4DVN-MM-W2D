@@ -25,6 +25,7 @@ class W2DSimuDataset(Dataset):
         
         # load data, convert to torch.Tensor
         # wind_2D_hr = data
+        print('device check in init: ', data.device)
         wind_2D_hr = torch.Tensor(data).type(torch.float32)
         print('device check in init: ', wind_2D_hr.device)
         
@@ -93,7 +94,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
     def setup(self):
         
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
-        print('check device in setup', wind_2D_hr.device)
         
         shape = wind_2D_hr.shape[-2:]
         wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))
