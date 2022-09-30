@@ -76,7 +76,7 @@ class Phi_r(nn.Module):
         self.net = nn.Sequential(
             nn.Conv2d(ts_length, 50, (3,3),
                       padding = 'same', padding_mode = 'reflect', bias = False),
-            nn.BatchNorm2d(20),
+            nn.BatchNorm2d(50),
             nn.LeakyReLU(0.1),
             nn.Conv2d(50, ts_length, (3,3),
                       padding = 'same', bias = False
