@@ -440,7 +440,7 @@ class LitModel(pl.LightningModule):
         loss += regularization * 1e-2
         #end
         
-        return dict({'loss' : loss}), outputs.item()
+        return dict({'loss' : loss}), outputs
     #end
     
     def training_step(self, batch, batch_idx):
