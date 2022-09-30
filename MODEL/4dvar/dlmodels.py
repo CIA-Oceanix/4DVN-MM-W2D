@@ -455,14 +455,14 @@ class LitModel(pl.LightningModule):
     def training_epoch_end(self, outputs):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
-        self.save_epoch_loss(loss.item(), self.current_epoch, 'train')
+        self.save_epoch_loss(loss, self.current_epoch, 'train')
     #end
     
     def validation_step(self, batch, batch_idx):
         
         metrics, out = self.forward(batch, phase = 'train')
         val_loss = metrics['loss']
-        self.log('val_loss', val_loss.item())
+        self.log('val_loss', val_loss)
         
         return val_loss
     #end
@@ -470,7 +470,7 @@ class LitModel(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         
         loss = torch.stack([out for out in outputs]).mean()
-        self.save_epoch_loss(loss.item(), self.current_epoch, 'val')
+        self.save_epoch_loss(loss, self.current_epoch, 'val')
     #end
     
     def test_step(self, batch, batch_idx):
