@@ -43,6 +43,8 @@ class W2DSimuDataset(Dataset):
     
     def __getitem__(self, idx):
         
+        print(self.wind2D_hr.__class__)
+        print(self.wind2D_hr.device)
         return self.wind2D_hr[idx]
     #end
     
