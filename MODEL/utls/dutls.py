@@ -33,10 +33,7 @@ class W2DSimuDataset(Dataset):
         self.wind2D_hr = wind_2D_hr
         
         self.numitems = wind_2D_hr.__len__()
-        
-        if torch.cuda.is_available():
-            self.move_to_cuda()
-        #end
+        self.to_tensor()
     #end
     
     def __len__(self):
@@ -66,9 +63,9 @@ class W2DSimuDataset(Dataset):
         return dmin + (dmax - dmin) * data
     #end
     
-    def move_to_cuda(self):
+    def to_tensor(self):
         
-        self.wind2D_hr = torch.Tensor(self.wind2D_hr).to(DEVICE)
+        self.wind2D_hr = torch.Tensor(self.wind2D_hr).type(torch.float32).to(DEVICE)
     #end
 #end
 
