@@ -68,7 +68,7 @@ class W2DSimuDataset(Dataset):
     
     def move_to_cuda(self):
         
-        self.wind_2D_hr = torch.Tensor(self.wind_2D_hr).to(DEVICE)
+        self.wind2D_hr = torch.Tensor(self.wind2D_hr).to(DEVICE)
     #end
 #end
 
