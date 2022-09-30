@@ -33,7 +33,7 @@ class RBlock(nn.Module):
             nn.Conv2d(72, 100, (3,3), padding = 1, stride = 1, bias = False),
             nn.BatchNorm2d(100),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(100, 72, (3,3), padding = 1, stride = 1, bias = False),
+            nn.Conv2d(100, 72, (3,3), padding = 1, stride = 1),
         )
         
         self.shortcut = nn.Identity()
@@ -48,12 +48,11 @@ class RBlock(nn.Module):
 #end
 
 
-class Phi(nn.Module):
+class Phi_r(nn.Module):
     def __init__(self, shape_data, config_params):
         super(Phi_r, self).__init__()
         
         self.rnet = nn.Sequential(
-            RBlock(),
             RBlock()
         )
     #end
@@ -65,21 +64,21 @@ class Phi(nn.Module):
 #end
 
 
-class Phi_r(nn.Module):
+class Phi(nn.Module):
     ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
-        super(Phi_r, self).__init__()
+        super(Phi, self).__init__()
         	
         ts_length = shape_data[1] * 3
         img_H, img_W = shape_data[-2:]
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 20, (3,3),
+            nn.Conv2d(ts_length, 50, (3,3),
                       padding = 'same', padding_mode = 'reflect', bias = False),
             nn.BatchNorm2d(20),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(20, ts_length, (3,3),
+            nn.Conv2d(50, ts_length, (3,3),
                       padding = 'same', bias = False
             )
         )
