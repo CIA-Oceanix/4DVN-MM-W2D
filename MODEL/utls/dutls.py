@@ -25,13 +25,11 @@ class W2DSimuDataset(Dataset):
         
         # load data, convert to torch.Tensor
         # wind_2D_hr = data
-        print('device check in init: ', data.device)
-        wind_2D_hr = torch.Tensor(data).type(torch.float32)
-        print('device check in init: ', wind_2D_hr.device)
+        # wind_2D_hr = torch.Tensor(data).type(torch.float32)
+        # print('device check in init: ', wind_2D_hr.device)
         
         # normalize
-        wind_2D_hr = self.normalize(wind_2D_hr, 'wind_2D_hr')
-        
+        wind_2D_hr = self.normalize(data, 'wind_2D_hr')
         self.wind2D_hr = wind_2D_hr
         
         self.numitems = wind_2D_hr.__len__()
