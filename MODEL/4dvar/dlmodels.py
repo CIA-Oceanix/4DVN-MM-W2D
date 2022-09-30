@@ -380,7 +380,7 @@ class LitModel(pl.LightningModule):
     def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
         # Prepare input data
-        data_hr = data.clone().to(DEVICE)
+        data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
         input_data = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
                 
