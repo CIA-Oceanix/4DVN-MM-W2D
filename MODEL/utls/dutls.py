@@ -22,12 +22,7 @@ class W2DSimuDataset(Dataset):
         
         # normalization parameters, used to normalize and denormalize data
         self.pparams = dict()
-        
-        # load data, convert to torch.Tensor
-        # wind_2D_hr = data
-        # wind_2D_hr = torch.Tensor(data).type(torch.float32)
-        # print('device check in init: ', wind_2D_hr.device)
-        
+                
         # normalize
         wind2D_hr = self.normalize(data, 'wind_2D_hr')
         self.wind2D_hr = wind2D_hr
@@ -126,7 +121,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
                           shuffle = True)
-                          # num_workers = WORKERS)
     #end
     
     def val_dataloader(self):
@@ -134,7 +128,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
                           shuffle = False)
-                          # num_workers = WORKERS)
     #end
     
     def test_dataloader(self):
@@ -142,6 +135,5 @@ class W2DSimuDataModule(pl.LightningDataModule):
                           batch_size = self.batch_size,
                           generator = torch.Generator(device = DEVICE),
                           shuffle = False)
-                          # num_workers = WORKERS)
     #end
 #end

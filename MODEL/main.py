@@ -199,8 +199,14 @@ class Experiment:
         
         # TRAINER : configure properties and callbacks
         profiler_kwargs = {'max_epochs'        : self.cparams.EPOCHS, 
-                           'log_every_n_steps' : 1,
-                           'gpus'              : gpus}
+                           'log_every_n_steps' : 1}
+        
+        if torch.cuda.is_available():
+            profiler_kwargs.update({'accelerator' : 'gpu'})
+            profiler_kwargs.update({'devices'     : self.cparams.GPUS})
+            profiler_kwargs.update({'stratedy'    : 'ddp'})
+            profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
+        #end
         
         ## Checkpoint callback
         model_checkpoint = ModelCheckpoint(
