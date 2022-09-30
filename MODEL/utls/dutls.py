@@ -26,6 +26,7 @@ class W2DSimuDataset(Dataset):
         # load data, convert to torch.Tensor
         # wind_2D_hr = data
         wind_2D_hr = torch.Tensor(data).type(torch.float32)
+        print('device check in init: ', wind_2D_hr.device)
         
         # normalize
         wind_2D_hr = self.normalize(wind_2D_hr, 'wind_2D_hr')
