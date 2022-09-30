@@ -401,7 +401,7 @@ class LitModel(pl.LightningModule):
                 reco_hr = outputs[:,48:,:,:]
                 reco = data_lr + reco_hr
             else:
-                outputs, hidden, cell, normgrad = self.model(input_state, input_data, mask)
+                outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
                 reco_hr = outputs[:,48:,:,:]
                 reco = reco_lr + reco_hr
@@ -440,7 +440,7 @@ class LitModel(pl.LightningModule):
         loss += regularization * 1e-2
         #end
         
-        return dict({'loss' : loss}), outputs
+        return dict({'loss' : loss}), outputs.item()
     #end
     
     def training_step(self, batch, batch_idx):
@@ -455,14 +455,14 @@ class LitModel(pl.LightningModule):
     def training_epoch_end(self, outputs):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
-        self.save_epoch_loss(loss, self.current_epoch, 'train')
+        self.save_epoch_loss(loss.item(), self.current_epoch, 'train')
     #end
     
     def validation_step(self, batch, batch_idx):
         
         metrics, out = self.forward(batch, phase = 'train')
         val_loss = metrics['loss']
-        self.log('val_loss', val_loss)
+        self.log('val_loss', val_loss.item())
         
         return val_loss
     #end
@@ -470,7 +470,7 @@ class LitModel(pl.LightningModule):
     def validation_epoch_end(self, outputs):
         
         loss = torch.stack([out for out in outputs]).mean()
-        self.save_epoch_loss(loss, self.current_epoch, 'val')
+        self.save_epoch_loss(loss.item(), self.current_epoch, 'val')
     #end
     
     def test_step(self, batch, batch_idx):
@@ -549,7 +549,7 @@ def bhattacharyya_distance(h_target, h_output, reduction_dim = 1, mode = 'trineq
     return b_distance.mean()
 #end
 
-def mse(target, output, divide_std = True):
+def mse_expl_variance(target, output, divide_std = True):
     
     mserror = (target - output).pow(2).mean(dim = (2,3)).sum(dim = 1).mean()
     if divide_std:
