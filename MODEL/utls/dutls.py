@@ -95,8 +95,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
-        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))
-        self.shapeData = (self.batch_size, 24, *tuple(shape))[:,:,:100,:100]
+        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))[:,:,:100,:100]
+        self.shapeData = (self.batch_size, 24, *tuple(shape))
         
         n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)
         n_train = np.int32(wind_2D_hr.__len__() - n_test)
