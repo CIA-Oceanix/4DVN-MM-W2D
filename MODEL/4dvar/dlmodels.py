@@ -25,6 +25,29 @@ class Print(nn.Module):
     #end
 #end
 
+class dw_conv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, stride, groups, bias):
+        super(dw_conv2d, self).__init__()
+        
+        self.conv_depthwise = nn.Conv2d(in_channels, in_channels,
+                                        kernel_size = kernel_size,
+                                        padding = padding,
+                                        stride = stride,
+                                        groups = in_channels,
+                                        bias = bias)
+        self.conv_pointwise = nn.Conv2d(in_channels, out_channels,
+                                        kernel_size = 1,
+                                        bias = bias)
+    #end
+    
+    def forward(self, data):
+        
+        spatial_out = self.conv_depthwise(data)
+        output = self.conv_pointwise(spatial_out)
+        return output
+    #end
+#end
+
 class RBlock(nn.Module):
     def __init__(self):
         super(RBlock, self).__init__()
@@ -47,10 +70,9 @@ class RBlock(nn.Module):
     #end
 #end
 
-
-class Phi_r(nn.Module):
+class ResNet(nn.Module):
     def __init__(self, shape_data, config_params):
-        super(Phi_r, self).__init__()
+        super(ResNet, self).__init__()
         
         self.rnet = nn.Sequential(
             RBlock()
@@ -64,23 +86,32 @@ class Phi_r(nn.Module):
 #end
 
 
-class Phi(nn.Module):
+class ConvNet(nn.Module):
     ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
-        super(Phi, self).__init__()
+        super(ConvNet, self).__init__()
         	
         ts_length = shape_data[1] * 3
         img_H, img_W = shape_data[-2:]
         
+        # self.net = nn.Sequential(
+        #     nn.Conv2d(ts_length, 50, (3,3),
+        #               padding = 'same', padding_mode = 'reflect', bias = False),
+        #     nn.BatchNorm2d(50),
+        #     nn.LeakyReLU(0.1),
+        #     nn.Conv2d(50, ts_length, (3,3),
+        #               padding = 'same', bias = False
+        #     )
+        # )
+        
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 50, (3,3),
-                      padding = 'same', padding_mode = 'reflect', bias = False),
+            dw_conv2d(ts_length, 50, (3,3), 
+                      padding = 1, stride = 1, groups = 72, bias = False),
             nn.BatchNorm2d(50),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(50, ts_length, (3,3),
-                      padding = 'same', bias = False
-            )
+            nn.ReLU(inplace = True),
+            dw_conv2d(50, 72, (3,3), 
+                      padding = 1, stride = 1, groups = 50, bias = True)
         )
     #end
     
@@ -88,6 +119,17 @@ class Phi(nn.Module):
         
         reco = self.net(data)
         return reco
+    #end
+#end
+
+def model_selection(shape_data, config_params):
+    
+    if config_params.PRIOR == 'SN':
+        return ConvNet(shape_data, config_params)
+    elif config_params.PRIOR == 'RN':
+        return ResNet(shape_data, config_params)
+    else:
+        raise NotImplementedError('No valid prior')
     #end
 #end
 
@@ -433,18 +475,17 @@ class LitModel(pl.LightningModule):
         loss_hr = self.loss_fn( (reco - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
-        # grad_data = torch.gradient(data_hr, dim = (3,2))
-        # grad_reco = torch.gradient(reco, dim = (3,2))
+        grad_data = torch.gradient(data_hr, dim = (3,2))
+        grad_reco = torch.gradient(reco, dim = (3,2))
         
-        # loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
-        # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
-        # loss_grad = loss_grad_x + loss_grad_y
+        loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
+        loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
+        loss_grad = loss_grad_x + loss_grad_y
         
-        # loss += loss_grad * 1e-3
+        loss += loss_grad * 1e-3
         
-        # regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
-        # loss += regularization * 1e-2
-        #end
+        regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+        loss += regularization * 1e-2
         
         return dict({'loss' : loss}), outputs
     #end

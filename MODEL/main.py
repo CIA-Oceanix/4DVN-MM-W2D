@@ -15,7 +15,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from pathmng import PathManager
-from dlmodels import LitModel, Phi_r
+from dlmodels import LitModel, model_selection
 from dutls import W2DSimuDataModule
 
 if torch.cuda.is_available():
@@ -94,7 +94,7 @@ class Experiment:
             model_name += '-fp1it'
         #end
         
-        self.model_name = model_name
+        self.model_name = model_name + f'-{self.cparams.PRIOR}'
         return model_name
     #end
     
@@ -183,7 +183,7 @@ class Experiment:
         shape_data = w2d_dm.get_shapeData()
         
         ## Instantiate dynamical prior and lit model
-        Phi = Phi_r(shape_data, self.cparams).to(DEVICE)
+        Phi = model_selection(shape_data, self.cparams).to(DEVICE)
         lit_model = LitModel(Phi, shape_data, self.cparams).to(DEVICE)
         
         ## Get checkpoint, if needed
