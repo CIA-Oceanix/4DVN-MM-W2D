@@ -53,14 +53,10 @@ class RBlock(nn.Module):
         super(RBlock, self).__init__()
         
         self.block = nn.Sequential(
-            # nn.Conv2d(72, 50, (3,3), padding = 1, stride = 1, bias = False),
-            dw_conv2d(72, 50, (3,3), 
-                      padding = 1, stride = 1, groups = 72, bias = False),
+            nn.Conv2d(72, 50, (3,3), padding = 1, stride = 1, bias = False),
             nn.BatchNorm2d(50),
             nn.LeakyReLU(0.1),
-            # nn.Conv2d(50, 72, (3,3), padding = 1, stride = 1),
-            dw_conv2d(50, 72, (3,3), 
-                      padding = 1, stride = 1, groups = 50, bias = True)
+            nn.Conv2d(50, 72, (3,3), padding = 1, stride = 1),
         )
         
         self.shortcut = nn.Identity()
@@ -99,24 +95,16 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         img_H, img_W = shape_data[-2:]
         
-        # self.net = nn.Sequential(
-        #     nn.Conv2d(ts_length, 50, (3,3),
-        #               padding = 'same', padding_mode = 'reflect', bias = False),
-        #     nn.BatchNorm2d(50),
-        #     nn.LeakyReLU(0.1),
-        #     nn.Conv2d(50, ts_length, (3,3),
-        #               padding = 'same', bias = False
-        #     )
-        # )
-        
         self.net = nn.Sequential(
-            dw_conv2d(ts_length, 50, (3,3), 
-                      padding = 1, stride = 1, groups = 72, bias = False),
+            nn.Conv2d(ts_length, 50, (3,3),
+                      padding = 'same', padding_mode = 'reflect', bias = False),
             nn.BatchNorm2d(50),
-            nn.ReLU(inplace = True),
-            dw_conv2d(50, 72, (3,3), 
-                      padding = 1, stride = 1, groups = 50, bias = True)
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(50, ts_length, (3,3),
+                      padding = 'same', bias = False
+            )
         )
+        
     #end
     
     def forward(self, data):
