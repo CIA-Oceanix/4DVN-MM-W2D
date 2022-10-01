@@ -388,8 +388,10 @@ class LitModel(pl.LightningModule):
         elif mode == 'points':
             
             mask = torch.zeros(data_shape)
-            points_x = [4, 4, 30, 30]
-            points_y = [4, 30, 4, 30]
+            # points_x = [4, 4, 30, 30]
+            # points_y = [4, 30, 4, 30]
+            points_x = np.random.randint(0, data_shape[-2], 10)
+            points_y = np.random.randint(0, data_shape[-1], 10)
             mask[:,:,points_x, points_y] = 1.
         else:
             raise ValueError('Mask mode not impletemented.')

@@ -94,7 +94,8 @@ class Experiment:
             model_name += '-fp1it'
         #end
         
-        self.model_name = model_name + f'-{self.cparams.PRIOR}'
+        model_name += f'-{self.cparams.PRIOR}'
+        self.model_name = model_name
         return model_name
     #end
     
