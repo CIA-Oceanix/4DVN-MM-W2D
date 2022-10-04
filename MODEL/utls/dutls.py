@@ -88,14 +88,14 @@ class W2DSimuDataModule(pl.LightningDataModule):
         else:
             raise ValueError('Shape data is None, likely not initialized instance')
         #end
-    #end
+    #ends
     
     def setup(self):
         
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
-        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))
+        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))[:,:,:150,:150]
         self.shapeData = (self.batch_size, 24, *tuple(shape))
         
         n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)

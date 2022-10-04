@@ -226,11 +226,12 @@ class LitModel(pl.LightningModule):
         self.loss_fn = NormLoss()
         
         # Hyper-parameters, learning and workflow
-        self.hparams.lr_kernel_size         = 31
+        self.hparams.lr_kernel_size         = 15   # NOTE : 15 for 150x150 img and 31 for 324x324 img
         self.hparams.lr_padding             = 0
         self.hparams.lr_stride              = 1
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
+        self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.weight_hres            = config_params.WEIGHT_HRES
         self.hparams.weight_lres            = config_params.WEIGHT_LRES
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
@@ -375,7 +376,7 @@ class LitModel(pl.LightningModule):
             
         elif mode == 'patch':
             
-            delta_x = 10
+            delta_x = self.hparams.patch_extent
             center_h, center_w = data_shape[-2] // 2, data_shape[-1] // 2
             mask = torch.zeros(data_shape)
             mask[:,:, center_h - delta_x : center_h + delta_x, 
@@ -415,11 +416,12 @@ class LitModel(pl.LightningModule):
         # Prepare input data
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
-        input_data = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
+        data_an = data_hr - data_lr
+        input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
                 
         # Prepare input state initialized
         if init_state is None:
-            input_state = torch.cat((data_lr, data_hr - data_lr, data_hr - data_lr), dim = 1)
+            input_state = torch.cat((data_lr, data_an, data_an), dim = 1)
         else:
             input_state = init_state
         #end
@@ -439,37 +441,29 @@ class LitModel(pl.LightningModule):
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
-                reco_hr = outputs[:,48:,:,:]
-                reco = data_lr + reco_hr
+                reco_an = outputs[:,48:,:,:]
+                reco_hr = reco_lr + reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
-                reco_hr = outputs[:,48:,:,:]
-                reco = reco_lr + reco_hr
+                reco_an = outputs[:,48:,:,:]
+                reco_hr = reco_lr + reco_an
             #end
         #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
-            self.save_samples({'data' : data.detach().cpu(), 
-                               'reco' : reco.detach().cpu()})
+            self.save_samples({'data' : data_hr.detach().cpu(), 
+                               'reco' : reco_hr.detach().cpu()})
         #end
         
-        # mask_loss = self.get_mask(data_lr.shape, mode = 'patch')
-        
-        # Return loss, computed as reconstruction loss
-        # ''' NOTE : loss function is NormLoss but in these data 
-        #     there are no missing values!!! '''
-        # reco_lr = outputs[:,:24,:,:]
-        # reco_hr = outputs[:,48:,:,:]
-        # reco = ( reco_lr + reco_hr )
         
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
-        loss_hr = self.loss_fn( (reco - data_hr), mask = None )
+        loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
         grad_data = torch.gradient(data_hr, dim = (3,2))
-        grad_reco = torch.gradient(reco, dim = (3,2))
+        grad_reco = torch.gradient(reco_hr, dim = (3,2))
         
         loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
         loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
@@ -496,10 +490,6 @@ class LitModel(pl.LightningModule):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'train')
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        #end
     #end
     
     def validation_step(self, batch, batch_idx):
