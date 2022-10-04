@@ -53,6 +53,7 @@ class PathManager:
             os.mkdir(path_modeloutput)
         #end
         
+        self.model_name            = model_name
         self.path_ckpt             = path_ckpt
         self.path_litmodel_trainer = path_litmodel_trainer
         self.path_evalmetrics      = path_evalmetrics
@@ -105,6 +106,11 @@ class PathManager:
                                configfile_name + '.json'), 'w') as f:
             json.dump(configfile._asdict(), f, indent = 4)
         f.close()
+        
+        with open(os.path.join(self.path_configfiles,
+                               'modelname.txt'), 'w') as f:
+            f.write(self.model_name)
+        f.close()
     #end
     
     def save_litmodel_trainer(self, lit_model, trainer):
@@ -119,7 +125,7 @@ class PathManager:
     #end
     
     def save_model_output(self, outputs, cparams, train_losses, val_losses):
-                    
+        
         img_dim = outputs[0]['reco'].shape[-2:]
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)

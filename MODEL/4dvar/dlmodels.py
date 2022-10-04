@@ -388,8 +388,6 @@ class LitModel(pl.LightningModule):
         elif mode == 'points':
             
             mask = torch.zeros(data_shape)
-            # points_x = [4, 4, 30, 30]
-            # points_y = [4, 30, 4, 30]
             points_x = np.random.randint(0, data_shape[-2], 10)
             points_y = np.random.randint(0, data_shape[-1], 10)
             mask[:,:,points_x, points_y] = 1.
@@ -439,8 +437,8 @@ class LitModel(pl.LightningModule):
             
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
-                # reco_lr = data_lr.clone()
-                reco_lr = outputs[:,:24,:,:]
+                reco_lr = data_lr.clone()
+                # reco_lr = outputs[:,:24,:,:]
                 reco_hr = outputs[:,48:,:,:]
                 reco = data_lr + reco_hr
             else:
@@ -498,6 +496,10 @@ class LitModel(pl.LightningModule):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'train')
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        #end
     #end
     
     def validation_step(self, batch, batch_idx):
