@@ -135,6 +135,7 @@ class Experiment:
         # instantiate path_manager of this version
         path_manager = PathManager(self.path_model,
                                    model_name,
+                                   self.cparams.LOAD_CKPT,
                                    versioning  = self.versioning,
                                    tabula_rasa = self.tabula_rasa)
         self.path_manager = path_manager

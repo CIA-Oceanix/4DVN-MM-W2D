@@ -8,7 +8,7 @@ import pickle
 
 class PathManager:
     
-    def __init__(self, mother_dir, model_name, versioning = True, tabula_rasa = False):
+    def __init__(self, mother_dir, model_name, load_ckpt, versioning = True, tabula_rasa = False):
         
         if tabula_rasa:
             os.system(r'rm -rf {}/*'.format(mother_dir))
@@ -31,6 +31,11 @@ class PathManager:
         path_ckpt = os.path.join(version_path, 'ckpt')
         if not os.path.exists(path_ckpt):
             os.mkdir(path_ckpt)
+        #end
+        
+        # For security, remove all the saved checkpoints in order no to load the wrong one
+        if not load_ckpt:
+            os.system(r'rm -f {}/*'.format(path_ckpt))
         #end
         
         path_litmodel_trainer = os.path.join(version_path, 'litmodel_trainer')
@@ -114,7 +119,7 @@ class PathManager:
     #end
     
     def save_litmodel_trainer(self, lit_model, trainer):
-        
+                
         with open(os.path.join(self.path_litmodel_trainer, 'lit_model.pkl'), 'wb') as f:
             torch.save(lit_model.cpu(), f)
         f.close()
