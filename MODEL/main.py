@@ -66,7 +66,7 @@ class Experiment:
         if self.cparams.GS_TRAIN and not self.versioning:
             
             n_iter_ref = self.cparams.NSOL_IT_REF
-            n_iter     = self.cparams.NSOL_ITER
+            n_iter     = self.cparams.NSOL_ITERF
             
             if self.cparams.LOAD_CKPT:
                 mname_source = model_name + f'-gs{n_iter_ref}it'
@@ -75,7 +75,8 @@ class Experiment:
                 # instantiate a path_manager only to get the
                 # path to checkpoints of source version
                 path_manager_source = PathManager(self.path_model,
-                                                  mname_source, 
+                                                  mname_source,
+                                                  self.cparams.LOAD_CKPT,
                                                   versioning  = False,
                                                   tabula_rasa = False)
                 self.path_checkpoint_source = path_manager_source.get_path('ckpt')
