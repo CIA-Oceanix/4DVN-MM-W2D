@@ -36,6 +36,7 @@ class PathManager:
         # For security, remove all the saved checkpoints in order no to load the wrong one
         if not load_ckpt:
             os.system(r'rm -f {}/*'.format(path_ckpt))
+            print('REMOVE CKPTS in {}'.format(path_ckpt))
         #end
         
         path_litmodel_trainer = os.path.join(version_path, 'litmodel_trainer')
