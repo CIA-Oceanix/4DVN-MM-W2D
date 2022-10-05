@@ -66,7 +66,7 @@ class Experiment:
         if self.cparams.GS_TRAIN and not self.versioning:
             
             n_iter_ref = self.cparams.NSOL_IT_REF
-            n_iter     = self.cparams.NSOL_ITERF
+            n_iter     = self.cparams.NSOL_ITER
             
             if self.cparams.LOAD_CKPT:
                 mname_source = model_name + f'-gs{n_iter_ref}it'
