@@ -226,9 +226,7 @@ class LitModel(pl.LightningModule):
         self.loss_fn = NormLoss()
         
         # Hyper-parameters, learning and workflow
-        self.hparams.lr_kernel_size         = 15   # NOTE : 15 for 150x150 img and 31 for 324x324 img
-        self.hparams.lr_padding             = 0
-        self.hparams.lr_stride              = 1
+        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
@@ -349,8 +347,8 @@ class LitModel(pl.LightningModule):
         img_size = data.shape[-2:]
         pooled = F.avg_pool2d(data, 
                               kernel_size = self.hparams.lr_kernel_size,
-                              padding = self.hparams.lr_padding, 
-                              stride = self.hparams.lr_stride)
+                              padding = 0, 
+                              stride = 1)
         pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic')
         
         if not data.shape == pooled.shape:
@@ -417,11 +415,11 @@ class LitModel(pl.LightningModule):
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
-        input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
-                
+        input_data = torch.cat((data_lr, data_hr, data_hr), dim = 1)
+        
         # Prepare input state initialized
         if init_state is None:
-            input_state = torch.cat((data_lr, data_an, data_an), dim = 1)
+            input_state = torch.cat((data_lr, data_hr, data_hr), dim = 1)
         else:
             input_state = init_state
         #end
@@ -441,13 +439,13 @@ class LitModel(pl.LightningModule):
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
-                reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + reco_an
+                reco_hr = outputs[:,48:,:,:]
+                # reco_hr = reco_lr + reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
-                reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + reco_an
+                reco_hr = outputs[:,48:,:,:]
+                # reco_hr = reco_lr + reco_an
             #end
         #end
         
@@ -529,8 +527,8 @@ class LitModel(pl.LightningModule):
         # reco_lr = reco[:,:24,:,:]
         # reco_hr = reco[:,48:,:,:]
         # reco = reco_lr + reco_hr
-        cp_data = crop_central_patch(data, length = 10)
-        cp_reco = crop_central_patch(reco, length = 10)
+        cp_data = crop_central_patch(data)
+        cp_reco = crop_central_patch(reco)
         
         hist_data = get_batched_histograms(data, bins = 30)
         hist_reco = get_batched_histograms(reco, bins = 30)
