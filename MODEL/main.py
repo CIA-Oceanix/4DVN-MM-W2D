@@ -228,7 +228,8 @@ class Experiment:
         ## Test
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
         lit_model.eval()
-        trainer.test(lit_model, w2d_dm.test_dataloader())
+        # trainer.test(lit_model, w2d_dm.test_dataloader())
+        trainer.test(w2d_dm)
         test_loss = lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
         
