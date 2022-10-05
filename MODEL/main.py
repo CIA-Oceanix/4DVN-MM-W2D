@@ -222,7 +222,8 @@ class Experiment:
         
         # Train and test
         ## Train
-        trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
+        # trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
+        trainer.fit(lit_model, w2d_dm)
         
         ## Test
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
