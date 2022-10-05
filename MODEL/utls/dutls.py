@@ -78,7 +78,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.data_name  = cparams.DATASET_NAME
         self.shapeData  = None
         
-        # self.setup()
+        self.setup()
     #end
     
     def get_shapeData(self):
