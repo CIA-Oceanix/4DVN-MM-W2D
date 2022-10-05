@@ -69,8 +69,8 @@ class Experiment:
             n_iter     = self.cparams.NSOL_ITER
             
             if self.cparams.LOAD_CKPT:
-                mname_source = model_name + f'-gs{n_iter_ref}it'
-                mname_target = model_name + f'-ckpt-gs{n_iter_ref}it-gs{n_iter}it'
+                mname_source = model_name + f'-gs{n_iter_ref}it-{self.cparams.PRIOR}'
+                mname_target = model_name + f'-ckpt-gs{n_iter_ref}it-gs{n_iter}it-{self.cparams.PRIOR}'
                 
                 # instantiate a path_manager only to get the
                 # path to checkpoints of source version
