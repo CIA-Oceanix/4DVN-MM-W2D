@@ -240,12 +240,12 @@ class Experiment:
                                             self.cparams,
                                             *lit_model.get_learning_curves())
         lit_model.remove_saved_outputs()
-        # self.path_manager.save_litmodel_trainer(lit_model, trainer)
+        self.path_manager.save_litmodel_trainer(lit_model, trainer)
         self.path_manager.print_evalreport(perf_dict_metrics)
         
         end_time = datetime.datetime.now()
         print('\nRun end at {}\n'.format(end_time))
-        print('\nRun time = {}'.format(end_time - start_time))
+        print('Run time = {}\n'.format(end_time - start_time))
     #end
 #end
 

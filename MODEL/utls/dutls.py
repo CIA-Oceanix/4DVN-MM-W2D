@@ -110,6 +110,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)
         print('Test  dataset shape : ', test_set.shape)
+        print()
         
         self.train_dataset = W2DSimuDataset(train_set, normalize = self.normalize)
         self.val_dataset   = W2DSimuDataset(val_set, normalize = self.normalize)

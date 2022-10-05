@@ -411,7 +411,7 @@ class LitModel(pl.LightningModule):
     
     def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
-        # Prepare input data
+        # Prepare input data : import, donwsample and iterpolate, produce anomaly field
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
@@ -425,13 +425,15 @@ class LitModel(pl.LightningModule):
         #end
         
         # Mask data
-        mask_lr = torch.ones_like(data_lr)
-        mask_hr = self.get_mask(data_hr.shape, mode = self.hparams.hr_mask_mode)
-        mask = torch.cat((mask_lr, mask_hr, torch.zeros_like(data_hr)), dim = 1)
+        mask_lr = torch.ones(data_lr.shape)
+        mask_an_dx1 = self.get_mask(data_hr.shape, mode = self.hparams.hr_mask_mode)
+        mask_an_dx2 = torch.zeros(data_an.shape)
+        mask = torch.cat((mask_lr, mask_an_dx2, mask_an_dx1), dim = 1)
         
         input_state = input_state * mask
         input_data  = input_data * mask
         
+        # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
@@ -455,20 +457,21 @@ class LitModel(pl.LightningModule):
                                'reco' : reco_hr.detach().cpu()})
         #end
         
-        
+        # Compute loss
+        ## Reconstruction loss
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
+        ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        
         loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
         loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
         loss_grad = loss_grad_x + loss_grad_y
-        
         loss += loss_grad * 1e-3
         
+        ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
         loss += regularization * 1e-2
         
