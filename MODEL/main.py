@@ -110,8 +110,8 @@ class Experiment:
                             f'run{run}-' + self.model_name + '-epoch=*.ckpt')
         #end
         
-        print('path ckpt : {}'.format(checkpoint_name))
         checkpoint_path = glob.glob(checkpoint_name)[0]
+        print('path ckpt : {}'.format(checkpoint_path))
         ckpt_model = open(checkpoint_path, 'rb')
         print('\n\nCHECKPOINT ({}) : {}\n\n'.format(stage, checkpoint_path))
         lit_model_statedict = torch.load(ckpt_model)['state_dict']
