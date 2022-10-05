@@ -437,15 +437,15 @@ class LitModel(pl.LightningModule):
             
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
-                reco_lr = data_lr.clone()
-                # reco_lr = outputs[:,:24,:,:]
-                reco_hr = outputs[:,48:,:,:]
-                # reco_hr = reco_lr + reco_an
+                # reco_lr = data_lr.clone()
+                reco_lr = outputs[:,:24,:,:]
+                reco_an = outputs[:,48:,:,:]
+                reco_hr = reco_lr + reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
-                reco_hr = outputs[:,48:,:,:]
-                # reco_hr = reco_lr + reco_an
+                reco_an = outputs[:,48:,:,:]
+                reco_hr = reco_lr + reco_an
             #end
         #end
         
