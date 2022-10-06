@@ -13,6 +13,7 @@ from collections import namedtuple
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping
 
 from pathmng import PathManager
 from dlmodels import LitModel, model_selection
@@ -45,10 +46,6 @@ class Experiment:
         _cparams = namedtuple('config_params', CPARAMS)
         cparams  = _cparams(**CPARAMS)
         
-        if cparams.GS_TRAIN and cparams.FIXED_POINT:
-            raise ValueError('Either fixed point or gradient train')
-        #end
-        
         path_data  = os.getenv('PATH_DATA')
         path_model = os.getenv('PATH_MODEL')
         
@@ -57,7 +54,19 @@ class Experiment:
         self.versioning  = versioning
         self.tabula_rasa = tabula_rasa
         self.cparams     = cparams
+        
+        self.check_inconstistency()
     #end
+    
+    def check_inconstistency(self):
+        
+        if self.cparams.GS_TRAIN and self.cparams.FIXED_POINT:
+            raise ValueError('Either fixed point or gradient train')
+        #end
+        
+        if self.cparams.LOAD_CKPT and self.cparams.FIXED_POINT:
+            raise ValueError('Load ckpt and fixed point, it`s probabily a mistake')
+        #end
     
     def get_model(self):
         
@@ -111,7 +120,6 @@ class Experiment:
         #end
         
         checkpoint_path = glob.glob(checkpoint_name)[0]
-        print('path ckpt : {}'.format(checkpoint_path))
         ckpt_model = open(checkpoint_path, 'rb')
         print('\n\nCHECKPOINT ({}) : {}\n\n'.format(stage, checkpoint_path))
         lit_model_statedict = torch.load(ckpt_model)['state_dict']
@@ -182,8 +190,6 @@ class Experiment:
         
         # MODELS : initialize and configure
         ## Obtain shape data
-        # batch_size, ts_length, height, width
-        # shape_data = tuple( next(iter(w2d_dm.train_dataloader())).shape )
         shape_data = w2d_dm.get_shapeData()
         
         ## Instantiate dynamical prior and lit model
@@ -194,7 +200,7 @@ class Experiment:
         path_ckpt = self.path_manager.get_path('ckpt')
         if self.cparams.LOAD_CKPT:
             
-            lit_model = self.load_checkpoint(lit_model, 'LOAD', run)
+            lit_model = self.load_checkpoint(lit_model, 'PARAMS-INIT', run)
             name_append = '_second'
         else:
             name_append = ''
@@ -211,7 +217,7 @@ class Experiment:
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
-        ## Checkpoint callback
+        ## Callbacks : model checkpoint and early stopping
         model_checkpoint = ModelCheckpoint(
             monitor    = 'val_loss',
             dirpath    = path_ckpt,
@@ -220,24 +226,35 @@ class Experiment:
             mode       = 'min'
         )
         
+        early_stopping = EarlyStopping(
+            monitor  = 'val_loss',
+            mode     = 'min',
+            patience = 50
+        )
+        
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
         
         # Train and test
         ## Train
-        # trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
-        trainer.fit(lit_model, w2d_dm)
+        trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
+        # trainer.fit(lit_model, w2d_dm)
         
         ## Test
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
         lit_model.eval()
-        # trainer.test(lit_model, w2d_dm.test_dataloader())
-        trainer.test(lit_model, w2d_dm)
+        trainer.test(lit_model, w2d_dm.test_dataloader())
+        # trainer.test(lit_model, w2d_dm)
         test_loss = lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
         
         # perf_dict_metrics = lit_model.get_eval_metrics()
         # perf_dict_metrics.update({'mse_test' : test_loss.item()})
+        
+        print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
+        print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
+        print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
+        print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
         
         # save reports and reconstructions in the proper target directory
         self.path_manager.save_configfiles(self.cparams, 'config_params')

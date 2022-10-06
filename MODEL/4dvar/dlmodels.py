@@ -255,6 +255,11 @@ class LitModel(pl.LightningModule):
         self.__test_loss = list()
         self.__test_batches_size = list()
         
+        self.means_data_an = list()
+        self.means_data_lr = list()
+        self.means_reco_an = list()
+        self.means_reco_lr = list()
+        
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
         mgrad_shapedata = [ts_length * 3, height, width]
@@ -418,6 +423,9 @@ class LitModel(pl.LightningModule):
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
         
+        self.means_data_lr.append(data_lr.mean())
+        self.means_data_an.append(data_an.mean())
+        
         # Prepare input state initialized
         if init_state is None:
             input_state = torch.cat((data_lr, data_an, data_an), dim = 1)
@@ -452,6 +460,9 @@ class LitModel(pl.LightningModule):
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
         #end
+        
+        self.means_reco_lr.append(reco_lr.mean())
+        self.means_reco_an.append(reco_an.mean())
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
