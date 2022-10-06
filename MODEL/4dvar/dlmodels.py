@@ -230,6 +230,7 @@ class LitModel(pl.LightningModule):
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
+        self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
         self.hparams.weight_hres            = config_params.WEIGHT_HRES
         self.hparams.weight_lres            = config_params.WEIGHT_LRES
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
@@ -443,12 +444,12 @@ class LitModel(pl.LightningModule):
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + self.hparams.ANOMALY_COEFF * reco_an
+                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + self.hparams.ANOMALY_COEFF * reco_an
+                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
         #end
         
