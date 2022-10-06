@@ -438,16 +438,17 @@ class LitModel(pl.LightningModule):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
             if self.hparams.fixed_point:
+                input_data = self.Phi(input_data)
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + reco_an
+                reco_hr = reco_lr + self.hparams.ANOMALY_COEFF * reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + reco_an
+                reco_hr = reco_lr + self.hparams.ANOMALY_COEFF * reco_an
             #end
         #end
         
