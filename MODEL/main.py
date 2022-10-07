@@ -223,14 +223,14 @@ class Experiment:
             mode       = 'min'
         )
         
-        early_stopping = EarlyStopping(
-            monitor  = 'val_loss',
-            mode     = 'min',
-            patience = 50
-        )
+        # early_stopping = EarlyStopping(
+        #     monitor  = 'val_loss',
+        #     mode     = 'min',
+        #     patience = 50
+        # )
         
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
         
         # Train and test
         ## Train
