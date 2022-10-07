@@ -100,11 +100,7 @@ class ConvNet(nn.Module):
             nn.BatchNorm2d(32),
             nn.LeakyReLU(0.1),
             
-            nn.Conv2d(32, 64, (5,5), padding = 'same', padding_mode = 'reflect', bias = False),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.1),
-            
-            nn.Conv2d(64, ts_length, (5,5), padding = 'same', bias = True),
+            nn.Conv2d(32, ts_length, (5,5), padding = 'same', bias = True),
             nn.ReLU()
         )
         
@@ -611,7 +607,7 @@ def mse_expl_variance(target, output, divide_std = True):
 #end
 
 # Crop central patch
-def crop_central_patch(img_ts, length = 10):
+def crop_central_patch(img_ts, length):
     
     center_h, center_w = img_ts[0,0].shape[-2] // 2, img_ts[0,0].shape[-1] // 2
     cp_img = img_ts[:,:, center_h - length : center_h + length, center_w - length : center_w + length]
