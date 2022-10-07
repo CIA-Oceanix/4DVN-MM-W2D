@@ -22,14 +22,12 @@ from dutls import W2DSimuDataModule
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    # print('Try to free CUDA cache')
-    # torch.cuda.empty_cache()
     gpus = -1
     print('Program runs using device : {}\n'.format(DEVICE))
 else:
     DEVICE = torch.device('cpu')
     gpus = 0
-    print('Program runs using device : {}'.format(DEVICE))
+    print('Program runs using device : {}\n'.format(DEVICE))
 #end
 
 class Experiment:
@@ -213,7 +211,6 @@ class Experiment:
         
         if torch.cuda.is_available():
             profiler_kwargs.update({'gpus'        : gpus})
-            # profiler_kwargs.update({'accelerator' : 'ddp'})
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
@@ -237,14 +234,12 @@ class Experiment:
         
         # Train and test
         ## Train
-        # trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
-        trainer.fit(lit_model, w2d_dm)
+        trainer.fit(lit_model, datamodule = w2d_dm)
         
         ## Test
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
         lit_model.eval()
-        # trainer.test(lit_model, w2d_dm.test_dataloader())
-        trainer.test(lit_model, w2d_dm)
+        trainer.test(lit_model, datamodule = w2d_dm)
         test_loss = lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
         
