@@ -436,7 +436,7 @@ class LitModel(pl.LightningModule):
         mask_lr = torch.ones(data_lr.shape)
         mask_an_dx1 = self.get_mask(data_hr.shape, mode = self.hparams.hr_mask_mode)
         mask_an_dx2 = torch.zeros(data_an.shape)
-        mask = torch.cat((mask_lr, mask_an_dx2, mask_an_dx1), dim = 1)
+        mask = torch.cat((mask_lr, mask_an_dx1, mask_an_dx2), dim = 1)
         
         input_state = input_state * mask
         input_data  = input_data * mask
@@ -446,7 +446,6 @@ class LitModel(pl.LightningModule):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
             if self.hparams.fixed_point:
-                # input_data = self.Phi(input_data)
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
@@ -484,7 +483,7 @@ class LitModel(pl.LightningModule):
         # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         # loss_grad = loss_grad_x + loss_grad_y
-        loss += loss_grad * 1
+        loss += loss_grad * 0.75
         
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
