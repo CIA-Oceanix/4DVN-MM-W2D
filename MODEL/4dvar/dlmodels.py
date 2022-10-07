@@ -108,8 +108,7 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             Block(ts_length, 32),
-            Block(32, 64),
-            Block(64, ts_length)
+            Block(32, ts_length)
         )
     #end
     
