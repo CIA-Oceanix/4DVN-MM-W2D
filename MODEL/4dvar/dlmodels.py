@@ -96,11 +96,11 @@ class ConvNet(nn.Module):
         img_H, img_W = shape_data[-2:]
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 64, (5,5), padding = 'same', padding_mode = 'reflect', bias = False),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(ts_length, 50, (5,5), padding = 'same', padding_mode = 'reflect', bias = False),
+            nn.BatchNorm2d(50),
             nn.LeakyReLU(0.1),
             
-            nn.Conv2d(64, ts_length, (5,5), padding = 'same', bias = True),
+            nn.Conv2d(50, ts_length, (5,5), padding = 'same', bias = True),
             # nn.ReLU()
         )
         
