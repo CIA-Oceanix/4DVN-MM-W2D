@@ -233,7 +233,7 @@ class Experiment:
         )
         
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
         
         # Train and test
         ## Train
@@ -254,7 +254,7 @@ class Experiment:
         print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
         print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
         print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
-        print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
+        print('Mean reco an = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
         
         # save reports and reconstructions in the proper target directory
         self.path_manager.save_configfiles(self.cparams, 'config_params')
