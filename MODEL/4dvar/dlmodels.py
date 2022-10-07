@@ -108,7 +108,7 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             Block(ts_length, 32),
-            Block(32, ts_length)
+            nn.Conv2d(32, ts_length, (5,5), padding = 'same', padding_mode = 'reflect')
         )
     #end
     
