@@ -481,7 +481,7 @@ class LitModel(pl.LightningModule):
         loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
         loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
         loss_grad = loss_grad_x + loss_grad_y
-        loss += loss_grad * 1e-3
+        loss += loss_grad * 1
         
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
