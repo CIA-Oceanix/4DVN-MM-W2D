@@ -104,11 +104,7 @@ class ConvNet(nn.Module):
             nn.BatchNorm2d(64),
             nn.LeakyReLU(0.1),
             
-            nn.Conv2d(64, 128, (5,5), padding = 'same', padding_mode = 'reflect', bias = False),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.1),
-            
-            nn.Conv2d(128, ts_length, (5,5), padding = 'same', bias = True),
+            nn.Conv2d(64, ts_length, (5,5), padding = 'same', bias = True),
             nn.ReLU()
         )
         
