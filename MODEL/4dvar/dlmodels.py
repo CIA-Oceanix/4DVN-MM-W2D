@@ -85,6 +85,18 @@ class ResNet(nn.Module):
     #end
 #end
 
+class Block(nn.Sequential):
+    def __init__(self, in_channels, out_channels):
+        super(Block, self).__init__(
+            nn.Conv2d(in_channels, out_channels, (5,5), 
+                      padding = 'same',
+                      padding_mode = 'reflect',
+                      bias = False),
+            nn.BatchNorm2d(in_channels),
+            nn.LeakyReLU(0.1),
+        )
+    #end
+#end
 
 class ConvNet(nn.Module):
     ''' Dynamical prior '''
@@ -93,17 +105,12 @@ class ConvNet(nn.Module):
         super(ConvNet, self).__init__()
         	
         ts_length = shape_data[1] * 3
-        img_H, img_W = shape_data[-2:]
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 50, (5,5), padding = 'same', padding_mode = 'reflect', bias = False),
-            nn.BatchNorm2d(50),
-            nn.LeakyReLU(0.1),
-            
-            nn.Conv2d(50, ts_length, (5,5), padding = 'same', bias = True),
-            # nn.ReLU()
+            Block(ts_length, 32),
+            Block(32, 64),
+            Block(64, ts_length)
         )
-        
     #end
     
     def forward(self, data):
