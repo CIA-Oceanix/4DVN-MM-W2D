@@ -101,7 +101,7 @@ class ConvNet(nn.Module):
             nn.LeakyReLU(0.1),
             
             nn.Conv2d(32, ts_length, (5,5), padding = 'same', bias = True),
-            nn.ReLU()
+            # nn.ReLU()
         )
         
     #end
