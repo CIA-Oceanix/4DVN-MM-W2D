@@ -90,7 +90,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         #end
     #ends
     
-    def setup(self):
+    def setup(self, stage = None):
         
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         

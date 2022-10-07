@@ -233,18 +233,18 @@ class Experiment:
         )
         
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
         
         # Train and test
         ## Train
-        trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
-        # trainer.fit(lit_model, w2d_dm)
+        # trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
+        trainer.fit(lit_model, w2d_dm)
         
         ## Test
         lit_model = self.load_checkpoint(lit_model, 'TEST', run)
         lit_model.eval()
-        trainer.test(lit_model, w2d_dm.test_dataloader())
-        # trainer.test(lit_model, w2d_dm)
+        # trainer.test(lit_model, w2d_dm.test_dataloader())
+        trainer.test(lit_model, w2d_dm)
         test_loss = lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
         
