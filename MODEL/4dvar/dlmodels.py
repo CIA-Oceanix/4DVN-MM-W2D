@@ -446,7 +446,7 @@ class LitModel(pl.LightningModule):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
             if self.hparams.fixed_point:
-                input_data = self.Phi(input_data)
+                # input_data = self.Phi(input_data)
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
