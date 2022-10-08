@@ -456,12 +456,14 @@ class LitModel(pl.LightningModule):
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                # reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                reco_hr = reco_lr + reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                # reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                reco_hr = reco_lr + reco_an
             #end
         #end
         
