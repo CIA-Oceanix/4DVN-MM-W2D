@@ -428,8 +428,8 @@ class LitModel(pl.LightningModule):
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
         
-        # self.means_data_lr.append(data_lr.mean())
-        # self.means_data_an.append(data_an.mean())
+        self.means_data_lr.append(data_lr.clone().detach().mean())
+        self.means_data_an.append(data_an.clone().detach().mean())
         
         # Prepare input state initialized
         if init_state is None:
@@ -456,19 +456,17 @@ class LitModel(pl.LightningModule):
                 reco_lr = data_lr.clone()
                 # reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                # reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
-                reco_hr = reco_lr + reco_an
+                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
-                # reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
-                reco_hr = reco_lr + reco_an
+                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
         #end
         
-        # self.means_reco_lr.append(reco_lr.mean())
-        # self.means_reco_an.append(reco_an.mean())
+        self.means_reco_lr.append(reco_lr.clone().detach().mean())
+        self.means_reco_an.append(reco_an.clone().detach().mean())
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
@@ -483,15 +481,15 @@ class LitModel(pl.LightningModule):
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
         ## Loss on gradients
-        # grad_data = torch.gradient(data_hr, dim = (3,2))
-        # grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        # grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
-        # grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
+        grad_data = torch.gradient(data_hr, dim = (3,2))
+        grad_reco = torch.gradient(reco_hr, dim = (3,2))
+        grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
+        grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         # loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
         # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
-        # loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
+        loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         # loss_grad = loss_grad_x + loss_grad_y
-        # loss += loss_grad * 0.01
+        loss += loss_grad * 0.01
         
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
