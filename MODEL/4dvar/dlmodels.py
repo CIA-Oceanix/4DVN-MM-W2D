@@ -428,8 +428,8 @@ class LitModel(pl.LightningModule):
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
         
-        self.means_data_lr.append(data_lr.mean())
-        self.means_data_an.append(data_an.mean())
+        # self.means_data_lr.append(data_lr.mean())
+        # self.means_data_an.append(data_an.mean())
         
         # Prepare input state initialized
         if init_state is None:
@@ -467,8 +467,8 @@ class LitModel(pl.LightningModule):
             #end
         #end
         
-        self.means_reco_lr.append(reco_lr.mean())
-        self.means_reco_an.append(reco_an.mean())
+        # self.means_reco_lr.append(reco_lr.mean())
+        # self.means_reco_an.append(reco_an.mean())
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
