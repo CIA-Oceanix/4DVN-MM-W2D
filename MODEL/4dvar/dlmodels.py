@@ -107,11 +107,7 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 32, (5,5), 
-                      padding = 'same',
-                      padding_mode = 'reflect',
-                      bias = True),
-            nn.LeakyReLU(0.1),
+            Block(ts_length, 32),
             nn.Conv2d(32, ts_length, (5,5), padding = 'same', padding_mode = 'reflect', bias = True)
         )
     #end
@@ -515,6 +511,10 @@ class LitModel(pl.LightningModule):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'train')
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        #end
     #end
     
     def validation_step(self, batch, batch_idx):
@@ -530,6 +530,10 @@ class LitModel(pl.LightningModule):
         
         loss = torch.stack([out for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'val')
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        #end
     #end
     
     def test_step(self, batch, batch_idx):
