@@ -91,8 +91,8 @@ class Block(nn.Sequential):
             nn.Conv2d(in_channels, out_channels, (5,5), 
                       padding = 'same',
                       padding_mode = 'reflect',
-                      bias = False),
-            nn.BatchNorm2d(out_channels),
+                      bias = True),
+            # nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1),
         )
     #end
@@ -108,7 +108,7 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             Block(ts_length, 32),
-            nn.Conv2d(32, ts_length, (5,5), padding = 'same', padding_mode = 'reflect')
+            nn.Conv2d(32, ts_length, (5,5), padding = 'same', padding_mode = 'reflect', bias = True)
         )
     #end
     
