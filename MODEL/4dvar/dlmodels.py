@@ -501,6 +501,8 @@ class LitModel(pl.LightningModule):
         print('Reg', regularization)
         loss += regularization * 1e-2
         
+        print('Loss', loss)
+        
         return dict({'loss' : loss}), outputs
     #end
     
