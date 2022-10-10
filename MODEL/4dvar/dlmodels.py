@@ -89,8 +89,10 @@ class Block(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(Block, self).__init__(
             nn.Conv2d(in_channels, out_channels, (5,5), 
-                      padding = 'same',
-                      padding_mode = 'reflect',
+                      # padding = 'same',
+                      # padding_mode = 'reflect',
+                      padding = 0,
+                      stride = 1,
                       bias = True),
             # nn.BatchNorm2d(out_channels),
             # nn.LeakyReLU(0.1),
@@ -108,7 +110,7 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             Block(ts_length, 32),
-            nn.Conv2d(32, ts_length, (5,5), padding = 'same', padding_mode = 'reflect', bias = True)
+            nn.Conv2d(32, ts_length, (5,5), padding = 0, stride = 1, bias = True)
         )
     #end
     
@@ -474,7 +476,6 @@ class LitModel(pl.LightningModule):
                                'reco' : reco_hr.detach().cpu()})
         #end
         
-        print(reco_hr.mean())
         # Compute loss
         ## Reconstruction loss
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
@@ -489,11 +490,13 @@ class LitModel(pl.LightningModule):
         # loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
         # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
+        print('Grad', loss_grad)
         # loss_grad = loss_grad_x + loss_grad_y
         loss += loss_grad * 0.01
         
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+        print('Reg', regularization)
         loss += regularization * 1e-2
         
         return dict({'loss' : loss}), outputs
