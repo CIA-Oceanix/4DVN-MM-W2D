@@ -89,10 +89,8 @@ class Block(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(Block, self).__init__(
             nn.Conv2d(in_channels, out_channels, (5,5), 
-                      # padding = 'same',
-                      # padding_mode = 'reflect',
-                      padding = 0,
-                      stride = 1,
+                      padding = 'same',
+                      padding_mode = 'reflect',
                       bias = True),
             # nn.BatchNorm2d(out_channels),
             # nn.LeakyReLU(0.1),
@@ -110,7 +108,7 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             Block(ts_length, 32),
-            nn.Conv2d(32, ts_length, (5,5), padding = 0, stride = 1, bias = True)
+            nn.Conv2d(32, ts_length, (5,5), padding = 'same', padding_mode = 'reflect', bias = True)
         )
     #end
     
@@ -482,6 +480,7 @@ class LitModel(pl.LightningModule):
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
+        print('HR', reco_hr.mean())
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
