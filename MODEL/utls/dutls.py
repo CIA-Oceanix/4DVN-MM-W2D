@@ -22,7 +22,7 @@ class W2DSimuDataset(Dataset):
         
         # normalization parameters, used to normalize and denormalize data
         self.pparams = dict()
-                
+        
         # normalize
         wind2D_hr = self.normalize(data, 'wind_2D_hr')
         self.wind2D_hr = wind2D_hr
@@ -95,7 +95,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
-        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))[:,:,:150,150:]
+        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))[:,:,:150,-150:]
         self.shapeData = (self.batch_size, 24, *tuple(shape))
         
         n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)
