@@ -474,6 +474,7 @@ class LitModel(pl.LightningModule):
                                'reco' : reco_hr.detach().cpu()})
         #end
         
+        print(reco_hr.mean())
         # Compute loss
         ## Reconstruction loss
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
