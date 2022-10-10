@@ -462,6 +462,9 @@ class LitModel(pl.LightningModule):
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                
+                print('reco lr', reco_lr.mean())
+                print('reco an', reco_an.mean())
             #end
         #end
         
