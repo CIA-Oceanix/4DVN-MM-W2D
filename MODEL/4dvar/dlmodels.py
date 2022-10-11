@@ -90,12 +90,12 @@ class Block(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(Block, self).__init__(
             collections.OrderedDict([
-            ('Block1', nn.Conv2d(in_channels, out_channels, (5,5), 
-                      padding = 2, # or 'same'
-                      # padding_mode = 'reflect',
-                      bias = True)),
-            # nn.BatchNorm2d(out_channels),
-            ('NL1', nn.LeakyReLU(0.1))
+                ('Block1', nn.Conv2d(in_channels, out_channels, (5,5), 
+                          padding = 2, # or 'same'
+                          # padding_mode = 'reflect',
+                          bias = True)),
+                # nn.BatchNorm2d(out_channels),
+                ('NL1', nn.LeakyReLU(0.1))
             ])
         )
     #end
@@ -111,8 +111,8 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             collections.OrderedDict([
-            ('block', Block(ts_length, 32)),
-            ('adjlayer', nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True))
+                ('block', Block(ts_length, 32)),
+                ('adjlayer', nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True))
             ])
         )
     #end
@@ -474,6 +474,8 @@ class LitModel(pl.LightningModule):
                     for name, param in self.Phi.named_parameters():
                         print(name, param.mean())
                     #end
+                    
+                    raise ValueError('nan in reco_an\nAborting')
                 #end
                 
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
