@@ -89,8 +89,8 @@ class Block(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(Block, self).__init__(
             nn.Conv2d(in_channels, out_channels, (5,5), 
-                      padding = 'same',
-                      padding_mode = 'reflect',
+                      padding = 2, # or 'same'
+                      # padding_mode = 'reflect',
                       bias = True),
             # nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1),
@@ -236,6 +236,8 @@ class LitModel(pl.LightningModule):
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
+        self.hparams.reg_coeff              = config_params.REG_COEFF
+        self.hparams.grad_coeff             = config_params.GRAD_COEFF
         self.hparams.weight_hres            = config_params.WEIGHT_HRES
         self.hparams.weight_lres            = config_params.WEIGHT_LRES
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
@@ -494,12 +496,12 @@ class LitModel(pl.LightningModule):
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         print('Grad', loss_grad)
         # loss_grad = loss_grad_x + loss_grad_y
-        loss += loss_grad * 0.01
+        loss += loss_grad * self.hparams.grad_coeff
         
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
         print('Reg', regularization)
-        loss += regularization * 1e-3
+        loss += regularization * self.hparams.reg_coeff
         
         print('Loss', loss)
         
