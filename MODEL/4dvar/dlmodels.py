@@ -482,8 +482,8 @@ class LitModel(pl.LightningModule):
             raise ValueError('nan in reco_an\nAborting')
         #end
         
-        print('reco lr', reco_lr.mean())
-        print('reco an', reco_an.mean())
+        # print('reco lr', reco_lr.mean())
+        # print('reco an', reco_an.mean())
         
         self.means_reco_lr.append(reco_lr.clone().detach().mean())
         self.means_reco_an.append(reco_an.clone().detach().mean())
