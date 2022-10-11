@@ -89,14 +89,12 @@ class ResNet(nn.Module):
 class Block(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(Block, self).__init__(
-            collections.OrderedDict([
-                ('Block1', nn.Conv2d(in_channels, out_channels, (5,5), 
+                nn.Conv2d(in_channels, out_channels, (5,5), 
                           padding = 2, # or 'same'
                           # padding_mode = 'reflect',
-                          bias = True)),
+                          bias = True),
                 # nn.BatchNorm2d(out_channels),
-                ('NL1', nn.LeakyReLU(0.1))
-            ])
+                nn.LeakyReLU(0.1)
         )
     #end
 #end
@@ -111,8 +109,9 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             collections.OrderedDict([
-                ('block', Block(ts_length, 32)),
-                ('adjlayer', nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True))
+                ('block1', Block(ts_length, 32)),
+                ('block2', Block(32, 50)),
+                ('adjlayer', nn.Conv2d(50, ts_length, (5,5), padding = 2, bias = True))
             ])
         )
     #end
