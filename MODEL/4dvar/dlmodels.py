@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+import collections
 import pytorch_lightning as pl
 import solver as NN_4DVar
 
@@ -88,12 +89,14 @@ class ResNet(nn.Module):
 class Block(nn.Sequential):
     def __init__(self, in_channels, out_channels):
         super(Block, self).__init__(
-            nn.Conv2d(in_channels, out_channels, (5,5), 
+            collections.OrderedDict([
+            ('Block1', nn.Conv2d(in_channels, out_channels, (5,5), 
                       padding = 2, # or 'same'
                       # padding_mode = 'reflect',
-                      bias = True),
+                      bias = True)),
             # nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(0.1),
+            ('NL1', nn.LeakyReLU(0.1))
+            ])
         )
     #end
 #end
@@ -107,8 +110,10 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            Block(ts_length, 32),
-            nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True)
+            collections.OrderedDict([
+            ('block', Block(ts_length, 32)),
+            ('adjlayer', nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True))
+            ])
         )
     #end
     
@@ -463,6 +468,14 @@ class LitModel(pl.LightningModule):
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
+                
+                if torch.any(reco_an.is_nan()):
+                    print('Nan in reco_an\nChecking ...\n')
+                    for name, param in self.Phi.named_parameters():
+                        print(name, param.mean())
+                    #end
+                #end
+                
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
         #end
