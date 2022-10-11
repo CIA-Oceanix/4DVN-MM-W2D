@@ -472,7 +472,7 @@ class LitModel(pl.LightningModule):
             #end
         #end
         
-        if torch.any(reco_an.is_nan()):
+        if torch.any(reco_an.isnan()):
             print('Nan in reco_an\nChecking ...\n')
             for name, param in self.Phi.named_parameters():
                 print(name, param.mean())
