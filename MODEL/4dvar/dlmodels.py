@@ -468,17 +468,17 @@ class LitModel(pl.LightningModule):
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 
-                if torch.any(reco_an.is_nan()):
-                    print('Nan in reco_an\nChecking ...\n')
-                    for name, param in self.Phi.named_parameters():
-                        print(name, param.mean())
-                    #end
-                    
-                    raise ValueError('nan in reco_an\nAborting')
-                #end
-                
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
+        #end
+        
+        if torch.any(reco_an.is_nan()):
+            print('Nan in reco_an\nChecking ...\n')
+            for name, param in self.Phi.named_parameters():
+                print(name, param.mean())
+            #end
+            
+            raise ValueError('nan in reco_an\nAborting')
         #end
         
         print('reco lr', reco_lr.mean())
