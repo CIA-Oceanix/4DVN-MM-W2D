@@ -532,6 +532,7 @@ class LitModel(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
+        print('Batch idx', batch_idx)
         metrics, out = self.forward(batch, phase = 'train')
         loss = metrics['loss']
         self.log('loss', loss, on_step = True, on_epoch = True, prog_bar = True)
