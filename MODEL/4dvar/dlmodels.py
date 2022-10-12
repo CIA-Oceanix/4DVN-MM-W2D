@@ -111,7 +111,7 @@ class ConvNet(nn.Module):
             collections.OrderedDict([
                 ('block1', Block(ts_length, 32, 7, 3)),
                 ('block2', Block(32, 64, 5, 2)),
-                ('adjlayer', nn.Conv2d(128, ts_length, (5,5), padding = 2, bias = True))
+                ('adjlayer', nn.Conv2d(64, ts_length, (5,5), padding = 2, bias = True))
             ])
         )
     #end
@@ -479,6 +479,10 @@ class LitModel(pl.LightningModule):
             #end
             
             raise ValueError('nan in reco_an\nAborting')
+        #end
+        
+        for name, params in self.Phi.named_parameters():
+            print(name, torch.linalg.norm(params.grad, dim = (2,3), ord = 2).mean())
         #end
         
         # print('reco lr', reco_lr.mean())
