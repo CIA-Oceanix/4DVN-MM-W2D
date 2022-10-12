@@ -91,7 +91,7 @@ class Block(nn.Sequential):
         super(Block, self).__init__(
                 nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), 
                           padding = (padding, padding), # or 'same'
-                          # padding_mode = 'reflect',
+                           padding_mode = 'reflect',
                           bias = True),
                 # nn.BatchNorm2d(out_channels),
                 nn.LeakyReLU(0.1)
