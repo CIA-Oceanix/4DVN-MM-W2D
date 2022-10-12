@@ -481,13 +481,13 @@ class LitModel(pl.LightningModule):
             raise ValueError('nan in reco_an\nAborting')
         #end
         
-        for name, params in self.Phi.named_parameters():
-            try:
-                print(name, torch.linalg.norm(params.grad, dim = (2,3), ord = 2).mean())
-            except:
-                pass
-            #end
-        #end
+        # for name, params in self.Phi.named_parameters():
+        #     try:
+        #         print(name, torch.linalg.norm(params.grad, dim = (2,3), ord = 2).mean())
+        #     except:
+        #         pass
+        #     #end
+        # #end
         
         # print('reco lr', reco_lr.mean())
         # print('reco an', reco_an.mean())
