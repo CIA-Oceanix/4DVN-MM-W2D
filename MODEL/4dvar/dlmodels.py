@@ -110,8 +110,7 @@ class ConvNet(nn.Module):
         self.net = nn.Sequential(
             collections.OrderedDict([
                 ('block1', Block(ts_length, 32, 7, 3)),
-                ('block2', Block(32, 64, 5, 2)),
-                ('adjlayer', nn.Conv2d(64, ts_length, (5,5), padding = 2, bias = True))
+                ('adjlayer', nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True))
             ])
         )
     #end
