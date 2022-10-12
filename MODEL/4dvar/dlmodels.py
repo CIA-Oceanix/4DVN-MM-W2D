@@ -482,7 +482,11 @@ class LitModel(pl.LightningModule):
         #end
         
         for name, params in self.Phi.named_parameters():
-            print(name, torch.linalg.norm(params.grad, dim = (2,3), ord = 2).mean())
+            try:
+                print(name, torch.linalg.norm(params.grad, dim = (2,3), ord = 2).mean())
+            except:
+                pass
+            #end
         #end
         
         # print('reco lr', reco_lr.mean())
