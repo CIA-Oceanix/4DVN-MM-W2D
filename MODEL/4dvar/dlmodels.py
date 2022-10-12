@@ -480,18 +480,7 @@ class LitModel(pl.LightningModule):
             
             raise ValueError('nan in reco_an\nAborting')
         #end
-        
-        # for name, params in self.Phi.named_parameters():
-        #     try:
-        #         print(name, torch.linalg.norm(params.grad, dim = (2,3), ord = 2).mean())
-        #     except:
-        #         pass
-        #     #end
-        # #end
-        
-        # print('reco lr', reco_lr.mean())
-        # print('reco an', reco_an.mean())
-        
+                
         self.means_reco_lr.append(reco_lr.clone().detach().mean())
         self.means_reco_an.append(reco_an.clone().detach().mean())
         
@@ -506,8 +495,7 @@ class LitModel(pl.LightningModule):
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        
-        # print('HR', reco_hr.mean())
+                
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
@@ -516,23 +504,18 @@ class LitModel(pl.LightningModule):
         # loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
         # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
-        # print('Grad', loss_grad)
         # loss_grad = loss_grad_x + loss_grad_y
         loss += loss_grad * self.hparams.grad_coeff
         
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
-        # print('Reg', regularization)
         loss += regularization * self.hparams.reg_coeff
-        
-        # print('Loss', loss)
-        
+                
         return dict({'loss' : loss}), outputs
     #end
     
     def training_step(self, batch, batch_idx):
         
-        print('Batch idx', batch_idx)
         metrics, out = self.forward(batch, phase = 'train')
         loss = metrics['loss']
         self.log('loss', loss, on_step = True, on_epoch = True, prog_bar = True)
