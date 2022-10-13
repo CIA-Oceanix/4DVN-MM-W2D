@@ -90,8 +90,8 @@ class Block(nn.Sequential):
     def __init__(self, in_channels, out_channels, kernel_size, padding):
         super(Block, self).__init__(
             nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), 
-                      padding = (padding, padding), # or 'same'
-                       padding_mode = 'reflect',
+                      padding = 'same',
+                      padding_mode = 'reflect',
                       bias = True),
             # nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1)
@@ -100,7 +100,6 @@ class Block(nn.Sequential):
 #end
 
 class ConvNet(nn.Module):
-    ''' Dynamical prior '''
     
     def __init__(self, shape_data, config_params):
         super(ConvNet, self).__init__()
@@ -108,10 +107,8 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            collections.OrderedDict([
-                ('block1', Block(ts_length, 32, 5, 2)),
-                ('adjlayer', nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True))
-            ])
+            Block(ts_length, 32, 5, 2),
+            nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True)
         )
     #end
     
@@ -494,12 +491,15 @@ class LitModel(pl.LightningModule):
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-                
+        
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
+        
+        print('Grad data mean : ', grad_data.mean())
+        print('Grad reco mean : ', grad_reco.mean())
         # loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
         # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
