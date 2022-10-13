@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-import collections
+# import collections
 import pytorch_lightning as pl
 import solver as NN_4DVar
 
@@ -108,7 +108,10 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             Block(ts_length, 32, 5, 2),
-            nn.Conv2d(32, ts_length, (5,5), padding = 2, bias = True)
+            nn.Conv2d(32, ts_length, (5,5),
+                      padding = 'same',
+                      padding_mode = 'reflect',
+                      bias = True)
         )
     #end
     
