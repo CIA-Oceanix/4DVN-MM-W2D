@@ -237,6 +237,8 @@ class LitModel(pl.LightningModule):
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
+        self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
+        self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
         self.hparams.reg_coeff              = config_params.REG_COEFF
@@ -373,14 +375,8 @@ class LitModel(pl.LightningModule):
         
         return pooled
     #end
-    
-    def get_hr_local_observation(self, data):
         
-        center_x, center_y = data.shape[-2] // 2, data.shape[-1] // 2
-        return data[:,:, center_x, center_y].unsqueeze(-1).unsqueeze(-1)
-    #end
-    
-    def get_mask(self, data_shape, mode):
+    def get_HR_obspoints_mask(self, data_shape, mode):
         
         if mode == 'center':
             
@@ -413,6 +409,34 @@ class LitModel(pl.LightningModule):
         return mask
     #end
     
+    def get_osse_mask(self, data_shape, lr_sfreq, hr_sfreq, hr_obs_point):
+                
+        # Low-reso pseudo-observations
+        mask_lr = torch.zeros(data_shape)
+        
+        # High-reso dx1 : get according to spatial sampling regime.
+        # This gives time series of local observations in specified points
+        # High-reso dx2 : all zeroes
+        mask_hr_dx1 = self.get_HR_obspoints_mask(data_shape, mode = hr_obs_point)
+        mask_hr_dx2 = torch.zeros(data_shape)
+        
+        ts_length = data_shape[1]
+        
+        # For both masks : temporal sampling.
+        # Ie : every n steps there is one observation
+        for mask, freq in zip([mask_lr, mask_hr_dx1], [lr_sfreq, hr_sfreq]):
+                    
+            if freq.__class__ is int:
+                mask[:, [t for t in range(ts_length) if t % freq == 0], :,:] = 1.
+            elif freq.__class__ is list:
+                mask[:, freq, :,:] = 1.
+            #end
+        #end
+                
+        mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
+        return mask
+    #end        
+    
     def forward(self, batch, phase = 'train'):
         
         state_init = None
@@ -444,10 +468,10 @@ class LitModel(pl.LightningModule):
         #end
         
         # Mask data
-        mask_lr = torch.ones(data_lr.shape)
-        mask_an_dx1 = self.get_mask(data_hr.shape, mode = self.hparams.hr_mask_mode)
-        mask_an_dx2 = torch.zeros(data_an.shape)
-        mask = torch.cat((mask_lr, mask_an_dx1, mask_an_dx2), dim = 1)
+        mask = self.get_osse_mask(data_hr.shape, 
+                                  self.hparams.lr_mask_sfreq, 
+                                  self.hparams.hr_mask_sfreq, 
+                                  self.hparams.hr_mask_mode)
         
         input_state = input_state * mask
         input_data  = input_data * mask
@@ -459,7 +483,6 @@ class LitModel(pl.LightningModule):
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr.clone()
-                # reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             else:
@@ -479,7 +502,7 @@ class LitModel(pl.LightningModule):
             
             raise ValueError('nan in reco_an\nAborting')
         #end
-                
+        
         self.means_reco_lr.append(reco_lr.clone().detach().mean())
         self.means_reco_an.append(reco_an.clone().detach().mean())
         
@@ -501,12 +524,7 @@ class LitModel(pl.LightningModule):
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
-        # print('Grad data mean : ', grad_data.mean())
-        # print('Grad reco mean : ', grad_reco.mean())
-        # loss_grad_x = self.loss_fn( (grad_data[0] - grad_reco[0]), mask = None )
-        # loss_grad_y = self.loss_fn( (grad_data[1] - grad_reco[1]), mask = None )
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
-        # loss_grad = loss_grad_x + loss_grad_y
         loss += loss_grad * self.hparams.grad_coeff
         
         ## Regularization
@@ -567,95 +585,4 @@ class LitModel(pl.LightningModule):
         return metrics, outs
     #end
     
-    def get_eval_metrics(self):
-        
-        data_reco = self.get_saved_samples()
-        
-        data = torch.cat([item['data'] for item in data_reco], dim = 0)
-        reco = torch.cat([item['reco'] for item in data_reco], dim = 0)
-        # reco_lr = reco[:,:24,:,:]
-        # reco_hr = reco[:,48:,:,:]
-        # reco = reco_lr + reco_hr
-        cp_data = crop_central_patch(data)
-        cp_reco = crop_central_patch(reco)
-        
-        hist_data = get_batched_histograms(data, bins = 30)
-        hist_reco = get_batched_histograms(reco, bins = 30)
-        cp_hist_data = get_batched_histograms(cp_data, bins = 30)
-        cp_hist_reco = get_batched_histograms(cp_reco, bins = 30)
-        
-        mse_complete = NormLoss()((data - reco), mask = None)
-        mse_central  = NormLoss()((cp_data - cp_reco), mask = None)
-        bdist_complete = bhattacharyya_distance(hist_data, hist_reco)
-        bdist_central = bhattacharyya_distance(cp_hist_data, cp_hist_reco)
-        
-        perf_metrics_dict = {
-            'mse_central'  : mse_central.item(),
-            'mse_complete' : mse_complete.item(),
-            'bd_central'   : bdist_central.item(),
-            'bd_complete'  : bdist_complete.item()
-        }
-        return perf_metrics_dict
-    #end
-    
-#end
-
-
-# Define evaluation metrics : Bhattacharyya distance, MSE
-
-def bhattacharyya_distance(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
-    
-    if reduction_dim is None and h_target.shape.__len__() > 1:
-        reduction_dim = 1
-    elif reduction_dim is None and h_target.shape.__len__() <= 1:
-        reduction_dim = 0
-    #end
-    
-    eps = 1e-5
-    b_coefficient = torch.sum((h_target * h_output).sqrt(), dim = reduction_dim)
-    if torch.any(b_coefficient > 1) or torch.any(b_coefficient < 0):
-        raise ValueError('BC can not be > 1 or < 0')
-    #end
-    
-    b_coefficient[b_coefficient < eps] = eps
-    
-    if mode == 'log':
-        b_distance = -1. * torch.log(b_coefficient)
-    elif mode == 'trineq':
-        b_distance = torch.sqrt(1 - b_coefficient)
-    else:
-        raise NotImplementedError('Metric selected not valid. Consider setting "log" or "trineq"')
-    #end
-    
-    return b_distance.mean()
-#end
-
-def mse_expl_variance(target, output, divide_std = True):
-    
-    mserror = (target - output).pow(2).mean(dim = (2,3)).sum(dim = 1).mean()
-    if divide_std:
-        mserror = mserror / target.std()
-    #end
-    
-    return mserror
-#end
-
-# Crop central patch
-def crop_central_patch(img_ts, length):
-    
-    center_h, center_w = img_ts[0,0].shape[-2] // 2, img_ts[0,0].shape[-1] // 2
-    cp_img = img_ts[:,:, center_h - length : center_h + length, center_w - length : center_w + length]
-    return cp_img
-#end
-
-# B-distances
-def get_batched_histograms(img_ts, bins = 30):
-    
-    img_H, img_W = img_ts[0,0].shape
-    img = img_ts.reshape(-1, img_H, img_W)
-    hist = torch.cat([torch.histc(img[i], bins = bins).unsqueeze(0) for i in range(img.shape[0])], dim = 0)
-    for i in range(hist.shape[0]):
-        hist[i] = hist[i] / hist[i].sum()
-    #end
-    return hist
 #end

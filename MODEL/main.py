@@ -13,7 +13,6 @@ from collections import namedtuple
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.callbacks import EarlyStopping
 
 from pathmng import PathManager
 from dlmodels import LitModel, model_selection
@@ -103,6 +102,11 @@ class Experiment:
         #end
         
         model_name += f'-{self.cparams.PRIOR}'
+        
+        if self.cparams.HR_MASK_SFREQ == 1:
+            model_name += '-REFRUN'
+        #end
+        
         self.model_name = model_name
         return model_name
     #end
@@ -222,13 +226,7 @@ class Experiment:
             save_top_k = 1,
             mode       = 'min'
         )
-        
-        # early_stopping = EarlyStopping(
-        #     monitor  = 'val_loss',
-        #     mode     = 'min',
-        #     patience = 50
-        # )
-        
+                
         ## Instantiate Trainer
         trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
         
@@ -242,10 +240,7 @@ class Experiment:
         trainer.test(lit_model, datamodule = w2d_dm)
         test_loss = lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
-        
-        # perf_dict_metrics = lit_model.get_eval_metrics()
-        # perf_dict_metrics.update({'mse_test' : test_loss.item()})
-        
+                
         print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
         print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
         print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
@@ -258,7 +253,6 @@ class Experiment:
                                             *lit_model.get_learning_curves())
         lit_model.remove_saved_outputs()
         self.path_manager.save_litmodel_trainer(lit_model, trainer)
-        # self.path_manager.print_evalreport(perf_dict_metrics)
         
         end_time = datetime.datetime.now()
         print('\nRun end at {}\n'.format(end_time))
