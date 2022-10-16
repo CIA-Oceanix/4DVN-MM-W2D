@@ -363,10 +363,7 @@ class LitModel(pl.LightningModule):
     def avgpool2d_keepsize(self, data):
         
         img_size = data.shape[-2:]
-        pooled = F.avg_pool2d(data, 
-                              kernel_size = self.hparams.lr_kernel_size,
-                              padding = 0, 
-                              stride = 1)
+        pooled = F.avg_pool2d(data, kernel_size = self.hparams.lr_kernel_size)
         pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic')
         
         if not data.shape == pooled.shape:
@@ -434,10 +431,10 @@ class LitModel(pl.LightningModule):
                 pass
             #end
         #end
-                
+        
         mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
         return mask
-    #end        
+    #end
     
     def forward(self, batch, phase = 'train'):
         

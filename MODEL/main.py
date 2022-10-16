@@ -92,8 +92,8 @@ class Experiment:
                 model_name = mname_target
             else:
                 
-                self.path_checkpoint_source = 'None'
-                self.name_source_model = 'None'
+                self.path_checkpoint_source = None
+                self.name_source_model = None
                 model_name += f'-gs{n_iter}it'
             #end
         else:
@@ -106,6 +106,21 @@ class Experiment:
         
         if self.cparams.HR_MASK_SFREQ == 1:
             model_name += '-REFRUN'
+        else:
+            lr_sfreq = self.cparams.LR_MASK_SFREQ
+            if lr_sfreq is None:
+                lrfs = '0'
+            else:
+                lrfs = '{}'.format(lr_sfreq)
+            #end
+            hr_sfreq = self.cparams.HR_MASK_SFREQ
+            if hr_sfreq is None:
+                hrfs = '0'
+            else:
+                hrfs = '{}'.format(hr_sfreq)
+            #end
+            
+            model_name += f'-sflr{lrfs}-sfhr{hrfs}'
         #end
         
         self.model_name = model_name
@@ -227,7 +242,7 @@ class Experiment:
             save_top_k = 1,
             mode       = 'min'
         )
-                
+        
         ## Instantiate Trainer
         trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
         
@@ -241,7 +256,7 @@ class Experiment:
         trainer.test(lit_model, datamodule = w2d_dm)
         test_loss = lit_model.get_test_loss()
         print('\n\nTest loss = {}\n\n'.format(test_loss))
-                
+        
         print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
         print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
         print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
@@ -282,4 +297,3 @@ if __name__ == '__main__':
     exp = Experiment(versioning = versioning)
     exp.run_simulation()
 #end
-
