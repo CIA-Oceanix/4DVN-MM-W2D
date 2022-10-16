@@ -425,11 +425,13 @@ class LitModel(pl.LightningModule):
         # For both masks : temporal sampling.
         # Ie : every n steps there is one observation
         for mask, freq in zip([mask_lr, mask_hr_dx1], [lr_sfreq, hr_sfreq]):
-                    
+            
             if freq.__class__ is int:
                 mask[:, [t for t in range(ts_length) if t % freq == 0], :,:] = 1.
             elif freq.__class__ is list:
                 mask[:, freq, :,:] = 1.
+            elif freq is None:
+                pass
             #end
         #end
                 

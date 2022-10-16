@@ -64,6 +64,7 @@ class Experiment:
         if self.cparams.LOAD_CKPT and self.cparams.FIXED_POINT:
             raise ValueError('Load ckpt and fixed point, it`s probabily a mistake')
         #end
+    #end
     
     def get_model(self):
         
