@@ -64,11 +64,34 @@ class Experiment:
         if self.cparams.LOAD_CKPT and self.cparams.FIXED_POINT:
             raise ValueError('Load ckpt and fixed point, it`s probabily a mistake')
         #end
+        
+        if not self.cparams.FIXED_POINT and self.cparams.HR_MASK_SFREQ == 1:
+            raise ValueError('Reference run requires fixed point')
+        #end
     #end
     
     def get_model(self):
         
         model_name = f'{self.cparams.VNAME}-{self.cparams.HR_MASK_MODE}'
+        
+        if self.cparams.HR_MASK_SFREQ == 1:
+            osse1_spcs = 'REFRUN'
+        else:
+            lr_sfreq = self.cparams.LR_MASK_SFREQ
+            if lr_sfreq is None:
+                lrfs = '0'
+            else:
+                lrfs = '{}'.format(lr_sfreq)
+            #end
+            hr_sfreq = self.cparams.HR_MASK_SFREQ
+            if hr_sfreq is None:
+                hrfs = '0'
+            else:
+                hrfs = '{}'.format(hr_sfreq)
+            #end
+            
+            osse1_spcs = f'sflr{lrfs}-sfhr{hrfs}'
+        #end
         
         if self.cparams.GS_TRAIN and not self.versioning:
             
@@ -76,8 +99,8 @@ class Experiment:
             n_iter     = self.cparams.NSOL_ITER
             
             if self.cparams.LOAD_CKPT:
-                mname_source = model_name + f'-gs{n_iter_ref}it-{self.cparams.PRIOR}'
-                mname_target = model_name + f'-ckpt-gs{n_iter_ref}it-gs{n_iter}it'
+                mname_source = model_name + f'-gs{n_iter_ref}it-{osse1_spcs}-{self.cparams.PRIOR}'
+                mname_target = model_name + f'-ckpt-gs{n_iter_ref}it-{osse1_spcs}-gs{n_iter}it'
                 
                 # instantiate a path_manager only to get the
                 # path to checkpoints of source version
@@ -94,33 +117,14 @@ class Experiment:
                 
                 self.path_checkpoint_source = None
                 self.name_source_model = None
-                model_name += f'-gs{n_iter}it'
+                model_name += f'-gs{n_iter}it-{osse1_spcs}'
             #end
         else:
             self.path_checkpoint_source = None
             self.name_source_model = None
-            model_name += '-fp1it'
+            model_name += f'-fp1it-{osse1_spcs}'
         #end
-        
-        if self.cparams.HR_MASK_SFREQ == 1:
-            model_name += '-REFRUN'
-        else:
-            lr_sfreq = self.cparams.LR_MASK_SFREQ
-            if lr_sfreq is None:
-                lrfs = '0'
-            else:
-                lrfs = '{}'.format(lr_sfreq)
-            #end
-            hr_sfreq = self.cparams.HR_MASK_SFREQ
-            if hr_sfreq is None:
-                hrfs = '0'
-            else:
-                hrfs = '{}'.format(hr_sfreq)
-            #end
-            
-            model_name += f'-sflr{lrfs}-sfhr{hrfs}'
-        #end
-        
+                
         model_name += f'-{self.cparams.PRIOR}'
         
         self.model_name = model_name
