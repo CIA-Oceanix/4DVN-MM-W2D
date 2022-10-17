@@ -102,8 +102,6 @@ class Experiment:
             model_name += '-fp1it'
         #end
         
-        model_name += f'-{self.cparams.PRIOR}'
-        
         if self.cparams.HR_MASK_SFREQ == 1:
             model_name += '-REFRUN'
         else:
@@ -122,6 +120,8 @@ class Experiment:
             
             model_name += f'-sflr{lrfs}-sfhr{hrfs}'
         #end
+        
+        model_name += f'-{self.cparams.PRIOR}'
         
         self.model_name = model_name
         return model_name
