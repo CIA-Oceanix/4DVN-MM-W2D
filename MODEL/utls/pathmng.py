@@ -6,13 +6,82 @@ import torch
 import pickle
 
 
+
 class PathManager:
     
-    def __init__(self, mother_dir, model_name, load_ckpt, versioning = True, tabula_rasa = False):
+    def __init__(self, mother_dir, cparams, versioning = True, tabula_rasa = False):
         
         if tabula_rasa:
             os.system(r'rm -rf {}/*'.format(mother_dir))
         #end
+        
+        #---------------------------------------------------------------------------------------------
+        # MODEL  NAME
+        # format : 4DVN-W2D-<mask_HR>[-ckpt-gs_n_itref]-<inversion>-<lr_hr_sfreqs / "REFRUN">-<prior>
+        model_name = f'{cparams.VNAME}-{cparams.HR_MASK_MODE}'
+        
+        if cparams.HR_MASK_SFREQ == 1:
+            exp_osse_1_specs = 'REFRUN'
+        else:
+            lr_sampling_freq = cparams.LR_MASK_SFREQ
+            if lr_sampling_freq is None:
+                lr_sampling_freq_tag = '0'
+            else:
+                if lr_sampling_freq.__class__ is list:
+                    
+                    lr_sampling_freq_tag = '_'
+                    for item in lr_sampling_freq:
+                        lr_sampling_freq_tag += (str(item) + '_')
+                    #end
+                
+                else:
+                    lr_sampling_freq_tag = '{}'.format(lr_sampling_freq)
+                #end
+            #end
+            
+            hr_sampling_freq = cparams.HR_MASK_SFREQ
+            if hr_sampling_freq is None:
+                hr_sampling_freq_tag = '0'
+            else:
+                if hr_sampling_freq.__class__ is list:
+                    
+                    hr_sampling_freq_tag = '_'
+                    for item in hr_sampling_freq:
+                        hr_sampling_freq_tag += (str(item) + '_')
+                    #end
+                    
+                else:
+                    hr_sampling_freq_tag = '{}'.format(hr_sampling_freq)
+                #end
+            #end
+            
+            exp_osse_1_specs = f'sflr{lr_sampling_freq_tag}-sfhr{hr_sampling_freq_tag}'
+        #end
+        
+        if cparams.GS_TRAIN and not versioning:
+            
+            nsol_iter = cparams.NSOL_ITER
+            nsol_iter_ref = cparams.NSOL_IT_REF
+            
+            if cparams.LOAD_CKPT:
+                model_source = f'{model_name}-gs{nsol_iter_ref}it-{exp_osse_1_specs}-{cparams.PRIOR}'
+                path_ckpt_source = os.path.join(mother_dir, model_source, 'ckpt')
+                inversion = f'ckpt-gs{nsol_iter_ref}it-gs{nsol_iter}it'
+            else:
+                model_source = None
+                path_ckpt_source = None
+                inversion = f'gs{nsol_iter}it'
+            #end
+            
+        else:
+            model_source = None
+            path_ckpt_source = None
+            inversion = 'fp1it'
+        #end
+        
+        self.path_ckpt_source = path_ckpt_source
+        self.model_source = model_source
+        model_name += f'-{inversion}-{exp_osse_1_specs}-{cparams.PRIOR}'
         
         if versioning:
             time_now = datetime.datetime.now()
@@ -21,6 +90,8 @@ class PathManager:
         else:
             version_path = os.path.join(mother_dir, model_name)
         #end
+        # END  MODEL NAME
+        #---------------------------------------------------------------------------------------------
         
         # create version home directory
         if not os.path.exists(version_path):
@@ -34,10 +105,8 @@ class PathManager:
         #end
         
         # For security, remove all the saved checkpoints in order no to load the wrong one
-        if not load_ckpt:
-            os.system(r'rm -f {}/*'.format(path_ckpt))
-            print('REMOVE CKPTS in {}'.format(path_ckpt))
-        #end
+        os.system(r'rm -f {}/*'.format(path_ckpt))
+        print('REMOVE CKPTS in {}'.format(path_ckpt))
         
         path_litmodel_trainer = os.path.join(version_path, 'litmodel_trainer')
         if not os.path.exists(path_litmodel_trainer):
@@ -65,8 +134,15 @@ class PathManager:
         self.path_evalmetrics      = path_evalmetrics
         self.path_configfiles      = path_configfiles
         self.path_modeloutput      = path_modeloutput
-        
         self.nrun = None
+    #end
+    
+    def get_model_name(self):
+        return self.model_name
+    #end
+    
+    def get_source_ckpt_path(self):
+        return self.path_ckpt_source, self.model_source
     #end
     
     def get_path(self, directory, absolute = False):
@@ -136,10 +212,6 @@ class PathManager:
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
         
-        # reco_lr = reco[:,:24,:,:]
-        # reco_hr = reco[:,48:,:,:]
-        # reco = reco_lr + reco_hr
-        
         if cparams.SAVE1TESTBATCH:
             
             outputs_save = [
@@ -170,5 +242,3 @@ class PathManager:
         f.close()
     #end
 #end
-
-

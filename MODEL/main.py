@@ -68,78 +68,28 @@ class Experiment:
         if not self.cparams.FIXED_POINT and self.cparams.HR_MASK_SFREQ == 1:
             raise ValueError('Reference run requires fixed point')
         #end
+        
+        if self.versioning and self.cparams.RUNS > 1:
+            raise ValueError('Versioning with RUNS > 1 not allowed')
+        #end
     #end
-    
-    def get_model(self):
         
-        model_name = f'{self.cparams.VNAME}-{self.cparams.HR_MASK_MODE}'
+    def initialize_model_names_paths(self, path_manager):
         
-        if self.cparams.HR_MASK_SFREQ == 1:
-            osse1_spcs = 'REFRUN'
-        else:
-            lr_sfreq = self.cparams.LR_MASK_SFREQ
-            if lr_sfreq is None:
-                lrfs = '0'
-            else:
-                lrfs = '{}'.format(lr_sfreq)
-            #end
-            hr_sfreq = self.cparams.HR_MASK_SFREQ
-            if hr_sfreq is None:
-                hrfs = '0'
-            else:
-                hrfs = '{}'.format(hr_sfreq)
-            #end
-            
-            osse1_spcs = f'sflr{lrfs}-sfhr{hrfs}'
-        #end
-        
-        if self.cparams.GS_TRAIN and not self.versioning:
-            
-            n_iter_ref = self.cparams.NSOL_IT_REF
-            n_iter     = self.cparams.NSOL_ITER
-            
-            if self.cparams.LOAD_CKPT:
-                mname_source = model_name + f'-gs{n_iter_ref}it-{osse1_spcs}-{self.cparams.PRIOR}'
-                mname_target = model_name + f'-ckpt-gs{n_iter_ref}it-{osse1_spcs}-gs{n_iter}it'
-                
-                # instantiate a path_manager only to get the
-                # path to checkpoints of source version
-                path_manager_source = PathManager(self.path_model,
-                                                  mname_source,
-                                                  self.cparams.LOAD_CKPT,
-                                                  versioning  = False,
-                                                  tabula_rasa = False)
-                self.path_checkpoint_source = path_manager_source.get_path('ckpt')
-                self.name_source_model = mname_source
-                
-                model_name = mname_target
-            else:
-                
-                self.path_checkpoint_source = None
-                self.name_source_model = None
-                model_name += f'-gs{n_iter}it-{osse1_spcs}'
-            #end
-        else:
-            self.path_checkpoint_source = None
-            self.name_source_model = None
-            model_name += f'-fp1it-{osse1_spcs}'
-        #end
-                
-        model_name += f'-{self.cparams.PRIOR}'
-        
-        self.model_name = model_name
-        return model_name
+        self.path_checkpoint_source, self.name_source_model = path_manager.get_source_ckpt_path()
+        self.path_checkpoint = path_manager.get_path('ckpt')
+        self.model_name = path_manager.get_model_name()
     #end
     
     def load_checkpoint(self, lit_model, stage, run):
         
-        if self.cparams.LOAD_CKPT:
+        if stage == 'PARAMS-INIT':
             checkpoint_name = os.path.join(self.path_checkpoint_source,
                             f'run{run}-' + self.name_source_model + '-epoch=*.ckpt')
-        else:
+        elif stage == 'TEST':
             checkpoint_name = os.path.join(self.path_checkpoint,
                             f'run{run}-' + self.model_name + '-epoch=*.ckpt')
-        #end
+        #ends
         
         checkpoint_path = glob.glob(checkpoint_name)[0]
         ckpt_model = open(checkpoint_path, 'rb')
@@ -158,18 +108,9 @@ class Experiment:
     
     def run_simulation(self):
         
-        if self.versioning and self.cparams.RUNS > 1:
-            raise ValueError('Versioning with RUNS > 1 not allowed')
-        #end
+        path_manager = PathManager(self.path_model, self.cparams, versioning = self.versioning, tabula_rasa = self.tabula_rasa)
+        self.initialize_model_names_paths(path_manager)
         
-        model_name = self.get_model()
-        
-        # instantiate path_manager of this version
-        path_manager = PathManager(self.path_model,
-                                   model_name,
-                                   self.cparams.LOAD_CKPT,
-                                   versioning  = self.versioning,
-                                   tabula_rasa = self.tabula_rasa)
         self.path_manager = path_manager
         self.path_checkpoint = path_manager.get_path('ckpt')
         
@@ -221,12 +162,7 @@ class Experiment:
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')
         if self.cparams.LOAD_CKPT:
-            
             lit_model = self.load_checkpoint(lit_model, 'PARAMS-INIT', run)
-            name_append = '_second'
-        else:
-            name_append = ''
-            pass
         #end
         
         # TRAINER : configure properties and callbacks
@@ -242,7 +178,7 @@ class Experiment:
         model_checkpoint = ModelCheckpoint(
             monitor    = 'val_loss',
             dirpath    = path_ckpt,
-            filename   = f'run{run}-' + self.model_name + '-{epoch:02d}' + name_append,
+            filename   = f'run{run}-' + self.model_name + '-{epoch:02d}', #+ name_append,
             save_top_k = 1,
             mode       = 'min'
         )
