@@ -257,6 +257,7 @@ class LitModel(pl.LightningModule):
         self.hparams.n_solver_iter          = config_params.NSOL_ITER
         self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
         self.hparams.automatic_optimization = True
+        self.has_any_nan                    = False
         
         # Monitoring metrics
         self.__train_losses = np.zeros(config_params.EPOCHS)
@@ -296,6 +297,17 @@ class LitModel(pl.LightningModule):
             alphaReg = alpha_reg,                                           # alpha regularization
             varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
         )
+    #end
+    
+    def has_nans(self):
+        
+        for param in self.model.parameters():
+            if torch.any(param.isnan()):
+                self.has_any_nan = True
+            #end
+        #end
+        
+        return self.has_any_nan
     #end
     
     def save_test_loss(self, test_loss, batch_size):
@@ -364,7 +376,7 @@ class LitModel(pl.LightningModule):
         
         img_size = data.shape[-2:]
         pooled = F.avg_pool2d(data, kernel_size = self.hparams.lr_kernel_size)
-        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic')
+        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic', align_corners = False)
         
         if not data.shape == pooled.shape:
             raise ValueError('Original and Pooled_keepsize data shapes mismatch')
@@ -407,7 +419,7 @@ class LitModel(pl.LightningModule):
     #end
     
     def get_osse_mask(self, data_shape, lr_sfreq, hr_sfreq, hr_obs_point):
-                
+        
         # Low-reso pseudo-observations
         mask_lr = torch.zeros(data_shape)
         
@@ -492,18 +504,17 @@ class LitModel(pl.LightningModule):
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
         #end
-        
-        if torch.any(reco_an.isnan()):
-            print('Nan in reco_an\nChecking ...\n')
-            for name, param in self.Phi.named_parameters():
-                print(name, param.mean())
-            #end
-            
-            raise ValueError('nan in reco_an\nAborting')
-        #end
-        
+                
         self.means_reco_lr.append(reco_lr.clone().detach().mean())
         self.means_reco_an.append(reco_an.clone().detach().mean())
+        
+        # if self.run == 1 and self.current_epoch == 4:
+        #     data_hr = data_hr * torch.nan
+            
+        #     for param in self.model.parameters():
+        #         param = param + torch.nan
+        #     #end            
+        # #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
@@ -529,7 +540,10 @@ class LitModel(pl.LightningModule):
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
         loss += regularization * self.hparams.reg_coeff
-                
+        
+        
+        
+        
         return dict({'loss' : loss}), outputs
     #end
     

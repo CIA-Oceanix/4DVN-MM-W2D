@@ -4,6 +4,8 @@ import datetime
 import json
 import torch
 import pickle
+import netCDF4 as nc
+import numpy as np
 
 
 
@@ -21,8 +23,11 @@ class PathManager:
         model_name = f'{cparams.VNAME}-{cparams.HR_MASK_MODE}'
         
         if cparams.HR_MASK_SFREQ == 1:
+            
             exp_osse_1_specs = 'REFRUN'
         else:
+            
+            # parse LR description
             lr_sampling_freq = cparams.LR_MASK_SFREQ
             if lr_sampling_freq is None:
                 lr_sampling_freq_tag = '0'
@@ -39,6 +44,7 @@ class PathManager:
                 #end
             #end
             
+            # parse HR description
             hr_sampling_freq = cparams.HR_MASK_SFREQ
             if hr_sampling_freq is None:
                 hr_sampling_freq_tag = '0'
@@ -135,6 +141,8 @@ class PathManager:
         self.path_configfiles      = path_configfiles
         self.path_modeloutput      = path_modeloutput
         self.nrun = None
+        
+        self.initialize_netCDF4_dataset(cparams.REGION_EXTENT_PX, cparams.RUNS)
     #end
     
     def get_model_name(self):
@@ -143,6 +151,23 @@ class PathManager:
     
     def get_source_ckpt_path(self):
         return self.path_ckpt_source, self.model_source
+    #end
+    
+    def initialize_netCDF4_dataset(self, region_extent, runs):
+        
+        if os.path.exists(os.path.join(self.path_modeloutput, 'reconstructions.nc')):
+            os.remove(os.path.join(self.path_modeloutput, 'reconstructions.nc'))
+        #end
+        
+        dataset = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'w', format = 'NETCDF4_CLASSIC')
+        dataset.createDimension('extent', region_extent)
+        dataset.createDimension('time', 24)
+        dataset.createDimension('one', 1)
+        dataset.createDimension('run', runs)
+        dataset.createDimension('batch', None)
+        dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent', 'extent'))
+        dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent', 'extent'))
+        dataset.close()
     #end
     
     def get_path(self, directory, absolute = False):
@@ -196,7 +221,7 @@ class PathManager:
     #end
     
     def save_litmodel_trainer(self, lit_model, trainer):
-                
+        
         with open(os.path.join(self.path_litmodel_trainer, 'lit_model.pkl'), 'wb') as f:
             torch.save(lit_model.cpu(), f)
         f.close()
@@ -206,33 +231,18 @@ class PathManager:
         #end
     #end
     
-    def save_model_output(self, outputs, cparams, train_losses, val_losses):
+    def save_model_output(self, outputs, cparams, train_losses, val_losses, run):
         
-        img_dim = outputs[0]['reco'].shape[-2:]
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
         
-        if cparams.SAVE1TESTBATCH:
-            
-            outputs_save = [
-                {
-                    'data' : data[0,:,:,:].reshape(1,-1, *tuple(img_dim)),
-                    'reco' : reco[0,:,:,:].reshape(1,-1, *tuple(img_dim))
-                }
-            ]
-        else:
-            outputs_save = [
-                {
-                    'data' : data,
-                    'reco' : reco
-                }
-            ]
+        reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
+        if run == 0:
+            reco_ncd['data'][0,:,:,:,:] = data
         #end
-        
-        with open(os.path.join(self.path_modeloutput, 'reconstructions.pkl'), 'wb') as f:
-            torch.save(outputs_save, f)
-        f.close()
-        
+        reco_ncd['reco'][run,:,:,:,:] = reco
+        reco_ncd.close()
+                
         with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:
             json.dump(cparams._asdict(), f, indent = 4)
         f.close()

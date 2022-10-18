@@ -70,13 +70,14 @@ class W2DSimuDataModule(pl.LightningDataModule):
     def __init__(self, path_data, cparams, normalize = True):
         super(W2DSimuDataModule, self).__init__()
         
-        self.path_data  = path_data
-        self.batch_size = cparams.BATCH_SIZE
-        self.ttsplit    = cparams.TR_TE_SPLIT
-        self.tvsplit    = cparams.TR_VA_SPLIT
-        self.normalize  = normalize
-        self.data_name  = cparams.DATASET_NAME
-        self.shapeData  = None
+        self.path_data     = path_data
+        self.region_extent = cparams.REGION_EXTENT_PX
+        self.batch_size    = cparams.BATCH_SIZE
+        self.ttsplit       = cparams.TR_TE_SPLIT
+        self.tvsplit       = cparams.TR_VA_SPLIT
+        self.normalize     = normalize
+        self.data_name     = cparams.DATASET_NAME
+        self.shapeData     = None
         
         self.setup()
     #end
@@ -95,7 +96,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
-        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))[:,:,:150,:150]
+        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))[:,:,:self.region_extent,:self.region_extent]
         self.shapeData = (self.batch_size, 24, *tuple(shape))
         
         n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)

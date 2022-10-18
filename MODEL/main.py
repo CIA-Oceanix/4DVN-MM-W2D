@@ -12,7 +12,7 @@ import argparse
 from collections import namedtuple
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathmng import PathManager
 from dlmodels import LitModel, model_selection
@@ -134,11 +134,15 @@ class Experiment:
         else:
             
             # a good choice of hyper-params is set yet
-            for _run in range(self.cparams.RUNS):
+            nruns = 0
+            _run = 0
+            while nruns < self.cparams.RUNS:
                 
-                print(f'Run : {_run}')
+                print(f'\n ******* Run : {_run}')
                 self.path_manager.set_nrun(_run)
-                self.main(_run)
+                run_outcome = self.main(_run)
+                nruns += run_outcome
+                _run += run_outcome
             #end
         #end
     #end
@@ -183,36 +187,59 @@ class Experiment:
             mode       = 'min'
         )
         
+        early_stopping = EarlyStopping(
+            monitor                  = 'loss',
+            check_finite             = True,
+            check_on_train_epoch_end = True
+            )
+        
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
         
         # Train and test
         ## Train
         trainer.fit(lit_model, datamodule = w2d_dm)
         
-        ## Test
-        lit_model = self.load_checkpoint(lit_model, 'TEST', run)
-        lit_model.eval()
-        trainer.test(lit_model, datamodule = w2d_dm)
-        test_loss = lit_model.get_test_loss()
-        print('\n\nTest loss = {}\n\n'.format(test_loss))
+        if lit_model.has_nans():
+            
+            print('\nNan in model parameters')
+            print('Aborting ...\n')
+            return_value = 0
         
-        print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
-        print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
-        print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
-        print('Mean reco an = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
+        else:
+            
+            ## Test
+            lit_model = self.load_checkpoint(lit_model, 'TEST', run)
+            lit_model.eval()
+            trainer.test(lit_model, datamodule = w2d_dm)
+            test_loss = lit_model.get_test_loss()
+            print('\n\nTest loss = {}\n\n'.format(test_loss))
+            
+            print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
+            print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
+            print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
+            print('Mean reco an = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
+            
+            # save reports and reconstructions in the proper target directory
+            self.path_manager.save_configfiles(self.cparams, 'config_params')
+            self.path_manager.save_model_output(lit_model.get_saved_samples(),
+                                                self.cparams,
+                                                *lit_model.get_learning_curves(),
+                                                run)
+            lit_model.remove_saved_outputs()
+            self.path_manager.save_litmodel_trainer(lit_model, trainer)
+            
+            print('\nTraining and test successful')
+            print('Returning ...')
+            return_value = 1
         
-        # save reports and reconstructions in the proper target directory
-        self.path_manager.save_configfiles(self.cparams, 'config_params')
-        self.path_manager.save_model_output(lit_model.get_saved_samples(),
-                                            self.cparams,
-                                            *lit_model.get_learning_curves())
-        lit_model.remove_saved_outputs()
-        self.path_manager.save_litmodel_trainer(lit_model, trainer)
-        
+        #end
+            
         end_time = datetime.datetime.now()
         print('\nRun end at {}\n'.format(end_time))
         print('Run time = {}\n'.format(end_time - start_time))
+        
+        return return_value
     #end
 #end
 
