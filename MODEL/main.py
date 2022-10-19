@@ -135,19 +135,22 @@ class Experiment:
             
             # a good choice of hyper-params is set yet
             nruns = 0
-            _run = 0
+            real_run = 0
             while nruns < self.cparams.RUNS:
                 
-                print(f'\n ******* Run : {_run}')
-                self.path_manager.set_nrun(_run)
-                run_outcome = self.main(_run)
+                print('\n***************')
+                print(f'RUN       : {nruns+1} / {self.cparams.RUNS}')
+                print(f'Effective : {real_run+1} ')
+                print(f'Aborted   : {real_run - nruns}')
+                self.path_manager.set_nrun(nruns)
+                run_outcome = self.main(nruns, real_run)
                 nruns += run_outcome
-                _run += run_outcome
+                real_run += 1
             #end
         #end
     #end
     
-    def main(self, run):
+    def main(self, run, real_run):
         
         start_time = datetime.datetime.now()
         print('\nRun start at {}\n'.format(start_time))
@@ -161,7 +164,7 @@ class Experiment:
         
         ## Instantiate dynamical prior and lit model
         Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-        lit_model = LitModel(Phi, shape_data, self.cparams).to(DEVICE)
+        lit_model = LitModel(Phi, shape_data, self.cparams, real_run).to(DEVICE)
         
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')
@@ -191,10 +194,10 @@ class Experiment:
             monitor                  = 'loss',
             check_finite             = True,
             check_on_train_epoch_end = True
-            )
+        )
         
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
         
         # Train and test
         ## Train
@@ -205,7 +208,7 @@ class Experiment:
             print('\nNan in model parameters')
             print('Aborting ...\n')
             return_value = 0
-        
+            
         else:
             
             ## Test
@@ -215,10 +218,10 @@ class Experiment:
             test_loss = lit_model.get_test_loss()
             print('\n\nTest loss = {}\n\n'.format(test_loss))
             
-            print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
-            print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
-            print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
-            print('Mean reco an = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
+            # print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
+            # print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
+            # print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
+            # print('Mean reco an = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
             
             # save reports and reconstructions in the proper target directory
             self.path_manager.save_configfiles(self.cparams, 'config_params')

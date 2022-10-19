@@ -166,6 +166,7 @@ class PathManager:
         dataset.createDimension('one', 1)
         dataset.createDimension('run', runs)
         dataset.createDimension('batch', None)
+        
         dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent', 'extent'))
         dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent', 'extent'))
         dataset.close()
