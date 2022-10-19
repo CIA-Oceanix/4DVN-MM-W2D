@@ -157,6 +157,7 @@ class PathManager:
         
         if os.path.exists(os.path.join(self.path_modeloutput, 'reconstructions.nc')):
             os.remove(os.path.join(self.path_modeloutput, 'reconstructions.nc'))
+            print('Old dataset.nc removed ...')
         #end
         
         dataset = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'w', format = 'NETCDF4_CLASSIC')
@@ -168,6 +169,7 @@ class PathManager:
         dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent', 'extent'))
         dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent', 'extent'))
         dataset.close()
+        print('Dataset.nc initialized and closed ...')
     #end
     
     def get_path(self, directory, absolute = False):
