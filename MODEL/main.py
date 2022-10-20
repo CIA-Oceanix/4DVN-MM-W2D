@@ -193,7 +193,8 @@ class Experiment:
         early_stopping_loss = EarlyStopping(
             monitor                  = 'loss',
             check_finite             = True,
-            check_on_train_epoch_end = True
+            check_on_train_epoch_end = True,
+            verbose                  = True
         )
         
         early_stopping_pnorm = EarlyStopping(
