@@ -311,6 +311,16 @@ class LitModel(pl.LightningModule):
         return self.has_any_nan
     #end
     
+    def get_params_norm(self):
+        
+        params_mean = torch.Tensor([0.])
+        for param in self.model.parameters():
+            params_mean += torch.mean(param.clone().detach())
+        #end
+        
+        return params_mean
+    #end
+    
     def save_test_loss(self, test_loss, batch_size):
         
         self.__test_loss.append(test_loss)
@@ -542,14 +552,18 @@ class LitModel(pl.LightningModule):
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
         loss += regularization * self.hparams.reg_coeff
         
-        return dict({'loss' : loss}), outputs
+        params_mean = self.get_params_norm()
+        
+        return dict({'loss' : loss, 'pnorm' : params_mean}), outputs
     #end
     
     def training_step(self, batch, batch_idx):
         
         metrics, out = self.forward(batch, phase = 'train')
         loss = metrics['loss']
-        self.log('loss', loss, on_step = True, on_epoch = True, prog_bar = True)
+        pnorm = metrics['pnorm']
+        self.log('loss', loss,   on_step = True, on_epoch = True, prog_bar = True)
+        self.log('pnorm', pnorm, on_step = True, on_epoch = True, prog_bar = False)
         
         return loss
     #end
@@ -558,14 +572,6 @@ class LitModel(pl.LightningModule):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'train')
-        
-        # for param in self.model.parameters():
-        #     if torch.any(param.isnan()):
-        #         self.has_any_nan = True
-        #         print('\nIn training_epoch_end')
-        #         print('Nan detected in model params. Returning -1')
-        #     #end
-        # #end
         
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

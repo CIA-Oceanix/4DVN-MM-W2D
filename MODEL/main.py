@@ -190,14 +190,23 @@ class Experiment:
             mode       = 'min'
         )
         
-        early_stopping = EarlyStopping(
+        early_stopping_loss = EarlyStopping(
             monitor                  = 'loss',
             check_finite             = True,
             check_on_train_epoch_end = True
         )
         
+        early_stopping_pnorm = EarlyStopping(
+            monitor                  = 'pnorm',
+            check_finite             = True,
+            check_on_train_epoch_end = True,
+            verbose                  = True
+        )
+        
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, 
+                                                             early_stopping_loss,
+                                                             early_stopping_pnorm])
         
         # Train and test
         ## Train
@@ -237,7 +246,7 @@ class Experiment:
             return_value = 1
         
         #end
-            
+        
         end_time = datetime.datetime.now()
         print('\nRun end at {}\n'.format(end_time))
         print('Run time = {}\n'.format(end_time - start_time))
