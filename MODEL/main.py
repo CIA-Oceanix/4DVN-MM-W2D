@@ -205,9 +205,9 @@ class Experiment:
         )
         
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, 
-                                                             early_stopping_loss,
-                                                             early_stopping_pnorm])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])#, 
+                                                             # early_stopping_loss,
+                                                             # early_stopping_pnorm])
         
         # Train and test
         ## Train
