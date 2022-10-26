@@ -1,6 +1,7 @@
 
 import os
 import numpy as np
+from tqdm import tqdm
 
 import torch
 import pytorch_lightning as pl
@@ -14,6 +15,7 @@ else:
     DEVICE  = torch.device('cpu')
     WORKERS = 8
 #end
+
 
 
 class W2DSimuDataset(Dataset):
@@ -39,6 +41,22 @@ class W2DSimuDataset(Dataset):
     def __getitem__(self, idx):
         
         return self.wind2D_hr[idx]
+    #end
+    
+    def _normalize(self, data, name):
+        
+        for i in tqdm(range(data.shape[0])):
+            
+            data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
+        #end
+        
+        img_mean = data.mean()
+        img_std  = data.std()
+        
+        data = (data - img_mean) / img_std
+        
+        print('\nImages normalized')
+        return data
     #end
     
     def normalize(self, data, name):
@@ -96,7 +114,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
         shape = wind_2D_hr.shape[-2:]
-        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))[:,:,:self.region_extent,:self.region_extent]
+        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))
         self.shapeData = (self.batch_size, 24, *tuple(shape))
         
         n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)

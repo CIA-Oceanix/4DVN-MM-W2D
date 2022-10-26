@@ -12,7 +12,7 @@ import argparse
 from collections import namedtuple
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 from pathmng import PathManager
 from dlmodels import LitModel, model_selection
@@ -141,7 +141,7 @@ class Experiment:
                 print('\n***************')
                 print(f'RUN       : {nruns+1} / {self.cparams.RUNS}')
                 print(f'Effective : {real_run+1} ')
-                print(f'Aborted   : {real_run - nruns}')
+                print(f'Aborted   : {real_run-nruns}')
                 self.path_manager.set_nrun(nruns)
                 run_outcome = self.main(nruns, real_run)
                 nruns += run_outcome
@@ -190,24 +190,8 @@ class Experiment:
             mode       = 'min'
         )
         
-        early_stopping_loss = EarlyStopping(
-            monitor                  = 'loss',
-            check_finite             = True,
-            check_on_train_epoch_end = True,
-            verbose                  = True
-        )
-        
-        early_stopping_pnorm = EarlyStopping(
-            monitor                  = 'pnorm',
-            check_finite             = True,
-            check_on_train_epoch_end = True,
-            verbose                  = True
-        )
-        
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])#, 
-                                                             # early_stopping_loss,
-                                                             # early_stopping_pnorm])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
         
         # Train and test
         ## Train
@@ -227,11 +211,6 @@ class Experiment:
             trainer.test(lit_model, datamodule = w2d_dm)
             test_loss = lit_model.get_test_loss()
             print('\n\nTest loss = {}\n\n'.format(test_loss))
-            
-            # print('Mean data lr = {}'.format(torch.Tensor(lit_model.means_data_lr).mean()))
-            # print('Mean data an = {}'.format(torch.Tensor(lit_model.means_data_an).mean()))
-            # print('Mean reco lr = {}'.format(torch.Tensor(lit_model.means_reco_lr).mean()))
-            # print('Mean reco an = {}'.format(torch.Tensor(lit_model.means_reco_an).mean()))
             
             # save reports and reconstructions in the proper target directory
             self.path_manager.save_configfiles(self.cparams, 'config_params')

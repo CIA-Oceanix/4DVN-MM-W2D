@@ -8,11 +8,13 @@ import argparse
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.getcwd(), 'config.env'))
 
-PATH_DATA  = os.getenv('PATH_DATA')
+PATH_DATA = os.getenv('PATH_DATA')
+PATH_DATA = os.path.join(PATH_DATA, 'MABay', 'winds_24h')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-c', type = int, default = 1)
-parser.add_argument('-f', type = int, default = 1)
+parser.add_argument('-create', type = int, default = 1)
+parser.add_argument('-fetch', type = int, default = 1)
+parser.add_argument('-dscomplete', type = int, default = 0)
 parser.add_argument('-dinit', type = int)
 parser.add_argument('-minit', type = int)
 parser.add_argument('-yinit', type = int)
@@ -21,10 +23,10 @@ parser.add_argument('-mend', type = int)
 parser.add_argument('-yend', type = int)
 args = parser.parse_args()
 
-if args.c > 1:
-    args.c = 1
-if args.f > 1:
-    args.f = 1
+if args.create > 1:
+    args.create = 1
+if args.fetch > 1:
+    args.fetch = 1
 #end
 
 
@@ -38,6 +40,46 @@ def distance_km_from_lat_lon(lat1, lat2, lon1, lon2):
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
     d = earth_radius * c
     return d
+#end
+
+def save_netCDF4_dataset(lat, lon, time, wind, indices, ds_name, day_start, month_start, year_start):
+    
+    if os.path.exists(os.path.join(PATH_DATA, ds_name)):
+        os.remove(os.path.join(PATH_DATA, ds_name))
+        print('Old Dataset removed ...')
+    #end
+    
+    print('Creating new netCDF4 Dataset ...')
+    nc_dataset = nc.Dataset(os.path.join(PATH_DATA, 'wind_dataset.nc'), mode = 'w', format = 'NETCDF4_CLASSIC')
+    nc_dataset.createDimension('south-north', lat.shape[0])
+    nc_dataset.createDimension('west-east', lon.shape[1])
+    nc_dataset.createDimension('time', delta_hours+1)
+    
+    nc_lat = nc_dataset.createVariable('lat', np.float32, ('south-north', 'west-east'))
+    nc_lat.units = 'degree_north'
+    nc_lat.long_name = 'latitude'
+    nc_lon = nc_dataset.createVariable('lon', np.float32, ('south-north', 'west-east'))
+    nc_lon.units = 'degree_east'
+    nc_lon.long_name = 'longitude'
+    nc_time = nc_dataset.createVariable('time', np.float64, ('time',))
+    nc_time.units = f'hours_since_{day_start:02d}/{month_start:02d}/{year_start}'
+    nc_time.long_name = 'hours'
+    nc_wind = nc_dataset.createVariable('wind', np.float32, ('time', 'south-north', 'west-east'))
+    nc_wind.units = 'm s-1'
+    nc_wind.long_name = 'model_wind'
+    nc_windices = nc_dataset.createVariable('indices', np.int32, ('time',))
+    nc_windices.units = 'none'
+    nc_windices.long_name = 'indices_of_wind_images'
+    
+    nc_lat[:,:] = lat
+    nc_lon[:,:] = lon
+    nc_time[:] = time
+    nc_wind[:,:,:] = wind
+    nc_windices = indices
+    
+    print('Dataset save. Closing ...')
+    nc_dataset.close()
+    print('Dataset close.')
 #end
 
 def size_obj(obj, unit = 'MiB'):
@@ -76,16 +118,22 @@ delta_days = timedelta.days
 delta_hours = np.int32(timedelta / np.timedelta64(1, 'h'))
 print('Hours since {} to {} : {}'.format(date_start, date_end, delta_hours+1))
 
-XLAT_MIN   = 0 #289
+time_range = pd.date_range(start = date_start, end = date_end, freq = 'h').tz_localize('UTC')
+print('Total hours with date_range : {}'.format(time_range.__len__()))
+
+indices = np.arange(time_range.__len__())
+
+XLAT_MIN   = 289 # 0
 XLAT_MAX   = 323
 XLAT_STEP  = 1
-XLONG_MIN  = 0 #289
+XLONG_MIN  = 289 # 0
 XLONG_MAX  = 323
 XLONG_STEP = 1
 TIME_MIN   = 0
 TIME_MAX   = delta_hours + 1
 TIME_STEP  = 1
-#end
+CROP_IMG   = 150
+
 
 URL = "https://tds.marine.rutgers.edu/thredds/dodsC/cool/ruwrf/wrf_4_1_3km_processed/WRF_4.1_3km_Processed_Dataset_Best?"\
     + "XLONG[{}:{}:{}][{}:{}:{}],".format(XLONG_MIN, XLONG_STEP, XLONG_MAX, XLONG_MIN, XLONG_STEP, XLONG_MAX) \
@@ -124,35 +172,9 @@ for var in dataset.variables.values():
     print()
 #end
 
-DS_CREATE = args.c
-DS_FETCH  = args.f
-
-# U10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-# V10 = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-
-# if np.bool_(DS_CREATE):
-    
-#     for i in tqdm(range(delta_hours + 1)):
-        
-#         U10[i,:,:] = dataset['U10'][i,:,:]
-#         V10[i,:,:] = dataset['V10'][i,:,:]
-#     #end
-    
-#     wind = np.sqrt((U10**2 + V10**2))
-#     print('Scalar wind shape : ', wind.shape)
-#     print('Size of scalar wind in MiB : ', size_obj(wind, unit = 'MiB'))
-    
-#     with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'wb') as f:
-#         np.save(f, wind, allow_pickle = True)
-#     f.close()
-# #end
-
-# if np.bool_(DS_FETCH):
-    
-#     with open(os.path.join(PATH_DATA, 'patch_modwind2D_24h.npy'), 'rb') as f:
-#         wind = np.load(f)
-#     f.close()
-# #end
+DS_CREATE   = args.create
+DS_FETCH    = args.fetch
+DS_COMPLETE = args.dscomplete
 
 lat   = np.array(lat)
 lon   = np.array(lon)
@@ -163,22 +185,10 @@ lon_max = lon.max()
 lat_min = lat.min()
 lat_max = lat.max()
 
-# print(f'Longitude range [ {lon_min:.4f} : {lon_max:.4f} ] — shape : {lon.shape}')
-# print(f'Latitude  range [ {lat_min:.4f} : {lat_max:.4f} ] — shape : {lat.shape}')
-# print(f'Time range [ {times.min()} : {times.max()} ] — shape : {times.shape}')
-# print(f'u10 , v10 shapes : {U10.shape} , {V10.shape}')
-
-# sizew = size_obj(wind, unit = 'KiB')
-# print(f'Velocity field memory space : {sizew:.4f} KiB')
-# sizew = size_obj(wind, unit = 'MiB')
-# print(f'Velocity field memory space : {sizew:.4f} MiB')
-
 if np.bool_(DS_CREATE):
     
     for i in tqdm(range(delta_hours)):
         
-        # U10[i,:,:] = dataset['U10'][i,:,:]
-        # V10[i,:,:] = dataset['V10'][i,:,:]
         _u10 = dataset['U10'][i,:,:].data
         _v10 = dataset['V10'][i,:,:].data
         
@@ -190,36 +200,35 @@ if np.bool_(DS_CREATE):
     
     print('***FILES SAVED SUCCESS***')
     
-    # wind = np.sqrt((u10**2 + v10**2))
-    # print('Scalar wind shape : ', wind.shape)
-    # print('Size of scalar wind in MiB : ', size_obj(wind, unit = 'MiB'))
-    
-    # with open(os.path.join(PATH_DATA, 'MABay', 'winds_24h', 'patch_modwind2D_24h.npy'), 'wb') as f:
-    #     np.save(f, wind, allow_pickle = True)
-    # f.close()
 #end
 
 if np.bool_(DS_FETCH):
     
     wind = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-    # with open('./data/MABay/winds_24h/patch_modwind2D_24h.npy', 'rb') as f:
-    #     wind = np.load(f)
-    # #end
-    for i in tqdm(range(delta_hours)):
-        
-        with open(os.path.join(PATH_DATA, 'w{}.npy'.format(i)), 'rb') as f:
-            wind[i,:,:] = np.load(f)
-        f.close()
-    #end
-    
-    print('***FILES IMPORTED SUCCESS***')
-    
     filename = f'patch_modw_{day_start:02d}{month_start:02d}{year_start}-{day_end:02d}{month_end:02d}{year_end}.npy'
-    with open(os.path.join(PATH_DATA, filename), 'wb') as f:
-        np.save(f, wind, allow_pickle = True)
-    f.close()
     
-    print('***FILES RESAVE COMPACT SUCCESS***')
+    if DS_COMPLETE:
+        
+        with open(os.path.join(PATH_DATA, filename), 'rb') as f:
+            wind = np.load(f)
+        #end
+        
+        print('***FILES IMPORTED SUCCESS***')
+    else:
+        for i in tqdm(range(delta_hours)):
+            
+            with open(os.path.join(PATH_DATA, 'w{}.npy'.format(i)), 'rb') as f:
+                wind[i,:,:] = np.load(f)
+            f.close()
+        #end
+        
+        with open(os.path.join(PATH_DATA, filename), 'wb') as f:
+            np.save(f, wind, allow_pickle = True)
+        f.close()
+        
+        print('***FILES IMPORTED SUCCESS***')
+        print('***FILES RESAVE COMPACT SUCCESS***')
+    #end
     
     print(f'Longitude range [ {lon_min:.4f} : {lon_max:.4f} ] — shape : {lon.shape}')
     print(f'Latitude  range [ {lat_min:.4f} : {lat_max:.4f} ] — shape : {lat.shape}')
@@ -232,6 +241,15 @@ if np.bool_(DS_FETCH):
     print(f'Velocity field memory space : {sizew:.4f} MiB')
 #end
 
+if CROP_IMG is not None:
+    
+    wind = wind[:, :CROP_IMG, -CROP_IMG:]
+    lat, lon = lat[:CROP_IMG, -CROP_IMG:], lon[:CROP_IMG, -CROP_IMG:]
+    
+    print('Cropped dimensions : {}'.format(wind.shape[-2:]))
+#end
+
+save_netCDF4_dataset(lat, lon, time_range, wind, indices, 'wind_dataset.nc', day_start, month_start, year_start)
 
 width  = distance_km_from_lat_lon(lat[0,0], lat[0,-1], lon[0,0], lon[0,-1])
 height = distance_km_from_lat_lon(lat[0,0], lat[-1,0], lon[0,0], lon[-1,0])
@@ -250,6 +268,11 @@ for i in range(lon.shape[1]-1):
     diff_km_lon[:,i]  = distance_km_from_lat_lon( lat[:,i], lat[:,i+1], lon[:,i], lon[:,i+1] )
 #end
 
-print(f'Width  ; resolution [km] = {width:.2f} ; {width/lat.shape[1]:.2f} or {diff_km_lat.mean():.2f} ± {diff_deg_lat.std():.2f} ; Average resolution [°] = {diff_deg_lat.mean():.2f} ± {diff_deg_lat.std():.2f}')
-print(f'Height ; resolution [km] = {height:.2f} ; {height/lon.shape[0]:.2f} or {diff_km_lon.mean():.2f} ± {diff_deg_lon.std():.2f} ; Average resolution [°] = {diff_deg_lon.mean():.2f} ± {diff_deg_lon.std():.2f}')
-
+print('Extent')
+print(f'Width  [km] = {width:.2f}')
+print(f'Height [km] = {height:.2f}')
+print('Resolution')
+print(f'Width  : (computed) [km] {width/lat.shape[1]:.2f} ; (average) [km] {diff_km_lat.mean():.2f} ± {diff_km_lat.std():.2f}')
+print(f'Width  : (average)  [°]  {diff_deg_lat.mean():.2f} ± {diff_deg_lat.std():.2f}')
+print(f'Height : (computed) [km] {height/lon.shape[0]:.2f} ; (average) [km] {diff_km_lon.mean():.2f} ± {diff_km_lon.std():.2f}')
+print(f'Heigth : (average)  [°]  {diff_deg_lon.mean():.2f} ± {diff_deg_lon.std():.2f}')
