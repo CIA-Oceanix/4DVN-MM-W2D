@@ -345,11 +345,12 @@ class LitModel_Base(pl.LightningModule):
 
 class LitModel_OSSE1(LitModel_Base):
     
-    def __init__(self, Phi, shape_data, config_params, run):
+    def __init__(self, Phi, shape_data, mask_land, config_params, run):
         super(LitModel_OSSE1, self).__init__(config_params)
         
-        # Dynamical prior
+        # Dynamical prior and mask for land/sea locations
         self.Phi = Phi
+        self.mask_land = mask_land
         
         # Loss function — parameters optimization
         self.loss_fn = NormLoss()

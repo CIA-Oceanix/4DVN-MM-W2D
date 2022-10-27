@@ -161,10 +161,11 @@ class Experiment:
         # MODELS : initialize and configure
         ## Obtain shape data
         shape_data = w2d_dm.get_shapeData()
+        mask_land = w2d_dm.get_mask_land()
         
         ## Instantiate dynamical prior and lit model
         Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-        lit_model = LitModel_OSSE1(Phi, shape_data, self.cparams, real_run).to(DEVICE)
+        lit_model = LitModel_OSSE1(Phi, shape_data, mask_land, self.cparams, real_run).to(DEVICE)
         
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')

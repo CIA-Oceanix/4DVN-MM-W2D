@@ -112,11 +112,16 @@ class W2DSimuDataModule(pl.LightningDataModule):
     def setup(self, stage = None):
         
         wind2D = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
-        
+        mask_land = np.load(open(os.path.join(self.path_data, 'global_mask.npy'), 'rb'))
         shape = wind2D.shape[-2:]
         
-        if 
-        wind2D = wind2D.reshape(-1, 24, *tuple(shape))
+        if self.region_case == 'coast':
+            wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -200:, -200:]
+            mask_land = mask_land[-200:, -200:]
+        else:
+            raise ValueError('Not implemented yet')
+        #end
+        
         self.shapeData = (self.batch_size, 24, *tuple(shape))
         
         n_test  = np.int32(wind2D.__len__() * self.ttsplit)
@@ -133,9 +138,14 @@ class W2DSimuDataModule(pl.LightningDataModule):
         print('Test  dataset shape : ', test_set.shape)
         print()
         
+        self.mask_land = mask_land
         self.train_dataset = W2DSimuDataset(train_set, normalize = self.normalize)
         self.val_dataset   = W2DSimuDataset(val_set,   normalize = self.normalize)
         self.test_dataset  = W2DSimuDataset(test_set,  normalize = self.normalize)
+    #end
+    
+    def get_mask_land(self):
+        return self.mask_land
     #end
     
     def train_dataloader(self):
