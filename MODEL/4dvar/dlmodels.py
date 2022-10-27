@@ -350,7 +350,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Dynamical prior and mask for land/sea locations
         self.Phi = Phi
-        self.mask_land = mask_land
+        self.mask_land = torch.Tensor(mask_land)
         
         # Loss function — parameters optimization
         self.loss_fn = NormLoss()
@@ -358,6 +358,7 @@ class LitModel_OSSE1(LitModel_Base):
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
         self.hparams.fixed_point            = config_params.FIXED_POINT
+        self.hparams.buoy_coord             = config_params.BUOY_COORDS
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
         self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
@@ -447,6 +448,12 @@ class LitModel_OSSE1(LitModel_Base):
             mask = torch.zeros(data_shape)
             mask[:,:, center_h, center_w] = 1.
             
+        elif mode == 'buoy':
+            
+            buoy_coords = self.hparams.buoy_coord
+            mask = torch.zeros(data_shape)
+            mask[:,:, buoy_coords[0], buoy_coords[1]] = 1.
+            
         elif mode == 'patch':
             
             delta_x = self.hparams.patch_extent
@@ -485,17 +492,18 @@ class LitModel_OSSE1(LitModel_Base):
         
         ts_length = data_shape[1]
         
-        # For both masks : temporal sampling.
-        # Ie : every n steps there is one observation
-        for mask, freq in zip([mask_lr, mask_hr_dx1], [lr_sfreq, hr_sfreq]):
-            
-            if freq.__class__ is int:
-                mask[:, [t for t in range(ts_length) if t % freq == 0], :,:] = 1.
-            elif freq.__class__ is list:
-                mask[:, freq, :,:] = 1.
-            elif freq is None:
-                pass
-            #end
+        # Low-resolution temporal sampling mask
+        if lr_sfreq.__class__ is int:
+            mask_lr[:, [t for t in range(ts_length) if t % lr_sfreq == 0], :,:] = 1.
+        elif lr_sfreq.__class__ is list:
+            mask_lr[:, lr_sfreq, :,:] = 1.
+        #end
+        
+        # High-resolution temporal sampling and land/sea masking
+        if hr_sfreq.__class__ is int:
+            mask_hr_dx1[:, [t for t in range(ts_length) if t % hr_sfreq == 0], :,:] = self.mask_land
+        elif hr_sfreq.__class__ is list:
+            mask_hr_dx1[:, hr_sfreq, :,:] = self.mask_land
         #end
         
         mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
