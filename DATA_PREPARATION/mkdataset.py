@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.getcwd(), 'config.env'))
 
 PATH_DATA = os.getenv('PATH_DATA')
-PATH_DATA = os.path.join(PATH_DATA, 'MABay', 'winds_24h')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-create',     type = int, default = 1)
