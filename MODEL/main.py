@@ -15,7 +15,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from pathmng import PathManager
-from dlmodels import LitModel, model_selection
+from dlmodels import LitModel_OSSE1, model_selection
 from dutls import W2DSimuDataModule
 
 if torch.cuda.is_available():
@@ -164,7 +164,7 @@ class Experiment:
         
         ## Instantiate dynamical prior and lit model
         Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-        lit_model = LitModel(Phi, shape_data, self.cparams, real_run).to(DEVICE)
+        lit_model = LitModel_OSSE1(Phi, shape_data, self.cparams, real_run).to(DEVICE)
         
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')

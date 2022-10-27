@@ -12,21 +12,23 @@ PATH_DATA = os.getenv('PATH_DATA')
 PATH_DATA = os.path.join(PATH_DATA, 'MABay', 'winds_24h')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-create', type = int, default = 1)
-parser.add_argument('-fetch', type = int, default = 1)
+parser.add_argument('-create',     type = int, default = 1)
+parser.add_argument('-fetch',      type = int, default = 1)
 parser.add_argument('-dscomplete', type = int, default = 0)
-parser.add_argument('-dinit', type = int)
-parser.add_argument('-minit', type = int)
-parser.add_argument('-yinit', type = int)
-parser.add_argument('-dend', type = int)
-parser.add_argument('-mend', type = int)
-parser.add_argument('-yend', type = int)
+parser.add_argument('-dinit',      type = int)
+parser.add_argument('-minit',      type = int)
+parser.add_argument('-yinit',      type = int)
+parser.add_argument('-dend',       type = int)
+parser.add_argument('-mend',       type = int)
+parser.add_argument('-yend',       type = int)
 args = parser.parse_args()
 
 if args.create > 1:
     args.create = 1
 if args.fetch > 1:
     args.fetch = 1
+if args.dscomplete > 1:
+    args.dscomplete = 1
 #end
 
 
@@ -50,10 +52,10 @@ def save_netCDF4_dataset(lat, lon, time, wind, indices, ds_name, day_start, mont
     #end
     
     print('Creating new netCDF4 Dataset ...')
-    nc_dataset = nc.Dataset(os.path.join(PATH_DATA, 'wind_dataset.nc'), mode = 'w', format = 'NETCDF4_CLASSIC')
+    nc_dataset = nc.Dataset(os.path.join(PATH_DATA, '{}.nc'.format(ds_name)), mode = 'w', format = 'NETCDF4_CLASSIC')
     nc_dataset.createDimension('south-north', lat.shape[0])
     nc_dataset.createDimension('west-east', lon.shape[1])
-    nc_dataset.createDimension('time', delta_hours+1)
+    nc_dataset.createDimension('time', time.__len__())
     
     nc_lat = nc_dataset.createVariable('lat', np.float32, ('south-north', 'west-east'))
     nc_lat.units = 'degree_north'
@@ -249,7 +251,7 @@ if CROP_IMG is not None:
     print('Cropped dimensions : {}'.format(wind.shape[-2:]))
 #end
 
-save_netCDF4_dataset(lat, lon, time_range, wind, indices, 'wind_dataset.nc', day_start, month_start, year_start)
+save_netCDF4_dataset(lat, lon, time_range, wind, indices, 'wds', day_start, month_start, year_start)
 
 width  = distance_km_from_lat_lon(lat[0,0], lat[0,-1], lon[0,0], lon[0,-1])
 height = distance_km_from_lat_lon(lat[0,0], lat[-1,0], lon[0,0], lon[-1,0])

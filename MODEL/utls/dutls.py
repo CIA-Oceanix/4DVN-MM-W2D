@@ -26,10 +26,10 @@ class W2DSimuDataset(Dataset):
         self.pparams = dict()
         
         # normalize
-        wind2D_hr = self.normalize(data, 'wind_2D_hr')
-        self.wind2D_hr = wind2D_hr
+        wind2D = self.normalize(data, 'wind_2D_hr')
+        self.wind2D = wind2D
         
-        self.numitems = wind2D_hr.__len__()
+        self.numitems = wind2D.__len__()
         self.to_tensor()
     #end
     
@@ -40,7 +40,7 @@ class W2DSimuDataset(Dataset):
     
     def __getitem__(self, idx):
         
-        return self.wind2D_hr[idx]
+        return self.wind2D[idx]
     #end
     
     def _normalize(self, data, name):
@@ -78,7 +78,7 @@ class W2DSimuDataset(Dataset):
     
     def to_tensor(self):
         
-        self.wind2D_hr = torch.Tensor(self.wind2D_hr).type(torch.float32).to(DEVICE)
+        self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
     #end
 #end
 
@@ -89,7 +89,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         super(W2DSimuDataModule, self).__init__()
         
         self.path_data     = path_data
-        self.region_extent = cparams.REGION_EXTENT_PX
+        self.region_case   = cparams.REGION_CASE
         self.batch_size    = cparams.BATCH_SIZE
         self.ttsplit       = cparams.TR_TE_SPLIT
         self.tvsplit       = cparams.TR_VA_SPLIT
@@ -111,20 +111,22 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def setup(self, stage = None):
         
-        wind_2D_hr = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
+        wind2D = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
         
-        shape = wind_2D_hr.shape[-2:]
-        wind_2D_hr = wind_2D_hr.reshape(-1, 24, *tuple(shape))
+        shape = wind2D.shape[-2:]
+        
+        if 
+        wind2D = wind2D.reshape(-1, 24, *tuple(shape))
         self.shapeData = (self.batch_size, 24, *tuple(shape))
         
-        n_test  = np.int32(wind_2D_hr.__len__() * self.ttsplit)
-        n_train = np.int32(wind_2D_hr.__len__() - n_test)
+        n_test  = np.int32(wind2D.__len__() * self.ttsplit)
+        n_train = np.int32(wind2D.__len__() - n_test)
         n_val   = np.int32(n_train * self.tvsplit)
         n_train = np.int32(n_train - n_val)
         
-        train_set = wind_2D_hr[:n_train, :, :]
-        val_set   = wind_2D_hr[n_train : n_train + n_val, :, :]
-        test_set  = wind_2D_hr[n_train + n_val : n_train + n_val + n_test, :, :]
+        train_set = wind2D[:n_train, :, :]
+        val_set   = wind2D[n_train : n_train + n_val, :, :]
+        test_set  = wind2D[n_train + n_val : n_train + n_val + n_test, :, :]
         
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)
@@ -132,8 +134,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
         print()
         
         self.train_dataset = W2DSimuDataset(train_set, normalize = self.normalize)
-        self.val_dataset   = W2DSimuDataset(val_set, normalize = self.normalize)
-        self.test_dataset  = W2DSimuDataset(test_set, normalize = self.normalize)
+        self.val_dataset   = W2DSimuDataset(val_set,   normalize = self.normalize)
+        self.test_dataset  = W2DSimuDataset(test_set,  normalize = self.normalize)
     #end
     
     def train_dataloader(self):

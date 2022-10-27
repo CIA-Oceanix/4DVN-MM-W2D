@@ -222,77 +222,16 @@ class NormLoss(nn.Module):
 #end
 
 
-class LitModel(pl.LightningModule):
+class LitModel_Base(pl.LightningModule):
     
-    def __init__(self, Phi, shape_data, config_params, run):
-        super(LitModel, self).__init__()
+    def __init__(self, cparams):
+        super(LitModel_Base, self).__init__()
         
-        # Dynamical prior
-        self.Phi = Phi
-        
-        # Loss function — parameters optimization
-        self.loss_fn = NormLoss()
-        
-        # Hyper-parameters, learning and workflow
-        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
-        self.hparams.fixed_point            = config_params.FIXED_POINT
-        self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
-        self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
-        self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
-        self.hparams.patch_extent           = config_params.PATCH_EXTENT
-        self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
-        self.hparams.reg_coeff              = config_params.REG_COEFF
-        self.hparams.grad_coeff             = config_params.GRAD_COEFF
-        self.hparams.weight_hres            = config_params.WEIGHT_HRES
-        self.hparams.weight_lres            = config_params.WEIGHT_LRES
-        self.hparams.mgrad_lr               = config_params.SOLVER_LR
-        self.hparams.mgrad_wd               = config_params.SOLVER_WD
-        self.hparams.prior_lr               = config_params.PHI_LR
-        self.hparams.prior_wd               = config_params.PHI_WD
-        self.hparams.learn_varcost_params   = config_params.LEARN_VC_PARAMS
-        self.hparams.varcost_lr             = config_params.VARCOST_LR
-        self.hparams.varcost_wd             = config_params.VARCOST_WD
-        self.hparams.dim_grad_solver        = config_params.DIM_LSTM
-        self.hparams.dropout                = config_params.SOL_DROPOUT
-        self.hparams.n_solver_iter          = config_params.NSOL_ITER
-        self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
-        self.hparams.automatic_optimization = True
-        self.has_any_nan                    = False
-        self.run                            = run
-        
-        # Monitoring metrics
-        self.__train_losses = np.zeros(config_params.EPOCHS)
-        self.__val_losses   = np.zeros(config_params.EPOCHS)
-        
-        # Save reconstructions to a list—protected fields
-        self.__samples_to_save = list()
-        self.__test_loss = list()
+        self.__train_losses      = np.zeros(cparams.EPOCHS)
+        self.__val_losses        = np.zeros(cparams.EPOCHS)
+        self.__test_losses       = list()
         self.__test_batches_size = list()
-                
-        # Initialize gradient solver (LSTM)
-        batch_size, ts_length, height, width = shape_data
-        mgrad_shapedata = [ts_length * 3, height, width]
-        model_shapedata = [batch_size, ts_length, height, width]
-        alpha_obs = config_params.ALPHA_OBS
-        alpha_reg = config_params.ALPHA_REG
-        
-        self.model = NN_4DVar.Solver_Grad_4DVarNN(
-            self.Phi,                                                       # Prior
-            ObsModel_Mask(shape_data, dim_obs = 1),                         # Observation model
-            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
-                mgrad_shapedata,                                              # m_Grad : Shape data
-                False,                                                        # m_Grad : Periodic BCs
-                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
-                self.hparams.dropout,                                         # m_Grad : Dropout
-            ),
-            NormLoss(),                                                     # Norm Observation
-            NormLoss(),                                                     # Norm Prior
-            model_shapedata,                                                # Shape data
-            self.hparams.n_solver_iter,                                     # Solver iterations
-            alphaObs = alpha_obs,                                           # alpha observations
-            alphaReg = alpha_reg,                                           # alpha regularization
-            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
-        )
+        self.__samples_to_save   = list()
     #end
     
     def has_nans(self):
@@ -306,25 +245,15 @@ class LitModel(pl.LightningModule):
         return self.has_any_nan
     #end
     
-    def get_params_norm(self):
-        
-        params_mean = torch.Tensor([0.])
-        for param in self.model.parameters():
-            params_mean += torch.mean(param.clone().detach())
-        #end
-        
-        return params_mean
-    #end
-    
     def save_test_loss(self, test_loss, batch_size):
         
-        self.__test_loss.append(test_loss)
+        self.__test_losses.append(test_loss)
         self.__test_batches_size.append(batch_size)
     #end
     
     def get_test_loss(self):
         
-        losses = torch.Tensor(self.__test_loss)
+        losses = torch.Tensor(self.__test_losses)
         bsizes = torch.Tensor(self.__test_batches_size)
         weighted_average = torch.sum(torch.mul(losses, bsizes)).div(bsizes.sum())
         
@@ -358,6 +287,124 @@ class LitModel(pl.LightningModule):
     def remove_saved_outputs(self):
         
         del self.__samples_to_save
+    #end
+    
+    def training_step(self, batch, batch_idx):
+        
+        metrics, out = self.forward(batch, phase = 'train')
+        loss = metrics['loss']
+        self.log('loss', loss,   on_step = True, on_epoch = True, prog_bar = True)
+        
+        return loss
+    #end
+    
+    def training_epoch_end(self, outputs):
+        
+        loss = torch.stack([out['loss'] for out in outputs]).mean()
+        self.save_epoch_loss(loss, self.current_epoch, 'train')
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        #end
+    #end
+    
+    def validation_step(self, batch, batch_idx):
+        
+        metrics, out = self.forward(batch, phase = 'train')
+        val_loss = metrics['loss']
+        self.log('val_loss', val_loss)
+        
+        return val_loss
+    #end
+    
+    def validation_epoch_end(self, outputs):
+        
+        loss = torch.stack([out for out in outputs]).mean()
+        self.save_epoch_loss(loss, self.current_epoch, 'val')
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        #end
+    #end
+    
+    def test_step(self, batch, batch_idx):
+        
+        with torch.no_grad():
+            metrics, outs = self.forward(batch, phase = 'test')
+            
+            test_loss = metrics['loss']
+            self.log('test_loss', test_loss.item())
+        #end
+        
+        self.save_test_loss(test_loss, batch.shape[0])
+        return metrics, outs
+    #end
+    
+#end
+
+
+class LitModel_OSSE1(LitModel_Base):
+    
+    def __init__(self, Phi, shape_data, config_params, run):
+        super(LitModel_OSSE1, self).__init__(config_params)
+        
+        # Dynamical prior
+        self.Phi = Phi
+        
+        # Loss function — parameters optimization
+        self.loss_fn = NormLoss()
+        
+        # Hyper-parameters, learning and workflow
+        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
+        self.hparams.fixed_point            = config_params.FIXED_POINT
+        self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
+        self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
+        self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
+        self.hparams.patch_extent           = config_params.PATCH_EXTENT
+        self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
+        self.hparams.reg_coeff              = config_params.REG_COEFF
+        self.hparams.grad_coeff             = config_params.GRAD_COEFF
+        self.hparams.weight_hres            = config_params.WEIGHT_HRES
+        self.hparams.weight_lres            = config_params.WEIGHT_LRES
+        self.hparams.mgrad_lr               = config_params.SOLVER_LR
+        self.hparams.mgrad_wd               = config_params.SOLVER_WD
+        self.hparams.prior_lr               = config_params.PHI_LR
+        self.hparams.prior_wd               = config_params.PHI_WD
+        self.hparams.learn_varcost_params   = config_params.LEARN_VC_PARAMS
+        self.hparams.varcost_lr             = config_params.VARCOST_LR
+        self.hparams.varcost_wd             = config_params.VARCOST_WD
+        self.hparams.dim_grad_solver        = config_params.DIM_LSTM
+        self.hparams.dropout                = config_params.SOL_DROPOUT
+        self.hparams.n_solver_iter          = config_params.NSOL_ITER
+        self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
+        self.hparams.automatic_optimization = True
+        self.has_any_nan                    = False
+        self.run                            = run
+                
+        # Initialize gradient solver (LSTM)
+        batch_size, ts_length, height, width = shape_data
+        mgrad_shapedata = [ts_length * 3, height, width]
+        model_shapedata = [batch_size, ts_length, height, width]
+        alpha_obs = config_params.ALPHA_OBS
+        alpha_reg = config_params.ALPHA_REG
+        
+        self.model = NN_4DVar.Solver_Grad_4DVarNN(
+            self.Phi,                                                       # Prior
+            ObsModel_Mask(shape_data, dim_obs = 1),                         # Observation model
+            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
+                mgrad_shapedata,                                              # m_Grad : Shape data
+                False,                                                        # m_Grad : Periodic BCs
+                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
+                self.hparams.dropout,                                         # m_Grad : Dropout
+            ),
+            NormLoss(),                                                     # Norm Observation
+            NormLoss(),                                                     # Norm Prior
+            model_shapedata,                                                # Shape data
+            self.hparams.n_solver_iter,                                     # Solver iterations
+            alphaObs = alpha_obs,                                           # alpha observations
+            alphaReg = alpha_reg,                                           # alpha regularization
+            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
+        )
     #end
     
     def configure_optimizers(self):
@@ -533,62 +580,21 @@ class LitModel(pl.LightningModule):
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
         loss += regularization * self.hparams.reg_coeff
         
-        params_mean = self.get_params_norm()
+        return dict({'loss' : loss}), outputs
+    #end
+#end
+
+
+
+class LitModel_OSSE1_2(LitModel_Base):
+    
+    def __init__(self, cparams):
+        super(LitModel_OSSE1_2, self).__init__(cparams)
         
-        return dict({'loss' : loss, 'pnorm' : params_mean}), outputs
     #end
     
-    def training_step(self, batch, batch_idx):
+    def compute_loss(self, batch, batch_idx, phase = 'train'):
         
-        metrics, out = self.forward(batch, phase = 'train')
-        loss = metrics['loss']
-        pnorm = metrics['pnorm']
-        self.log('loss', loss,   on_step = True, on_epoch = True, prog_bar = True)
-        self.log('pnorm', pnorm, on_step = True, on_epoch = True, prog_bar = False)
-        
-        return loss
+        pass
     #end
-    
-    def training_epoch_end(self, outputs):
-        
-        loss = torch.stack([out['loss'] for out in outputs]).mean()
-        self.save_epoch_loss(loss, self.current_epoch, 'train')
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        #end
-    #end
-    
-    def validation_step(self, batch, batch_idx):
-        
-        metrics, out = self.forward(batch, phase = 'train')
-        val_loss = metrics['loss']
-        self.log('val_loss', val_loss)
-        
-        return val_loss
-    #end
-    
-    def validation_epoch_end(self, outputs):
-        
-        loss = torch.stack([out for out in outputs]).mean()
-        self.save_epoch_loss(loss, self.current_epoch, 'val')
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        #end
-    #end
-    
-    def test_step(self, batch, batch_idx):
-        
-        with torch.no_grad():
-            metrics, outs = self.forward(batch, phase = 'test')
-            
-            test_loss = metrics['loss']
-            self.log('test_loss', test_loss.item())
-        #end
-        
-        self.save_test_loss(test_loss, batch.shape[0])
-        return metrics, outs
-    #end
-    
 #end
