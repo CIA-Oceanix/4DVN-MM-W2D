@@ -70,6 +70,9 @@ def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, day_start
     nc_lon = nc_dataset.createVariable('lon', np.float32, ('south-north', 'west-east'))
     nc_lon.units = 'degree_east'
     nc_lon.long_name = 'longitude'
+    nc_mask = nc_dataset.createVariable('mask_land', np.float32, ('south-north', 'west-east'))
+    nc_mask.units = 'm'
+    nc_mask.long_name = 'Mask_land_sea'
     nc_time = nc_dataset.createVariable('time', np.float64, ('time',))
     nc_time.units = f'hours_since_{day_start:02d}/{month_start:02d}/{year_start}'
     nc_time.long_name = 'hours'
@@ -83,6 +86,7 @@ def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, day_start
     nc_lat[:,:] = lat
     nc_lon[:,:] = lon
     nc_time[:] = time
+    nc_mask[:,:] = mask
     nc_wind[:,:,:] = wind
     nc_windices = indices
     
@@ -258,8 +262,8 @@ if CROP_IMG is not None:
     
     wind = wind[:, :CROP_IMG, -CROP_IMG:]
     lat, lon = lat[:CROP_IMG, -CROP_IMG:], lon[:CROP_IMG, -CROP_IMG:]
-    mask_land = mask_land[:CROP_IMG, -CROP_IMG:]
-    mask_sea = mask_sea[:CROP_IMG, -CROP_IMG:]
+    mask_land = mask_land[-CROP_IMG:, -CROP_IMG:]
+    mask_sea = mask_sea[-CROP_IMG:, -CROP_IMG:]
     
     print('Cropped dimensions : {}'.format(wind.shape[-2:]))
 #end
