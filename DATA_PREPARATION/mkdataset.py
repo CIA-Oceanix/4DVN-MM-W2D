@@ -3,6 +3,7 @@ from sys import getsizeof
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from global_land_mask import globe
 import netCDF4 as nc
 import argparse
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-create',     type = int, default = 1)
 parser.add_argument('-fetch',      type = int, default = 1)
 parser.add_argument('-dscomplete', type = int, default = 0)
+parser.add_argument('-crop',       type = int, default = 0)
 parser.add_argument('-dinit',      type = int)
 parser.add_argument('-minit',      type = int)
 parser.add_argument('-yinit',      type = int)
@@ -31,6 +33,12 @@ if args.dscomplete > 1:
     args.dscomplete = 1
 #end
 
+if args.crop == 0:
+    _CROP_IMG = None
+else:
+    _CROP_IMG = args.crop
+#end
+
 
 def distance_km_from_lat_lon(lat1, lat2, lon1, lon2):
     ''' Matches with https://www.nhc.noaa.gov/gccalc.shtml '''
@@ -44,7 +52,7 @@ def distance_km_from_lat_lon(lat1, lat2, lon1, lon2):
     return d
 #end
 
-def save_netCDF4_dataset(lat, lon, time, wind, indices, ds_name, day_start, month_start, year_start):
+def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, day_start, month_start, year_start):
     
     if os.path.exists(os.path.join(PATH_DATA, ds_name)):
         os.remove(os.path.join(PATH_DATA, ds_name))
@@ -125,16 +133,16 @@ print('Total hours with date_range : {}'.format(time_range.__len__()))
 
 indices = np.arange(time_range.__len__())
 
-XLAT_MIN   = 289 # 0
+XLAT_MIN   = 0
 XLAT_MAX   = 323
 XLAT_STEP  = 1
-XLONG_MIN  = 289 # 0
+XLONG_MIN  = 0
 XLONG_MAX  = 323
 XLONG_STEP = 1
 TIME_MIN   = 0
 TIME_MAX   = delta_hours + 1
 TIME_STEP  = 1
-CROP_IMG   = 150
+CROP_IMG   = _CROP_IMG
 
 
 URL = "https://tds.marine.rutgers.edu/thredds/dodsC/cool/ruwrf/wrf_4_1_3km_processed/WRF_4.1_3km_Processed_Dataset_Best?"\
@@ -201,7 +209,6 @@ if np.bool_(DS_CREATE):
     #end
     
     print('***FILES SAVED SUCCESS***')
-    
 #end
 
 if np.bool_(DS_FETCH):
@@ -243,15 +250,20 @@ if np.bool_(DS_FETCH):
     print(f'Velocity field memory space : {sizew:.4f} MiB')
 #end
 
+# Mask land and sea
+mask = globe.is_land(lat, lon)
+mask_land = np.float32(mask)
+mask_sea = np.float32(~mask)
+
 if CROP_IMG is not None:
     
     wind = wind[:, :CROP_IMG, -CROP_IMG:]
     lat, lon = lat[:CROP_IMG, -CROP_IMG:], lon[:CROP_IMG, -CROP_IMG:]
+    mask_land = mask_land[:CROP_IMG, -CROP_IMG:]
+    mask_sea = mask_sea[:CROP_IMG, -CROP_IMG:]
     
     print('Cropped dimensions : {}'.format(wind.shape[-2:]))
 #end
-
-save_netCDF4_dataset(lat, lon, time_range, wind, indices, 'wds', day_start, month_start, year_start)
 
 width  = distance_km_from_lat_lon(lat[0,0], lat[0,-1], lon[0,0], lon[0,-1])
 height = distance_km_from_lat_lon(lat[0,0], lat[-1,0], lon[0,0], lon[-1,0])
@@ -278,3 +290,5 @@ print(f'Width  : (computed) [km] {width/lat.shape[1]:.2f} ; (average) [km] {diff
 print(f'Width  : (average)  [°]  {diff_deg_lat.mean():.2f} ± {diff_deg_lat.std():.2f}')
 print(f'Height : (computed) [km] {height/lon.shape[0]:.2f} ; (average) [km] {diff_km_lon.mean():.2f} ± {diff_km_lon.std():.2f}')
 print(f'Heigth : (average)  [°]  {diff_deg_lon.mean():.2f} ± {diff_deg_lon.std():.2f}')
+
+save_netCDF4_dataset(lat, lon, time_range, mask_sea, wind, indices, 'wds', day_start, month_start, year_start)
