@@ -128,11 +128,14 @@ class W2DSimuDataModule(pl.LightningDataModule):
         mask_land = np.array(ds_wind2D['mask_land'])
         region_lat = np.array(ds_wind2D['lat'])
         region_lon = np.array(ds_wind2D['lon'])
+        ds_wind2D.close()
         shape = wind2D.shape[-2:]
         
         if self.region_case == 'coast':
             wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -self.region_extent:, -self.region_extent:]
             mask_land = mask_land[-self.region_extent:, -self.region_extent:]
+            region_lat = region_lat[-self.region_extent:, -self.region_extent:]
+            region_lon = region_lon[-self.region_extent:, -self.region_extent:]
         else:
             raise ValueError('Not implemented yet')
         #end
@@ -162,15 +165,13 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def get_buoy_location(self, lat, lon):
         
-        resolution = np.float32(0.03)
         bcoords = self.buoy_coords
-        lat_buoy_coords = np.zeros(lat.shape)
-        lon_buoy_coords = np.zeros(lon.shape)
-        
-        lat_buoy_coords[(lat > bcoords[0] - resolution) & (lat < bcoords[0] + resolution)] = 1.
-        lon_buoy_coords[(lat > bcoords[1] - resolution) & (lat < bcoords[1] + resolution)] = 1.
-        coords = np.float32(np.bool_(lat_buoy_coords) & np.bool_(lon_buoy_coords))
-        buoy_position = np.unravel_index(coords.argmax(), coords.shape)
+        lat_coord = np.zeros(lat.shape)
+        lon_coord = np.zeros(lon.shape)
+        lat_coord[(lat > bcoords[0] - 0.03) & (lat < bcoords[0] + 0.03)] = 1.
+        lon_coord[(lon > bcoords[1] - 0.03) & (lon < bcoords[1] + 0.03)] = 1.
+        coord = np.float32(np.bool_(lat_coord) & np.bool_(lon_coord))
+        buoy_position = np.unravel_index(coord.argmax(), coord.shape)
         
         return buoy_position
     #end
