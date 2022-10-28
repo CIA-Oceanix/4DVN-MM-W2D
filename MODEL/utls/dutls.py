@@ -3,6 +3,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 
+import netCDF4 as nc
 import torch
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
@@ -89,7 +90,9 @@ class W2DSimuDataModule(pl.LightningDataModule):
         super(W2DSimuDataModule, self).__init__()
         
         self.path_data     = path_data
+        self.buoy_coords   = cparams.BUOY_COORDS
         self.region_case   = cparams.REGION_CASE
+        self.region_extent = cparams.REGION_EXTENT_PX
         self.batch_size    = cparams.BATCH_SIZE
         self.ttsplit       = cparams.TR_TE_SPLIT
         self.tvsplit       = cparams.TR_VA_SPLIT
@@ -109,15 +112,27 @@ class W2DSimuDataModule(pl.LightningDataModule):
         #end
     #ends
     
+    def get_mask_land(self):
+        return self.mask_land
+    #end
+    
+    def get_land_and_buoy_positions(self):
+        return self.mask_land, self.buoy_position
+    #end
+    
     def setup(self, stage = None):
         
-        wind2D = np.load(open(os.path.join(self.path_data, self.data_name), 'rb'))
-        mask_land = np.load(open(os.path.join(self.path_data, 'global_mask.npy'), 'rb'))
+        # NetCDF4 dataset
+        ds_wind2D = nc.Dataset(os.path.join(self.path_data, self.data_name), 'r')
+        wind2D = np.array(ds_wind2D['wind'])
+        mask_land = ds_wind2D(ds_wind2D['mask_land'])
+        region_lat = np.array(ds_wind2D['lat'])
+        region_lon = np.array(ds_wind2D['lon'])
         shape = wind2D.shape[-2:]
         
         if self.region_case == 'coast':
-            wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -200:, -200:]
-            mask_land = mask_land[-200:, -200:]
+            wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -self.region_extent:, -self.region_extent:]
+            mask_land = mask_land[-self.region_extent:, -self.region_extent:]
         else:
             raise ValueError('Not implemented yet')
         #end
@@ -139,13 +154,25 @@ class W2DSimuDataModule(pl.LightningDataModule):
         print()
         
         self.mask_land = mask_land
+        self.buoy_position = self.get_buoy_location(region_lat, region_lon)
         self.train_dataset = W2DSimuDataset(train_set, normalize = self.normalize)
         self.val_dataset   = W2DSimuDataset(val_set,   normalize = self.normalize)
         self.test_dataset  = W2DSimuDataset(test_set,  normalize = self.normalize)
     #end
     
-    def get_mask_land(self):
-        return self.mask_land
+    def get_buoy_location(self, lat, lon):
+        
+        resolution = np.float32(0.03)
+        bcoords = self.buoy_coords
+        lat_buoy_coords = np.zeros(lat.shape)
+        lon_buoy_coords = np.zeros(lon.shape)
+        
+        lat_buoy_coords[(lat > bcoords[0] - resolution) & (lat < bcoords[0] + resolution)] = 1.
+        lon_buoy_coords[(lat > bcoords[1] - resolution) & (lat < bcoords[1] + resolution)] = 1.
+        coords = np.float32(np.bool_(lat_buoy_coords) & np.bool_(lon_buoy_coords))
+        buoy_position = np.unravel_index(coords.argmax(), coords.shape)
+        
+        return buoy_position
     #end
     
     def train_dataloader(self):

@@ -345,12 +345,13 @@ class LitModel_Base(pl.LightningModule):
 
 class LitModel_OSSE1(LitModel_Base):
     
-    def __init__(self, Phi, shape_data, mask_land, config_params, run):
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run):
         super(LitModel_OSSE1, self).__init__(config_params)
         
         # Dynamical prior and mask for land/sea locations
         self.Phi = Phi
-        self.mask_land = torch.Tensor(mask_land)
+        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
+        self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
         self.loss_fn = NormLoss()
@@ -358,7 +359,6 @@ class LitModel_OSSE1(LitModel_Base):
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
         self.hparams.fixed_point            = config_params.FIXED_POINT
-        self.hparams.buoy_coord             = config_params.BUOY_COORDS
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
         self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
@@ -439,7 +439,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         return pooled
     #end
-        
+    
     def get_HR_obspoints_mask(self, data_shape, mode):
         
         if mode == 'center':
@@ -450,7 +450,7 @@ class LitModel_OSSE1(LitModel_Base):
             
         elif mode == 'buoy':
             
-            buoy_coords = self.hparams.buoy_coord
+            buoy_coords = self.buoy_position
             mask = torch.zeros(data_shape)
             mask[:,:, buoy_coords[0], buoy_coords[1]] = 1.
             
@@ -592,7 +592,6 @@ class LitModel_OSSE1(LitModel_Base):
         return dict({'loss' : loss}), outputs
     #end
 #end
-
 
 
 class LitModel_OSSE1_2(LitModel_Base):
