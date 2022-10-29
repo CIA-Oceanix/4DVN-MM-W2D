@@ -203,6 +203,13 @@ class Experiment:
             print('\nNan in model parameters')
             print('Aborting ...\n')
             return_value = 0
+            del lit_model
+            del Phi
+            del trainer
+            del w2d_dm
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            #end
             
         else:
             
