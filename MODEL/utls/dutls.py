@@ -90,9 +90,9 @@ class W2DSimuDataModule(pl.LightningDataModule):
         super(W2DSimuDataModule, self).__init__()
         
         self.path_data     = path_data
-        self.buoy_coords   = cparams.BUOY_COORDS
         self.region_case   = cparams.REGION_CASE
         self.region_extent = cparams.REGION_EXTENT_PX
+        self.hr_mask_mode  = cparams.HR_MASK_MODE
         self.batch_size    = cparams.BATCH_SIZE
         self.ttsplit       = cparams.TR_TE_SPLIT
         self.tvsplit       = cparams.TR_VA_SPLIT
@@ -117,13 +117,13 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def get_land_and_buoy_positions(self):
-        return self.mask_land, self.buoy_position
+        return self.mask_land, self.buoy_positions
     #end
     
     def setup(self, stage = None):
         
         # NetCDF4 dataset
-        ds_wind2D = nc.Dataset(os.path.join(self.path_data, self.data_name), 'r')
+        ds_wind2D = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name), 'r')
         wind2D = np.array(ds_wind2D['wind'])
         mask_land = np.array(ds_wind2D['mask_land'])
         region_lat = np.array(ds_wind2D['lat'])
@@ -131,7 +131,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         ds_wind2D.close()
         shape = wind2D.shape[-2:]
         
-        if self.region_case == 'coast':
+        if self.region_case == 'coast-MA':
             wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -self.region_extent:, -self.region_extent:]
             mask_land = mask_land[-self.region_extent:, -self.region_extent:]
             region_lat = region_lat[-self.region_extent:, -self.region_extent:]
@@ -157,23 +157,58 @@ class W2DSimuDataModule(pl.LightningDataModule):
         print()
         
         self.mask_land = mask_land
-        self.buoy_position = self.get_buoy_location(region_lat, region_lon)
-        self.train_dataset = W2DSimuDataset(train_set, normalize = self.normalize)
-        self.val_dataset   = W2DSimuDataset(val_set,   normalize = self.normalize)
-        self.test_dataset  = W2DSimuDataset(test_set,  normalize = self.normalize)
+        self.buoy_positions = self.get_buoy_locations(region_lat, region_lon)
+        self.train_dataset  = W2DSimuDataset(train_set, normalize = self.normalize)
+        self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize)
+        self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize)
     #end
     
-    def get_buoy_location(self, lat, lon):
+    def get_buoy_locations(self, lat, lon):
         
-        bcoords = self.buoy_coords
-        lat_coord = np.zeros(lat.shape)
-        lon_coord = np.zeros(lon.shape)
-        lat_coord[(lat > bcoords[0] - 0.03) & (lat < bcoords[0] + 0.03)] = 1.
-        lon_coord[(lon > bcoords[1] - 0.03) & (lon < bcoords[1] + 0.03)] = 1.
-        coord = np.float32(np.bool_(lat_coord) & np.bool_(lon_coord))
-        buoy_position = np.unravel_index(coord.argmax(), coord.shape)
+        def coord_to_index(lat, lon, bcoords):
+            
+            lat_coord = np.zeros(lat.shape)
+            lon_coord = np.zeros(lon.shape)
+            lat_coord[(lat > bcoords[0] - 0.03) & (lat < bcoords[0] + 0.03)] = 1.
+            lon_coord[(lon > bcoords[1] - 0.03) & (lon < bcoords[1] + 0.03)] = 1.
+            coord = np.float32(np.bool_(lat_coord) & np.bool_(lon_coord))
+            
+            if coord.max() == 0.0:
+                return None
+            #end
+            
+            index = np.unravel_index(coord.argmax(), coord.shape)
+            return index
+        #end
         
-        return buoy_position
+        dir_buoys = os.path.join(self.path_data, 'wind_buoys')
+        
+        if self.hr_mask_mode.__class__ is list:
+            buoyID = str(self.hr_mask_mode[1])
+            
+            coords = np.genfromtxt(os.path.join(dir_buoys, buoyID, 'coords.txt'), delimiter = ',')
+            buoy_positions = coord_to_index(lat, lon, coords)
+            buoy_positions = np.array(buoy_positions).reshape(1,2)
+            
+        elif self.hr_mask_mode == 'buoys':
+            
+            lcoords = list()
+            for cdir in os.listdir(dir_buoys):
+                coords = np.genfromtxt(os.path.join(dir_buoys, cdir, 'coords.txt'), delimiter = ',')
+                buoy_position = coord_to_index(lat, lon, coords)
+                
+                if buoy_position is not None:
+                    lcoords.append(buoy_position)
+                #end
+                
+            #end
+            buoy_positions = np.array(lcoords)
+            
+        else:
+            return None
+        #end
+        
+        return buoy_positions
     #end
     
     def train_dataloader(self):

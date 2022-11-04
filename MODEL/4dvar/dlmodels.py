@@ -164,22 +164,26 @@ class _NormLoss(nn.Module):
     
     def forward(self, item, mask):
         
-        # square
-        argument = item.pow(2)
-        if mask is not None:
-            argument = argument.mul(mask)
+        if item.__class__ is not torch.Tensor:
+            item = torch.Tensor(item)
         #end
         
-        # feature-wise norm
-        if self.dim_item == 2:
-            argument = argument.mean(dim = (-2, -1))
-        elif self.dim_item == 1:
-            argument = argument.mean(dim = -1)
+        if mask.__class__ is not torch.Tensor:
+            mask = torch.Tensor(mask)
         #end
         
-        # sum over time steps and batch-wise mean
-        argument = argument.sum(dim = -1)
-        loss = argument.mean()
+        if mask is None:
+            mask = torch.ones(item.shape)
+        #end
+        
+        # tot_items = mask.shape[2] * mask.shape[3]
+        nonzero_items = mask.sum(dim = (2,3))
+        nonzero_fract =  1 / nonzero_items #/ tot_items
+        
+        loss = item.mul(mask).pow(2)
+        loss = loss.sum(dim = (2,3))
+        loss = loss.mul(nonzero_fract)
+        loss = loss.sum(1).mean(0)
         
         return loss
     #end
@@ -195,8 +199,14 @@ class NormLoss(nn.Module):
     
     def forward(self, item, mask):
         
+        if item.__class__ is not torch.Tensor:
+            item = torch.Tensor(item)
+        #end
+        
         if mask is None:
             mask = torch.ones_like(item)
+        elif mask.__class__ is not torch.Tensor:
+            mask = torch.Tensor(mask)
         #end
         
         # square
@@ -442,17 +452,21 @@ class LitModel_OSSE1(LitModel_Base):
     
     def get_HR_obspoints_mask(self, data_shape, mode):
         
+        if mode.__class__ is list:
+            mode = mode[0]
+        #end
+        
         if mode == 'center':
             
             center_h, center_w = data_shape[-2] // 2, data_shape[-1] // 2
             mask = torch.zeros(data_shape)
             mask[:,:, center_h, center_w] = 1.
             
-        elif mode == 'buoy':
+        elif mode == 'buoy' or mode == 'buoys':
             
             buoy_coords = self.buoy_position
             mask = torch.zeros(data_shape)
-            mask[:,:, buoy_coords[0], buoy_coords[1]] = 1.
+            mask[:,:, buoy_coords[:,0], buoy_coords[:,1]] = 1.
             
         elif mode == 'patch':
             

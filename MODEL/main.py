@@ -72,6 +72,14 @@ class Experiment:
         if self.versioning and self.cparams.RUNS > 1:
             raise ValueError('Versioning with RUNS > 1 not allowed')
         #end
+        
+        if self.cparams.HR_MASK_MODE.__class__ is str and self.cparams.HR_MASK_MODE == 'buoy':
+            raise ValueError('Specify buoyID if HR_MASK_MODE == "buoy"')
+        #end
+        
+        if self.cparams.HR_MASK_MODE.__class__ is list and self.cparams.HR_MASK_MODE[0] != 'buoy':
+            raise ValueError('Specification of in-situ point only if it is a buoy')
+        #end
     #end
         
     def initialize_model_names_paths(self, path_manager):

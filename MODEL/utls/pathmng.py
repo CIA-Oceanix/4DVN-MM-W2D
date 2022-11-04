@@ -20,7 +20,14 @@ class PathManager:
         #---------------------------------------------------------------------------------------------
         # MODEL  NAME
         # format : 4DVN-W2D-<mask_HR>[-ckpt-gs_n_itref]-<inversion>-<lr_hr_sfreqs / "REFRUN">-<prior>
-        model_name = f'{cparams.VNAME}-{cparams.HR_MASK_MODE}'
+        hr_mask_mode = cparams.HR_MASK_MODE
+        if hr_mask_mode.__class__ is list:
+            mode = hr_mask_mode[0]
+            nbuoy = hr_mask_mode[1]
+            model_name = f'{cparams.VNAME}-{mode}{nbuoy}'
+        else:
+            model_name = f'{cparams.VNAME}-{cparams.HR_MASK_MODE}'
+        #end
         
         if cparams.HR_MASK_SFREQ == 1:
             
