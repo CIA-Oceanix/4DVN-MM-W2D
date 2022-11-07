@@ -1,7 +1,6 @@
 
 import os
 import numpy as np
-from tqdm import tqdm
 
 import netCDF4 as nc
 import torch
@@ -46,17 +45,14 @@ class W2DSimuDataset(Dataset):
     
     def normalize_imgwise(self, data, name):
         
-        for i in tqdm(range(data.shape[0])):
-            
+        for i in range(data.shape[0]):
             data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
         #end
         
         img_mean = data.mean()
         img_std  = data.std()
-        
         data = (data - img_mean) / img_std
         
-        print('\nImages normalized')
         return data
     #end
     
@@ -113,10 +109,12 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #ends
     
     def get_mask_land(self):
+        
         return self.mask_land
     #end
     
     def get_land_and_buoy_positions(self):
+        
         return self.mask_land, self.buoy_positions
     #end
     
@@ -212,14 +210,17 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
+        
         return DataLoader(self.train_dataset, batch_size = self.batch_size)
     #end
     
     def val_dataloader(self):
+        
         return DataLoader(self.val_dataset, batch_size = self.batch_size)
     #end
     
     def test_dataloader(self):
+        
         return DataLoader(self.test_dataset, batch_size = self.batch_size)
     #end
 #end

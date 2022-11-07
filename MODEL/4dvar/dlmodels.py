@@ -50,6 +50,7 @@ class dw_conv2d(nn.Module):
 #end
 
 class RBlock(nn.Module):
+    
     def __init__(self):
         super(RBlock, self).__init__()
         
@@ -72,6 +73,7 @@ class RBlock(nn.Module):
 #end
 
 class ResNet(nn.Module):
+    
     def __init__(self, shape_data, config_params):
         super(ResNet, self).__init__()
         
@@ -87,6 +89,7 @@ class ResNet(nn.Module):
 #end
 
 class Block(nn.Sequential):
+    
     def __init__(self, in_channels, out_channels, kernel_size, padding):
         super(Block, self).__init__(
             nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), 
