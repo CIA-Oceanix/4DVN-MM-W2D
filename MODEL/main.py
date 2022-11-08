@@ -13,6 +13,7 @@ from collections import namedtuple
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
+import netCDF4 as nc
 
 from pathmng import PathManager
 from dlmodels import LitModel_OSSE1, model_selection

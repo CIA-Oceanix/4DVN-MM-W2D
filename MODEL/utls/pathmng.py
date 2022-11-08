@@ -176,6 +176,7 @@ class PathManager:
         
         dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent', 'extent'))
         dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent', 'extent'))
+        dataset.createVariable('mask', np.float32, ('one', 'extent', 'extent'))
         dataset.close()
         print('Dataset.nc initialized and closed ...')
     #end
@@ -241,7 +242,7 @@ class PathManager:
         #end
     #end
     
-    def save_model_output(self, outputs, cparams, train_losses, val_losses, run):
+    def save_model_output(self, outputs, mask_land, cparams, train_losses, val_losses, run):
         
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
@@ -249,10 +250,11 @@ class PathManager:
         reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
         if run == 0:
             reco_ncd['data'][0,:,:,:,:] = data
+            reco_ncd['mask'][0,:,:] = mask_land
         #end
         reco_ncd['reco'][run,:,:,:,:] = reco
         reco_ncd.close()
-                
+        
         with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:
             json.dump(cparams._asdict(), f, indent = 4)
         f.close()

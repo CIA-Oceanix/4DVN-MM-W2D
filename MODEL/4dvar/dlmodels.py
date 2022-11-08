@@ -1,11 +1,15 @@
 
+
+import sys
+sys.path.append('../utls')
+
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-# import collections
 import pytorch_lightning as pl
 import solver as NN_4DVar
+from metrics import NormLoss
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
@@ -157,84 +161,6 @@ class ObsModel_Mask(nn.Module):
 #end
 
 
-class _NormLoss(nn.Module):
-    
-    def __init__(self, dim_item = 2):
-        super(_NormLoss, self).__init__()
-        
-        self.dim_item = dim_item
-    #end
-    
-    def forward(self, item, mask):
-        
-        if item.__class__ is not torch.Tensor:
-            item = torch.Tensor(item)
-        #end
-        
-        if mask.__class__ is not torch.Tensor:
-            mask = torch.Tensor(mask)
-        #end
-        
-        if mask is None:
-            mask = torch.ones(item.shape)
-        #end
-        
-        # tot_items = mask.shape[2] * mask.shape[3]
-        nonzero_items = mask.sum(dim = (2,3))
-        nonzero_fract =  1 / nonzero_items #/ tot_items
-        
-        loss = item.mul(mask).pow(2)
-        loss = loss.sum(dim = (2,3))
-        loss = loss.mul(nonzero_fract)
-        loss = loss.sum(1).mean(0)
-        
-        return loss
-    #end
-#end
-
-
-class NormLoss(nn.Module):
-    
-    def __init__(self):
-        super(NormLoss, self).__init__()
-        
-    #end
-    
-    def forward(self, item, mask):
-        
-        if item.__class__ is not torch.Tensor:
-            item = torch.Tensor(item)
-        #end
-        
-        if mask is None:
-            mask = torch.ones_like(item)
-        elif mask.__class__ is not torch.Tensor:
-            mask = torch.Tensor(mask)
-        #end
-        
-        # square
-        argument = item.pow(2)
-        argument = argument.mul(mask)
-        
-        if mask.sum() == 0.:
-            n_items = 1.
-        else:
-            n_items = mask.sum().div(24.)
-        #end
-        
-        # sum on: 
-        #   1. features plane; 
-        #   2. timesteps and batches
-        # Then mean over effective items
-        argument = argument.sum(dim = (2,3))
-        argument = argument.sum(dim = (1,0))
-        loss = argument.div(n_items)
-        
-        return loss
-    #end
-#end
-
-
 class LitModel_Base(pl.LightningModule):
     
     def __init__(self, cparams):
@@ -352,7 +278,6 @@ class LitModel_Base(pl.LightningModule):
         self.save_test_loss(test_loss, batch.shape[0])
         return metrics, outs
     #end
-    
 #end
 
 
@@ -574,7 +499,7 @@ class LitModel_OSSE1(LitModel_Base):
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
-                reco_lr = outputs[:,:24,:,:]
+                reco_lr = data_lr.clone()
                 reco_an = outputs[:,48:,:,:]
                 
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
