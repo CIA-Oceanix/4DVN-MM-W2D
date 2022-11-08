@@ -250,7 +250,7 @@ class PathManager:
         reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
         if run == 0:
             reco_ncd['data'][0,:,:,:,:] = data
-            reco_ncd['mask'][0,:,:] = mask_land
+            reco_ncd['mask'][0,:,:] = mask_land.detach()
         #end
         reco_ncd['reco'][run,:,:,:,:] = reco
         reco_ncd.close()
