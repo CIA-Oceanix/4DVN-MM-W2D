@@ -436,14 +436,22 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Low-resolution temporal sampling mask
         if lr_sfreq.__class__ is int:
-            mask_lr[:, [t for t in range(ts_length) if t % lr_sfreq == 0], :,:] = 1.
+            if lr_sfreq == 0:
+                pass
+            else:
+                mask_lr[:, [t for t in range(ts_length) if t % lr_sfreq == 0], :,:] = 1.
+            #end
         elif lr_sfreq.__class__ is list:
             mask_lr[:, lr_sfreq, :,:] = 1.
         #end
         
         # High-resolution temporal sampling and land/sea masking
         if hr_sfreq.__class__ is int:
-            mask_hr_dx1[:, [t for t in range(ts_length) if t % hr_sfreq == 0], :,:] = self.mask_land
+            if hr_sfreq == 0:
+                pass
+            else:
+                mask_hr_dx1[:, [t for t in range(ts_length) if t % hr_sfreq == 0], :,:] = self.mask_land
+            #end
         elif hr_sfreq.__class__ is list:
             mask_hr_dx1[:, hr_sfreq, :,:] = self.mask_land
         #end
