@@ -111,7 +111,7 @@ class ConvNet(nn.Module):
     def __init__(self, shape_data, config_params):
         super(ConvNet, self).__init__()
         	
-        ts_length = shape_data[1] * 4
+        ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
             Block(ts_length, 32, 5, 2),
@@ -325,7 +325,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
-        mgrad_shapedata = [ts_length * 4, height, width]
+        mgrad_shapedata = [ts_length * 3, height, width]
         model_shapedata = [batch_size, ts_length, height, width]
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
@@ -428,9 +428,6 @@ class LitModel_OSSE1(LitModel_Base):
         # Low-reso pseudo-observations
         mask_lr = torch.zeros(data_shape)
         
-        # Mid-reso pseudo-observations
-        mask_mr = torch.zeros(data_shape)
-        
         # High-reso dx1 : get according to spatial sampling regime.
         # This gives time series of local observations in specified points
         # High-reso dx2 : all zeroes
@@ -450,17 +447,6 @@ class LitModel_OSSE1(LitModel_Base):
             mask_lr[:, lr_sfreq, :,:] = 1.
         #end
         
-        # Mid-resolution temporal sampling mask
-        if mr_sfreq.__class__ is int:
-            if mr_sfreq == 0:
-                pass
-            else:
-                mask_mr[:, [t for t in range(ts_length) if t % mr_sfreq == 0], :,:] = 1.
-            #end
-        elif mr_sfreq.__class__ is list:
-            mask_mr[:, mr_sfreq, :,:] = 1.
-        #end
-        
         # High-resolution temporal sampling and land/sea masking
         if hr_sfreq.__class__ is int:
             if hr_sfreq == 0:
@@ -472,7 +458,7 @@ class LitModel_OSSE1(LitModel_Base):
             mask_hr_dx1[:, hr_sfreq, :,:] = self.mask_land
         #end
         
-        mask = torch.cat([mask_lr, mask_mr, mask_hr_dx1, mask_hr_dx2], dim = 1)
+        mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
         return mask
     #end
     
@@ -493,13 +479,12 @@ class LitModel_OSSE1(LitModel_Base):
         # Prepare input data : import, donwsample and iterpolate, produce anomaly field
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr, ksize = self.hparams.lr_kernel_size)
-        data_mr = self.avgpool2d_keepsize(data_hr, ksize = self.hparams.mr_kernel_size)
         data_an = data_hr - data_lr
-        input_data = torch.cat((data_lr, data_mr, data_an, data_an), dim = 1)
+        input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
         
         # Prepare input state initialized
         if init_state is None:
-            input_state = torch.cat((data_lr, data_mr, data_an, data_an), dim = 1)
+            input_state = torch.cat((data_lr, data_an, data_an), dim = 1)
         else:
             input_state = init_state
         #end
@@ -507,7 +492,6 @@ class LitModel_OSSE1(LitModel_Base):
         # Mask data
         mask = self.get_osse_mask(data_hr.shape,
                                   self.hparams.lr_mask_sfreq,
-                                  self.hparams.mr_mask_sfreq,
                                   self.hparams.hr_mask_sfreq,
                                   self.hparams.hr_mask_mode)
         
@@ -521,12 +505,12 @@ class LitModel_OSSE1(LitModel_Base):
             if self.hparams.fixed_point:
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr.clone()
-                reco_an = outputs[:,72:,:,:]
+                reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             else:
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = data_lr.clone()
-                reco_an = outputs[:,72:,:,:]
+                reco_an = outputs[:,48:,:,:]
                 
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
