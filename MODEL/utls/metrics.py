@@ -208,7 +208,7 @@ class NormLoss(nn.Module):
         # Then mean over effective items
         argument = argument.sum(dim = (2,3))
         argument = argument.sum(dim = (1,0))
-        print(argument.item(), argument.div(n_items).item())
+        print(argument.item(), argument.div(n_items).item(), n_items)
         loss = argument.div(n_items)
         
         return loss
