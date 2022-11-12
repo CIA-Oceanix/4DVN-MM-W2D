@@ -184,7 +184,9 @@ class Experiment:
         
         # TRAINER : configure properties and callbacks
         profiler_kwargs = {'max_epochs'              : self.cparams.EPOCHS, 
-                           'log_every_n_steps'       : 1}
+                           'log_every_n_steps'       : 1,
+                           'gradient_clip_val'       : 5,
+                           'gradient_clip_algorithm' : 'value'}
         
         if torch.cuda.is_available():
             profiler_kwargs.update({'gpus'        : gpus})
