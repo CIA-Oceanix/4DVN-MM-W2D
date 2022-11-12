@@ -296,6 +296,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
+        self.hparams.mr_kernel_size         = config_params.MR_KERNELSIZE
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
@@ -491,8 +492,8 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Prepare input data : import, donwsample and iterpolate, produce anomaly field
         data_hr = data.clone()
-        data_lr = self.avgpool2d_keepsize(data_hr, ksize = self.hparams.lr_mask_sfreq)
-        data_mr = self.avgpool2d_keepsize(data_hr, ksize = self.hparams.mr_mask_sfreq)
+        data_lr = self.avgpool2d_keepsize(data_hr, ksize = self.hparams.lr_kernel_size)
+        data_mr = self.avgpool2d_keepsize(data_hr, ksize = self.hparams.mr_kernel_size)
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_mr, data_an, data_an), dim = 1)
         
