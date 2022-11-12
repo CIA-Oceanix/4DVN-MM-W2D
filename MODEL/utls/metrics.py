@@ -202,12 +202,13 @@ class NormLoss(nn.Module):
             n_items = mask.sum().div(24.)
         #end
         
-        # sum on: 
+        # sum on:
         #   1. features plane; 
         #   2. timesteps and batches
         # Then mean over effective items
         argument = argument.sum(dim = (2,3))
         argument = argument.sum(dim = (1,0))
+        print(argument.item(), argument.div(n_items).item())
         loss = argument.div(n_items)
         
         return loss
