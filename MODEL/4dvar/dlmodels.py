@@ -423,7 +423,7 @@ class LitModel_OSSE1(LitModel_Base):
         return mask
     #end
     
-    def get_osse_mask(self, data_shape, lr_sfreq, mr_sfreq, hr_sfreq, hr_obs_point):
+    def get_osse_mask(self, data_shape, lr_sfreq, hr_sfreq, hr_obs_point):
         
         # Low-reso pseudo-observations
         mask_lr = torch.zeros(data_shape)
