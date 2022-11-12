@@ -45,9 +45,26 @@ class PathManager:
                     for item in lr_sampling_freq:
                         lr_sampling_freq_tag += (str(item) + '_')
                     #end
-                
+                    
                 else:
                     lr_sampling_freq_tag = '{}'.format(lr_sampling_freq)
+                #end
+            #end
+            
+            # parse MR description
+            mr_sampling_freq = cparams.MR_MASK_SFREQ
+            if mr_sampling_freq is None:
+                mr_sampling_freq_tag = None
+            else:
+                if mr_sampling_freq.__class__ is list:
+                    
+                    mr_sampling_freq_tag = '_'
+                    for item in mr_sampling_freq:
+                        mr_sampling_freq_tag += (str(item) + '_')
+                    #end
+                    
+                else:
+                    mr_sampling_freq_tag = '{}'.format(mr_sampling_freq)
                 #end
             #end
             
@@ -68,7 +85,11 @@ class PathManager:
                 #end
             #end
             
-            exp_osse_1_specs = f'sflr{lr_sampling_freq_tag}-sfhr{hr_sampling_freq_tag}'
+            if mr_sampling_freq_tag is not None:
+                exp_osse_1_specs = f'sflr{lr_sampling_freq_tag}-sfmr{mr_sampling_freq_tag}-sfhr{hr_sampling_freq_tag}'
+            else:
+                exp_osse_1_specs = f'sflr{lr_sampling_freq_tag}-sfhr{hr_sampling_freq_tag}'
+            #end
         #end
         
         if cparams.GS_TRAIN and not versioning:
