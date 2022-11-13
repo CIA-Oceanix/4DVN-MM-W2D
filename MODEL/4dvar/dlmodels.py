@@ -565,6 +565,10 @@ class LitModel_OSSE1(LitModel_Base):
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
         loss += regularization * self.hparams.reg_coeff
         
+        if torch.isnan(loss):
+            raise ValueError('NAN IN LOSS')
+        #end
+        
         return dict({'loss' : loss}), outputs
     #end
 #end
