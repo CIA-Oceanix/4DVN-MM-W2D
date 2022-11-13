@@ -206,9 +206,10 @@ class NormLoss(nn.Module):
         #   1. features plane; 
         #   2. timesteps and batches
         # Then mean over effective items
-        argument = argument.mean(dim = (2,3))
-        loss = argument.mean(dim = (1,0))
+        # argument = argument.mean(dim = (2,3))
+        # loss = argument.mean(dim = (1,0))
         # loss = argument.div(n_items)
+        loss = torch.nanmean(argument)
         
         return loss
     #end
