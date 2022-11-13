@@ -100,7 +100,8 @@ class Block(nn.Sequential):
                       padding_mode = 'reflect',
                       bias = True),
             # nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(0.1)
+            # nn.LeakyReLU(0.1)
+            nn.Sigmoid()
         )
     #end
 #end
@@ -472,6 +473,14 @@ class LitModel_OSSE1(LitModel_Base):
         return loss, outs
     #end
     
+    def on_after_backward(self):
+        
+        print('\nIn on_after_backward. Params gradients')
+        for pname, param in self.named_parameters():
+            print(f'Param {pname} : {param.mean():.4f}')
+        #end
+    #end
+    
     def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
         # Prepare input data : import, donwsample and iterpolate, produce anomaly field
@@ -479,6 +488,9 @@ class LitModel_OSSE1(LitModel_Base):
         data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
+        
+        print('\nBegin compute_loss')
+        print(f'Mean data hr, an, lr : { data_hr.mean():.4f}, {data_an.mean():.4f}, {data_lr.mean():.4f}')
         
         # Prepare input state initialized
         if init_state is None:
@@ -496,7 +508,10 @@ class LitModel_OSSE1(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        # Inverse problem solution
+        print('\n')
+        print(f'input data, state : {input_data.mean():.4f}, {input_state.mean():.4f}')
+        
+        # Inverse problem solution 
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
@@ -514,6 +529,13 @@ class LitModel_OSSE1(LitModel_Base):
             #end
         #end
         
+        print('\n')
+        print(f'reco an, hr : {reco_an.mean():.4f}, {reco_hr.mean():.4f}')
+        
+        for pname, param in self.named_parameters():
+            print(f'Param {pname} : {param.mean():.4f}')
+        #end
+        
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data_hr.detach().cpu(), 
@@ -529,8 +551,12 @@ class LitModel_OSSE1(LitModel_Base):
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
-        grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
+        grad_data_square = grad_data[0].pow(2) + grad_data[1].pow(2)
+        grad_reco_square = grad_reco[0].pow(2) + grad_reco[1].pow(2)
+        grad_data_square[grad_data_square < 0] = 0.
+        grad_reco_square[grad_reco_square < 0] = 0.
+        grad_data = torch.sqrt(grad_data_square)
+        grad_reco = torch.sqrt(grad_reco_square)
         
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad * self.hparams.grad_coeff
