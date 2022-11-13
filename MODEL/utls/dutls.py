@@ -26,7 +26,7 @@ class W2DSimuDataset(Dataset):
         self.pparams = dict()
         
         # normalize
-        wind2D = self.normalize(data, 'wind_2D_hr')
+        wind2D = self.normalize_imgwise(data, 'wind_2D_hr')
         self.wind2D = wind2D
         
         self.numitems = wind2D.__len__()
