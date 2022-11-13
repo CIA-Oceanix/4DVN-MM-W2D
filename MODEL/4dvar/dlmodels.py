@@ -477,7 +477,11 @@ class LitModel_OSSE1(LitModel_Base):
         
         print('\nIn on_after_backward. Params gradients')
         for pname, param in self.named_parameters():
-            print(f'Param {pname} : {param.grad.mean():.4f}')
+            try:
+                print(f'Param {pname} : {param.grad.mean():.4f}')
+            except:
+                pass
+            #end
         #end
     #end
     
