@@ -1,4 +1,3 @@
-
 import sys
 import torch
 from torch import nn
@@ -16,13 +15,11 @@ def crop_central_patch(img_ts, length):
 #end
 
 # B-distances
-def get_batched_histograms(img_ts, bins = 30, flat = False):
+def get_batched_histograms(img_ts, bins = 30):
     
-    if not flat:
-        img = img_ts.reshape(-1, *img_ts.shape[-2:])
-    else:
-        img = img_ts.reshape(-1, img_ts.shape[-1])
-    #end
+    # img_H, img_W = img_ts[0,0].shape
+    img_H, img_W = img_ts.shape[-2:]
+    img = img_ts.reshape(-1, img_H, img_W)
     hist = torch.cat([torch.histc(img[i], bins = bins).unsqueeze(0) for i in range(img.shape[0])], dim = 0)
     for i in range(hist.shape[0]):
         hist[i] = hist[i] / hist[i].sum()
@@ -126,9 +123,9 @@ def peak_signal_to_noise_ratio(target, output):
     return np.nanmean(psnr)
 #end
 
-def mse(target, output, mask = None, divide_std = True):
+def mse(target, output, divide_std = True):
     
-    mserror = NormLoss()((target - output), mask = mask)
+    mserror = NormLoss()((target - output), mask = None)
     if divide_std:
         mserror = mserror / target.std()
     #end
@@ -192,18 +189,23 @@ class NormLoss(nn.Module):
             mask = torch.Tensor(mask)
         #end
         
+        # square
         argument = item.pow(2)
         argument = argument.mul(mask)
         
-        if mask.sum() < 1:
+        if mask.sum() == 0.:
             n_items = 1.
         else:
-            n_items = mask.sum()
+            n_items = mask.sum().div(24.)
         #end
         
+        # sum on: 
+        #   1. features plane; 
+        #   2. timesteps and batches
+        # Then mean over effective items
+        argument = argument.sum(dim = (2,3))
+        argument = argument.sum(dim = (1,0))
         loss = argument.div(n_items)
-        loss = torch.sum(loss, dim = (2,3))
-        loss = torch.sum(loss, dim = (1,0))
         
         return loss
     #end

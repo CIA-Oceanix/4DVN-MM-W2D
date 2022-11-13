@@ -1,4 +1,3 @@
-
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), 'utls'))
@@ -184,10 +183,7 @@ class Experiment:
         
         # TRAINER : configure properties and callbacks
         profiler_kwargs = {'max_epochs'              : self.cparams.EPOCHS, 
-                           'log_every_n_steps'       : 1,
-                           'gradient_clip_val'       : 1,
-                           'gradient_clip_algorithm' : 'norm',
-                           'accumulate_grad_batches' : 5}
+                           'log_every_n_steps'       : 1}
         
         if torch.cuda.is_available():
             profiler_kwargs.update({'gpus'        : gpus})
@@ -245,7 +241,6 @@ class Experiment:
             print('\nTraining and test successful')
             print('Returning ...')
             return_value = 1
-        
         #end
         
         end_time = datetime.datetime.now()

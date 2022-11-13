@@ -1,4 +1,3 @@
-
 import sys
 sys.path.append('../utls')
 
@@ -100,8 +99,7 @@ class Block(nn.Sequential):
                       padding_mode = 'reflect',
                       bias = True),
             # nn.BatchNorm2d(out_channels),
-            # nn.LeakyReLU(0.1)
-            nn.Sigmoid()
+            nn.LeakyReLU(0.1)
         )
     #end
 #end
@@ -320,7 +318,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.hparams.automatic_optimization = True
         self.has_any_nan                    = False
         self.run                            = run
-        
+                
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
         mgrad_shapedata = [ts_length * 3, height, width]
@@ -353,16 +351,13 @@ class LitModel_OSSE1(LitModel_Base):
             [
                 {'params'       : self.model.model_Grad.parameters(),
                  'lr'           : self.hparams.mgrad_lr,
-                 # 'weight_decay' : self.hparams.mgrad_wd
-                },
+                 'weight_decay' : self.hparams.mgrad_wd},
                 {'params'       : self.model.Phi.parameters(),
                  'lr'           : self.hparams.prior_lr,
-                 # 'weight_decay' : self.hparams.prior_wd
-                },
+                 'weight_decay' : self.hparams.prior_wd},
                 {'params'       : self.model.model_VarCost.parameters(),
                  'lr'           : self.hparams.varcost_lr,
-                 # 'weight_decay' : self.hparams.varcost_wd
-                }
+                 'weight_decay' : self.hparams.varcost_wd}
             ]
         )
         return optimizers
@@ -426,28 +421,6 @@ class LitModel_OSSE1(LitModel_Base):
     
     def get_osse_mask(self, data_shape, lr_sfreq, hr_sfreq, hr_obs_point):
         
-        def get_resolution_mask(freq, mask, wfreq):
-            
-            if freq is None:
-                return mask
-            else:
-                if freq.__class__ is list:
-                    mask[:, freq, :,:] = 1.
-                elif freq.__class__ is int:
-                    for t in range(mask.shape[1]):
-                        if t % freq == 0:
-                            if wfreq == 'lr':
-                                mask[:,t,:,:] = 1.
-                            elif wfreq == 'hr':
-                                mask[:,t,:,:] = self.mask_land
-                        #end
-                    #end
-                #end
-            #end
-            
-            return mask
-        #end
-        
         # Low-reso pseudo-observations
         mask_lr = torch.zeros(data_shape)
         
@@ -456,9 +429,22 @@ class LitModel_OSSE1(LitModel_Base):
         # High-reso dx2 : all zeroes
         mask_hr_dx1 = self.get_HR_obspoints_mask(data_shape, mode = hr_obs_point)
         mask_hr_dx2 = torch.zeros(data_shape)
-                
-        mask_lr = get_resolution_mask(lr_sfreq, mask_lr, 'lr')
-        mask_hr_dx1 = get_resolution_mask(hr_sfreq, mask_hr_dx1, 'hr')
+        
+        ts_length = data_shape[1]
+        
+        # Low-resolution temporal sampling mask
+        if lr_sfreq.__class__ is int:
+            mask_lr[:, [t for t in range(ts_length) if t % lr_sfreq == 0], :,:] = 1.
+        elif lr_sfreq.__class__ is list:
+            mask_lr[:, lr_sfreq, :,:] = 1.
+        #end
+        
+        # High-resolution temporal sampling and land/sea masking
+        if hr_sfreq.__class__ is int:
+            mask_hr_dx1[:, [t for t in range(ts_length) if t % hr_sfreq == 0], :,:] = self.mask_land
+        elif hr_sfreq.__class__ is list:
+            mask_hr_dx1[:, hr_sfreq, :,:] = self.mask_land
+        #end
         
         mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
         return mask
@@ -476,19 +462,6 @@ class LitModel_OSSE1(LitModel_Base):
         return loss, outs
     #end
     
-    def on_after_backward(self):
-        
-        print('\nIn on_after_backward. Params gradients *********************************')
-        for pname, param in self.named_parameters():
-            try:
-                print(f'Param {pname} : {param.grad.mean()}')
-                print(f'What if ... ? {param.grad.mean() * 1e-8}')
-            except:
-                pass
-            #end
-        #end
-    #end
-    
     def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
         # Prepare input data : import, donwsample and iterpolate, produce anomaly field
@@ -496,9 +469,6 @@ class LitModel_OSSE1(LitModel_Base):
         data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
-        
-        print('\n\nBegin compute_loss')
-        print(f'Mean data hr, an, lr : { data_hr.mean():.4f}, {data_an.mean():.4f}, {data_lr.mean():.4f}')
         
         # Prepare input state initialized
         if init_state is None:
@@ -516,9 +486,7 @@ class LitModel_OSSE1(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        print(f'input data, state : {input_data.mean():.4f}, {input_state.mean():.4f}')
-        
-        # Inverse problem solution 
+        # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
@@ -536,12 +504,6 @@ class LitModel_OSSE1(LitModel_Base):
             #end
         #end
         
-        print(f'reco an, hr : {reco_an.mean():.4f}, {reco_hr.mean():.4f}')
-        
-        for pname, param in self.named_parameters():
-            print(f'Param {pname} : {param.mean():.4f}')
-        #end
-        
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data_hr.detach().cpu(), 
@@ -557,12 +519,8 @@ class LitModel_OSSE1(LitModel_Base):
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        grad_data_square = grad_data[0].pow(2) + grad_data[1].pow(2)
-        grad_reco_square = grad_reco[0].pow(2) + grad_reco[1].pow(2)
-        grad_data_square[grad_data_square < 0] = 0.
-        grad_reco_square[grad_reco_square < 0] = 0.
-        grad_data = torch.sqrt(grad_data_square)
-        grad_reco = torch.sqrt(grad_reco_square)
+        grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
+        grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad * self.hparams.grad_coeff
@@ -570,10 +528,6 @@ class LitModel_OSSE1(LitModel_Base):
         ## Regularization
         regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
         loss += regularization * self.hparams.reg_coeff
-        
-        if torch.isnan(loss):
-            raise ValueError('NAN IN LOSS')
-        #end
         
         return dict({'loss' : loss}), outputs
     #end

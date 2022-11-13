@@ -1,4 +1,3 @@
-
 import os
 import datetime
 import json
@@ -246,7 +245,9 @@ class PathManager:
         
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
-                
+        
+        print(data.__class__, reco.__class__, mask_land.__class__)
+        
         reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
         if run == 0:
             reco_ncd['data'][0,:,:,:,:] = data

@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 
@@ -43,11 +42,10 @@ class W2DSimuDataset(Dataset):
         return self.wind2D[idx]
     #end
     
-    def normalize_imgwise(self, indata, name):
+    def normalize_imgwise(self, data, name):
         
-        data = np.zeros(indata.shape)
-        for i in range(indata.shape[0]):
-            data[i] = (indata[i] - indata[i].min()) / (indata[i].max() - indata[i].min())
+        for i in range(data.shape[0]):
+            data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
         #end
         
         img_mean = data.mean()
@@ -57,14 +55,13 @@ class W2DSimuDataset(Dataset):
         return data
     #end
     
-    def normalize(self, indata, name):
+    def normalize(self, data, name):
         
-        dmax = indata.max()
-        dmin = indata.min()
+        dmax = data.max()
+        dmin = data.min()
         self.pparams.update({name : {'max' : dmax, 'min' : dmin}})
         
-        data = (indata - dmin) / (dmax - dmin)
-        return data
+        return (data - dmin) / (dmax - dmin)
     #end
     
     def denormalize(self, data, name):
