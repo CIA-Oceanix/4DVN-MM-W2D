@@ -192,24 +192,18 @@ class NormLoss(nn.Module):
             mask = torch.Tensor(mask)
         #end
         
-        # square
         argument = item.pow(2)
         argument = argument.mul(mask)
         
-        if mask.sum() == 0.:
+        if mask.sum() < 1:
             n_items = 1.
         else:
-            n_items = mask.sum().div(24.)
+            n_items = mask.sum()
         #end
         
-        # sum on:
-        #   1. features plane; 
-        #   2. timesteps and batches
-        # Then mean over effective items
-        # argument = argument.mean(dim = (2,3))
-        # loss = argument.mean(dim = (1,0))
-        # loss = argument.div(n_items)
-        loss = torch.nanmean(argument)
+        loss = argument.div(n_items)
+        loss = torch.nansum(loss, dim = (2,3))
+        loss = torch.nansum(loss, dim = (1,0))
         
         return loss
     #end
