@@ -26,7 +26,7 @@ class W2DSimuDataset(Dataset):
         self.pparams = dict()
         
         # normalize
-        wind2D = self.normalize_imgwise(data, 'wind_2D_hr')
+        wind2D = self.normalize(data, 'wind_2D_hr')
         self.wind2D = wind2D
         
         self.numitems = wind2D.__len__()
@@ -43,10 +43,11 @@ class W2DSimuDataset(Dataset):
         return self.wind2D[idx]
     #end
     
-    def normalize_imgwise(self, data, name):
+    def normalize_imgwise(self, indata, name):
         
-        for i in range(data.shape[0]):
-            data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
+        data = np.zeros(indata.shape)
+        for i in range(indata.shape[0]):
+            data[i] = (indata[i] - indata[i].min()) / (indata[i].max() - indata[i].min())
         #end
         
         img_mean = data.mean()
@@ -56,13 +57,14 @@ class W2DSimuDataset(Dataset):
         return data
     #end
     
-    def normalize(self, data, name):
+    def normalize(self, indata, name):
         
-        dmax = data.max()
-        dmin = data.min()
+        dmax = indata.max()
+        dmin = indata.min()
         self.pparams.update({name : {'max' : dmax, 'min' : dmin}})
         
-        return (data - dmin) / (dmax - dmin)
+        data = (indata - dmin) / (dmax - dmin)
+        return data
     #end
     
     def denormalize(self, data, name):

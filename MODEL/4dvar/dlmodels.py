@@ -422,6 +422,28 @@ class LitModel_OSSE1(LitModel_Base):
     
     def get_osse_mask(self, data_shape, lr_sfreq, hr_sfreq, hr_obs_point):
         
+        def get_resolution_mask(freq, mask, wfreq):
+            
+            if freq is None:
+                return mask
+            else:
+                if freq.__class__ is list:
+                    mask[:, freq, :,:] = 1.
+                elif freq.__class__ is int:
+                    for t in range(mask.shape[1]):
+                        if t % freq == 0:
+                            if wfreq == 'lr':
+                                mask[:,t,:,:] = 1.
+                            elif wfreq == 'hr':
+                                mask[:,t,:,:] = self.mask_land
+                        #end
+                    #end
+                #end
+            #end
+            
+            return mask
+        #end
+        
         # Low-reso pseudo-observations
         mask_lr = torch.zeros(data_shape)
         
@@ -430,30 +452,9 @@ class LitModel_OSSE1(LitModel_Base):
         # High-reso dx2 : all zeroes
         mask_hr_dx1 = self.get_HR_obspoints_mask(data_shape, mode = hr_obs_point)
         mask_hr_dx2 = torch.zeros(data_shape)
-        
-        ts_length = data_shape[1]
-        
-        # Low-resolution temporal sampling mask
-        if lr_sfreq.__class__ is int:
-            if lr_sfreq == 0:
-                pass
-            else:
-                mask_lr[:, [t for t in range(ts_length) if t % lr_sfreq == 0], :,:] = 1.
-            #end
-        elif lr_sfreq.__class__ is list:
-            mask_lr[:, lr_sfreq, :,:] = 1.
-        #end
-        
-        # High-resolution temporal sampling and land/sea masking
-        if hr_sfreq.__class__ is int:
-            if hr_sfreq == 0:
-                pass
-            else:
-                mask_hr_dx1[:, [t for t in range(ts_length) if t % hr_sfreq == 0], :,:] = self.mask_land
-            #end
-        elif hr_sfreq.__class__ is list:
-            mask_hr_dx1[:, hr_sfreq, :,:] = self.mask_land
-        #end
+                
+        mask_lr = get_resolution_mask(lr_sfreq, mask_lr, 'lr')
+        mask_hr_dx1 = get_resolution_mask(hr_sfreq, mask_hr_dx1, 'hr')
         
         mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
         return mask
