@@ -477,7 +477,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         print('\nIn on_after_backward. Params gradients')
         for pname, param in self.named_parameters():
-            print(f'Param {pname} : {param.mean():.4f}')
+            print(f'Param {pname} : {param.grad.mean():.4f}')
         #end
     #end
     
@@ -489,7 +489,7 @@ class LitModel_OSSE1(LitModel_Base):
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
         
-        print('\nBegin compute_loss')
+        print('\n\nBegin compute_loss')
         print(f'Mean data hr, an, lr : { data_hr.mean():.4f}, {data_an.mean():.4f}, {data_lr.mean():.4f}')
         
         # Prepare input state initialized
@@ -508,7 +508,6 @@ class LitModel_OSSE1(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        print('\n')
         print(f'input data, state : {input_data.mean():.4f}, {input_state.mean():.4f}')
         
         # Inverse problem solution 
@@ -529,7 +528,6 @@ class LitModel_OSSE1(LitModel_Base):
             #end
         #end
         
-        print('\n')
         print(f'reco an, hr : {reco_an.mean():.4f}, {reco_hr.mean():.4f}')
         
         for pname, param in self.named_parameters():
