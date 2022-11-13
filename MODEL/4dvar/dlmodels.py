@@ -1,5 +1,4 @@
 
-
 import sys
 sys.path.append('../utls')
 
@@ -296,11 +295,9 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
-        self.hparams.mr_kernel_size         = config_params.MR_KERNELSIZE
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
-        self.hparams.mr_mask_sfreq          = config_params.MR_MASK_SFREQ
         self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
@@ -367,10 +364,10 @@ class LitModel_OSSE1(LitModel_Base):
         return optimizers
     #end
     
-    def avgpool2d_keepsize(self, data, ksize):
+    def avgpool2d_keepsize(self, data):
         
         img_size = data.shape[-2:]
-        pooled = F.avg_pool2d(data, kernel_size = ksize)
+        pooled = F.avg_pool2d(data, kernel_size = self.hparams.lr_kernel_size)
         pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic', align_corners = False)
         
         if not data.shape == pooled.shape:
@@ -478,7 +475,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Prepare input data : import, donwsample and iterpolate, produce anomaly field
         data_hr = data.clone()
-        data_lr = self.avgpool2d_keepsize(data_hr, ksize = self.hparams.lr_kernel_size)
+        data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
         input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
         
@@ -490,9 +487,9 @@ class LitModel_OSSE1(LitModel_Base):
         #end
         
         # Mask data
-        mask = self.get_osse_mask(data_hr.shape,
-                                  self.hparams.lr_mask_sfreq,
-                                  self.hparams.hr_mask_sfreq,
+        mask = self.get_osse_mask(data_hr.shape, 
+                                  self.hparams.lr_mask_sfreq, 
+                                  self.hparams.hr_mask_sfreq, 
                                   self.hparams.hr_mask_mode)
         
         input_state = input_state * mask

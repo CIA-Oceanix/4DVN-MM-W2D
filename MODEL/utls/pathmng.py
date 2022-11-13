@@ -45,7 +45,7 @@ class PathManager:
                     for item in lr_sampling_freq:
                         lr_sampling_freq_tag += (str(item) + '_')
                     #end
-                    
+                
                 else:
                     lr_sampling_freq_tag = '{}'.format(lr_sampling_freq)
                 #end
