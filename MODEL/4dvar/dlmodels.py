@@ -353,13 +353,16 @@ class LitModel_OSSE1(LitModel_Base):
             [
                 {'params'       : self.model.model_Grad.parameters(),
                  'lr'           : self.hparams.mgrad_lr,
-                 'weight_decay' : self.hparams.mgrad_wd},
+                 # 'weight_decay' : self.hparams.mgrad_wd
+                },
                 {'params'       : self.model.Phi.parameters(),
                  'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd},
+                 # 'weight_decay' : self.hparams.prior_wd
+                },
                 {'params'       : self.model.model_VarCost.parameters(),
                  'lr'           : self.hparams.varcost_lr,
-                 'weight_decay' : self.hparams.varcost_wd}
+                 # 'weight_decay' : self.hparams.varcost_wd
+                }
             ]
         )
         return optimizers
