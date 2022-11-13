@@ -202,8 +202,8 @@ class NormLoss(nn.Module):
         #end
         
         loss = argument.div(n_items)
-        loss = torch.nansum(loss, dim = (2,3))
-        loss = torch.nansum(loss, dim = (1,0))
+        loss = torch.sum(loss, dim = (2,3))
+        loss = torch.sum(loss, dim = (1,0))
         
         return loss
     #end
