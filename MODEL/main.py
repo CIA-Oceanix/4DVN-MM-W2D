@@ -44,17 +44,31 @@ class WeightSave(pl.callbacks.Callback):
     
     def on_epoch_end(self, trainer, pl_module):
         
+        fetch_params = False
         for pname, param in pl_module.named_parameters():
-            if torch.any(param.isnan()) or torch.any(param.grad().isnan()):
+            
+            try:
+                if torch.any(param.grad().isnan()):
+                    print(f'Warning !!! Grad of parameter {pname} has nans')
+                    print('Referch parameters as at epoch end')
+                    fetch_params = True
+                #end
+            except:
+                pass
+            #end
+            
+            if torch.any(param.isnan()):
                 print(f'Warning !!! Parameter {pname} has nans')
                 print('Refetch parameters as at epoch start')
-                
-                fname = f'weight-state-dict_epoch{pl_module.current_epoch:03d}.ckp'
-                params_statedict = torch.load(fname)
-                pl_module.load_state_dict(params_statedict)
-                
-                break
+                fetch_params = True
             #edn
+        #end
+        
+        if fetch_params:
+            
+            fname = f'weight-state-dict_epoch{pl_module.current_epoch:03d}.ckp'
+            params_statedict = torch.load(fname)
+            pl_module.load_state_dict(params_statedict)
         #end
     #end
 #end
