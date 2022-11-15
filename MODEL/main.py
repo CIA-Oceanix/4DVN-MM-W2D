@@ -31,6 +31,7 @@ else:
 
 # Custom training callbacks
 class WeightSave(pl.callbacks.Callback):
+    
     def __init__(self, path_checkpoint):
         
         self.path_checkpoint = path_checkpoint
@@ -244,10 +245,10 @@ class Experiment:
             mode       = 'min'
         )
         
-        weight_save = WeightSave(path_ckpt)
+        # weight_save = WeightSave(path_ckpt)
         
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, weight_save])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
         
         # Train and test
         ## Train
