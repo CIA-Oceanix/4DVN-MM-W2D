@@ -36,13 +36,13 @@ class WeightSave(pl.callbacks.Callback):
         self.path_checkpoint = path_checkpoint
     #end
     
-    def on_epoch_start(self, trainer, pl_module):
+    def on_train_epoch_start(self, trainer, pl_module):
         
-        fname = f'weight-state-dict_epoch{pl_module.current_epoch:03d}.ckp'
+        fname = 'weight-state-dict_last-epoch.ckp'
         torch.save(pl_module.state_dict(), os.path.join(self.path_checkpoint, fname))
     #end
     
-    def on_epoch_end(self, trainer, pl_module):
+    def on_train_epoch_end(self, trainer, pl_module):
         
         fetch_params = False
         for pname, param in pl_module.named_parameters():
@@ -66,7 +66,7 @@ class WeightSave(pl.callbacks.Callback):
         
         if fetch_params:
             
-            fname = f'weight-state-dict_epoch{pl_module.current_epoch:03d}.ckp'
+            fname = 'weight-state-dict_last-epoch.ckp'
             params_statedict = torch.load(fname)
             pl_module.load_state_dict(params_statedict)
         #end
