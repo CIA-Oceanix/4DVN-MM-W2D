@@ -8,6 +8,11 @@ import numpy as np
 
 
 
+def get_model_name(cparams, versioning):
+    
+    pass
+#end
+
 class PathManager:
     
     def __init__(self, mother_dir, cparams, versioning = True, tabula_rasa = False):

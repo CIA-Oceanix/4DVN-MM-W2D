@@ -127,6 +127,18 @@ class ConvNet(nn.Module):
     #end
 #end
 
+class UNet(nn.Module):
+    
+    def __init__(self, shape_data, config_params):
+        super(UNet, self).__init__()
+    #end
+    
+    def forward(self):
+        
+        pass
+    #end
+#end
+
 def model_selection(shape_data, config_params):
     
     if config_params.PRIOR == 'SN':
@@ -150,7 +162,7 @@ class ObsModel_Mask(nn.Module):
         self.dim_obs = dim_obs
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
     #end
-    
+        
     def forward(self, x, y_obs, mask):
         
         obs_term = (x - y_obs).mul(mask)
@@ -294,6 +306,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
+        self.hparams.mr_kernel_size         = config_params.MR_KERNELSIZE
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
@@ -510,6 +523,12 @@ class LitModel_OSSE1(LitModel_Base):
                 reco_an = outputs[:,48:,:,:]
                 
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+            #end
+        #end
+        
+        if self.current_epoch == 1:
+            for param in self.parameters():
+                param.copy_(param * torch.nan)
             #end
         #end
         

@@ -12,7 +12,6 @@ from collections import namedtuple
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-import netCDF4 as nc
 
 from pathmng import PathManager
 from dlmodels import LitModel_OSSE1, model_selection
@@ -28,6 +27,38 @@ else:
     gpus = 0
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
+
+
+# Custom training callbacks
+class WeightSave(pl.callbacks.Callback):
+    def __init__(self, path_checkpoint):
+        
+        self.path_checkpoint = path_checkpoint
+    #end
+    
+    def on_epoch_start(self, trainer, pl_module):
+        
+        fname = f'weight-state-dict_epoch{pl_module.current_epoch:03d}.ckp'
+        torch.save(pl_module.state_dict(), os.path.join(self.path_checkpoint, fname))
+    #end
+    
+    def on_epoch_end(self, trainer, pl_module):
+        
+        for pname, param in pl_module.named_parameters():
+            if torch.any(param.isnan()) or torch.any(param.grad().isnan()):
+                print(f'Warning !!! Parameter {pname} has nans')
+                print('Refetch parameters as at epoch start')
+                
+                fname = f'weight-state-dict_epoch{pl_module.current_epoch:03d}.ckp'
+                params_statedict = torch.load(fname)
+                pl_module.load_state_dict(params_statedict)
+                
+                break
+            #edn
+        #end
+    #end
+#end
+    
 
 class Experiment:
     
@@ -199,8 +230,10 @@ class Experiment:
             mode       = 'min'
         )
         
+        weight_save = WeightSave(path_ckpt)
+        
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, weight_save])
         
         # Train and test
         ## Train
