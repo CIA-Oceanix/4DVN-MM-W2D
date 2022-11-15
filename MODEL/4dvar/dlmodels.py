@@ -524,13 +524,7 @@ class LitModel_OSSE1(LitModel_Base):
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             #end
         #end
-        
-        if self.current_epoch == 1:
-            for param in self.parameters():
-                param.copy_(param * torch.nan)
-            #end
-        #end
-        
+                
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data_hr.detach().cpu(), 
