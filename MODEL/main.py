@@ -67,7 +67,7 @@ class WeightSave(pl.callbacks.Callback):
         if fetch_params:
             
             fname = 'weight-state-dict_last-epoch.ckp'
-            params_statedict = torch.load(fname)
+            params_statedict = torch.load(os.path.join(self.path_checkpoint, fname))
             pl_module.load_state_dict(params_statedict)
         #end
     #end
