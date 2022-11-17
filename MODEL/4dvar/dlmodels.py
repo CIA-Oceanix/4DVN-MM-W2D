@@ -131,11 +131,25 @@ class UNet(nn.Module):
     
     def __init__(self, shape_data, config_params):
         super(UNet, self).__init__()
+        
+        ts_length = shape_data[1] * 3
+        
+        self.encoder1 = nn.Conv2d(ts_length, 32, kernel_size = 5, padding = 2)
+        self.nl1 = nn.LeakyReLU(0.1)
+        self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
+        self.nl2 = nn.LeakyReLU(0.1)
+        self.decoder1 = nn.Conv2d(32 * 2, 32, kernel_size = 5, padding = 2)
+        self.conv = nn.Conv2d(32, ts_length, kernel_size = 5, padding = 2)
     #end
     
-    def forward(self):
+    def forward(self, x):
         
-        pass
+        enc1 = self.nl1(self.encoder1(x))
+        bottleneck = self.bottleneck(enc1)
+        dec1 = torch.cat([enc1, bottleneck], dim = 1)
+        dec1 = self.decoder1(dec1)
+        y = self.conv(self.nl2(dec1))
+        return y
     #end
 #end
 
@@ -145,6 +159,8 @@ def model_selection(shape_data, config_params):
         return ConvNet(shape_data, config_params)
     elif config_params.PRIOR == 'RN':
         return ResNet(shape_data, config_params)
+    elif config_params.PRIOR == 'UN':
+        return UNet(shape_data, config_params)
     else:
         raise NotImplementedError('No valid prior')
     #end
