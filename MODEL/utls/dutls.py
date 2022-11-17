@@ -28,7 +28,7 @@ class W2DSimuDataset(Dataset):
         wind2D = self.normalize_imgwise(data, 'wind_2D_hr')
         self.wind2D = wind2D
         
-        self.numitems = wind2D.__len__()
+        self.numitems = self.wind2D.__len__()
         self.to_tensor()
     #end
     
