@@ -97,8 +97,8 @@ class Block(nn.Sequential):
             nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), 
                       padding = 'same',
                       padding_mode = 'reflect',
-                      bias = False),
-            nn.BatchNorm2d(out_channels),
+                      bias = True),
+            # nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1)
         )
     #end
