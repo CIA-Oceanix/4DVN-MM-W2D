@@ -98,7 +98,7 @@ class Block(nn.Sequential):
                       padding = 'same',
                       padding_mode = 'reflect',
                       bias = True),
-            # nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1)
         )
     #end
