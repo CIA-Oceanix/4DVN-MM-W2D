@@ -428,17 +428,15 @@ class Model_Var_Cost(nn.Module):
         #end
     #end
     
-    # TIP : verifica che quel loop for non dia problemi !!!
-    def forward(self, data_fidelty, regularization, mask_obs):
+    def forward(self, data_fidelty, regularization):
         
-        loss = self.alphaReg.pow(2) * self.normPrior(regularization, mask_obs)
-        mask_obs_ = (mask_obs[:,:24,:,:], mask_obs[:,24:48,:,:], mask_obs[:,48:,:,:])
+        loss = self.alphaReg.pow(2) * self.normPrior(regularization)
         
         if self.dim_obs == 1:
-            loss += self.alphaObs[0].pow(2) * self.normObs(data_fidelty, mask_obs)
+            loss += self.alphaObs[0].pow(2) * self.normObs(data_fidelty)
         else:
             for kk in range(0, self.dim_obs):
-                loss += self.alphaObs[0,kk].pow(2) * self.normObs(data_fidelty[kk], mask = mask_obs_[kk])
+                loss += self.alphaObs[0,kk].pow(2) * self.normObs(data_fidelty[kk])
             #end
         #end
         
@@ -529,8 +527,6 @@ class Solver_Grad_4DVarNN(nn.Module):
         grad *= 1./ self.n_grad
         x_k_plus_1 = x_k - grad
         
-        # print('In solver_step : ', x_k.mean(), grad.mean())
-        
         return x_k_plus_1, hidden, cell, normgrad_
     #end
     
@@ -538,9 +534,8 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         data_fidelty = self.model_H(x, yobs, mask)
         regularization = x - self.Phi(x)
-        # print('in var_cost = ', data_fidelty[0].mean(), data_fidelty[1].mean(), data_fidelty[2].mean(), regularization.mean())
         
-        var_cost = self.model_VarCost(data_fidelty, regularization, mask)
+        var_cost = self.model_VarCost(data_fidelty, regularization)
         var_cost_grad = torch.autograd.grad(var_cost, x, create_graph = True)[0]
         
         return var_cost, var_cost_grad
