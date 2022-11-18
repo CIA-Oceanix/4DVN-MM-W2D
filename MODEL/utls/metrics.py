@@ -145,7 +145,7 @@ class _NormLoss(nn.Module):
         self.dim_item = dim_item
     #end
     
-    def forward(self, item, mask):
+    def forward(self, item, mask = None):
         
         if item.__class__ is not torch.Tensor:
             item = torch.Tensor(item)
@@ -180,7 +180,7 @@ class NormLoss(nn.Module):
         
     #end
     
-    def forward(self, item, mask):
+    def forward(self, item, mask = None):
         
         if item.__class__ is not torch.Tensor:
             item = torch.Tensor(item)
