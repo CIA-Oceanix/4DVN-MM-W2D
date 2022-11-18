@@ -170,19 +170,39 @@ def model_selection(shape_data, config_params):
 class ObsModel_Mask(nn.Module):
     ''' Observation model '''
     
-    def __init__(self, shape_data, dim_obs):
+    def __init__(self, shape_data, dim_obs, mr_kernelsize = None):
         super(ObsModel_Mask, self).__init__()
         
         # NOTE : chennels == time series length
         self.shape_data = shape_data
         self.dim_obs = dim_obs
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        self.mr_kernelsize = mr_kernelsize
     #end
         
     def forward(self, x, y_obs, mask):
         
-        obs_term = (x - y_obs).mul(mask)
-        return obs_term
+        if self.dim_obs == 1:
+            
+            obs_term = (x - y_obs).mul(mask)
+            return obs_term
+            
+        else:
+            
+            dy1 = (x - y_obs).mul(mask)
+            
+            yhr = y_obs[:,24:48,:,:]
+            xhr = x[:,24:48,:,:]
+            
+            ymr = F.avg_pool2d(yhr, kernel_size = self.mr_kernelsize)
+            ymr = F.interpolate(ymr, tuple(y_obs.shape[-2:]), mode = 'bicubic', align_corners = False)
+            xmr = F.avg_pool2d(xhr, kernel_size = self.mr_kernelsize)
+            xmr = F.interpolate(xmr, tuple(x.shape[-2:]), mode = 'bicubic', align_corners = False)
+            
+            dy2 = (xmr - ymr).mul(mask[:,24:48,:,:])
+            
+            return [dy1, dy2]
+        #end
     #end
 #end
 
@@ -322,10 +342,12 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
+        self.hparams.mr_kernel_size         = config_params.MR_KERNELSIZE
         self.hparams.fixed_point            = config_params.FIXED_POINT
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
         self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
+        self.hparams.lr_sampl_delay         = config_params.LR_SAMP_DELAY
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
         self.hparams.reg_coeff              = config_params.REG_COEFF
@@ -499,17 +521,43 @@ class LitModel_OSSE1(LitModel_Base):
         return loss, outs
     #end
     
+    def get_data_lr_delay(self, data_lr):
+        
+        batch_size, timesteps = data_lr.shape[:2]
+        for m in range(batch_size):
+            for t in range(timesteps):
+                if t % timesteps == 0:
+                    try:
+                        delay = np.random.randint(0, 1)
+                        data_lr[m,t,:,:] = data_lr[m,t + delay, :,:]
+                    except:
+                        pass
+                    #end
+                #end
+            #end
+        #end
+        
+        return data_lr
+    #end
+    
     def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
         # Prepare input data : import, donwsample and iterpolate, produce anomaly field
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
-        input_data = torch.cat((data_lr, data_an, data_an), dim = 1)
+        
+        if self.hparams.lr_sampl_delay:
+            data_lr_input = self.get_data_lr_delay(data_lr.clone())
+        else:
+            data_lr_input = data_lr.clone()
+        #end
+        
+        input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         
         # Prepare input state initialized
         if init_state is None:
-            input_state = torch.cat((data_lr, data_an, data_an), dim = 1)
+            input_state = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         else:
             input_state = init_state
         #end

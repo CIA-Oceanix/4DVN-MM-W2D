@@ -55,6 +55,10 @@ class PathManager:
                 #end
             #end
             
+            if cparams.LR_SAMP_DELAY:
+                lr_sampling_freq_tag += 'rd'
+            #end
+            
             # parse HR description
             hr_sampling_freq = cparams.HR_MASK_SFREQ
             if hr_sampling_freq is None:
