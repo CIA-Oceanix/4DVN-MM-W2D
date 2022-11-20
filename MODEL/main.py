@@ -152,8 +152,8 @@ class Experiment:
                 self.path_manager.set_nrun(nruns)
                 run_outcome = self.main(nruns, real_run)
                 
-                # if run_outcome == 0:
-                self.path_manager.remove_checkpoints(nruns)
+                if run_outcome == 0:
+                    self.path_manager.remove_checkpoints(nruns)
                 #end
                 
                 nruns += run_outcome
