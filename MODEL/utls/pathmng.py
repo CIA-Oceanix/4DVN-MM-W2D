@@ -1,4 +1,5 @@
 import os
+import glob
 import datetime
 import json
 import torch
@@ -125,10 +126,6 @@ class PathManager:
             os.mkdir(path_ckpt)
         #end
         
-        # For security, remove all the saved checkpoints in order no to load the wrong one
-        os.system(r'rm -f {}/*'.format(path_ckpt))
-        print('REMOVE CKPTS in {}'.format(path_ckpt))
-        
         path_litmodel_trainer = os.path.join(version_path, 'litmodel_trainer')
         if not os.path.exists(path_litmodel_trainer):
             os.mkdir(path_litmodel_trainer)
@@ -149,6 +146,7 @@ class PathManager:
             os.mkdir(path_modeloutput)
         #end
         
+        self.remove_checkpoints()
         self.model_name            = model_name
         self.path_ckpt             = path_ckpt
         self.path_litmodel_trainer = path_litmodel_trainer
@@ -166,6 +164,17 @@ class PathManager:
     
     def get_source_ckpt_path(self):
         return self.path_ckpt_source, self.model_source
+    #end
+    
+    def remove_checkpoints(self, run_to_remove = None):
+        
+        if run_to_remove is None:
+            os.system(r'rm -f {}/*'.format(self.path_ckpt))
+            print('REMOVE CKPTS in {}'.format(self.path_ckpt))
+        else:
+            ckpt_to_remove = glob.glob(os.path.join(self.path_ckpt, f'{run_to_remove}*'))
+            os.system(r'rm -f {}/{}'.format(self.path_ckpt, ckpt_to_remove))
+        #end
     #end
     
     def initialize_netCDF4_dataset(self, region_extent, runs):

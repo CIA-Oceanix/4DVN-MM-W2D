@@ -151,6 +151,11 @@ class Experiment:
                 print(f'Aborted   : {real_run-nruns}')
                 self.path_manager.set_nrun(nruns)
                 run_outcome = self.main(nruns, real_run)
+                
+                if run_outcome == 0:
+                    self.path_manager.remove_checkpoints(nruns)
+                #end
+                
                 nruns += run_outcome
                 real_run += 1
             #end
