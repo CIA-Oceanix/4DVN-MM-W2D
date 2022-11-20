@@ -146,7 +146,6 @@ class PathManager:
             os.mkdir(path_modeloutput)
         #end
         
-        self.remove_checkpoints()
         self.model_name            = model_name
         self.path_ckpt             = path_ckpt
         self.path_litmodel_trainer = path_litmodel_trainer
@@ -155,6 +154,7 @@ class PathManager:
         self.path_modeloutput      = path_modeloutput
         self.nrun = None
         
+        self.remove_checkpoints()
         self.initialize_netCDF4_dataset(cparams.REGION_EXTENT_PX, cparams.RUNS)
     #end
     
