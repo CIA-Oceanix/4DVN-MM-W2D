@@ -172,8 +172,8 @@ class PathManager:
             os.system(r'rm -f {}/*'.format(self.path_ckpt))
             print('REMOVE CKPTS in {}'.format(self.path_ckpt))
         else:
-            ckpt_to_remove = glob.glob(os.path.join(self.path_ckpt, f'{run_to_remove}*'))
-            os.system(r'rm -f {}/{}'.format(self.path_ckpt, ckpt_to_remove))
+            ckpt_to_remove = glob.glob(os.path.join(self.path_ckpt, f'{run_to_remove}*'))[0]
+            os.remove(ckpt_to_remove)
         #end
     #end
     
