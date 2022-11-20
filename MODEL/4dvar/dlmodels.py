@@ -526,9 +526,9 @@ class LitModel_OSSE1(LitModel_Base):
         batch_size, timesteps = data_lr.shape[:2]
         for m in range(batch_size):
             for t in range(timesteps):
-                if t % timesteps == 0:
+                if t % self.hparams.lr_mask_sfreq == 0:
                     try:
-                        delay = np.random.randint(0, 1)
+                        delay = np.random.randint(0, 3)
                         data_lr[m,t,:,:] = data_lr[m,t + delay, :,:]
                     except:
                         pass
