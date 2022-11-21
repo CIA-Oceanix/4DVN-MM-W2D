@@ -171,7 +171,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         print()
         
         with open(os.path.join(self.path_data, 'testset.pkl'), 'wb') as f:
-            pickle.dump(self.test_dataset, f)
+            pickle.dump(test_set, f)
         f.close()
         
         self.mask_land = mask_land
