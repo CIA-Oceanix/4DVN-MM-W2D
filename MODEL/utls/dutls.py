@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pickle
 
 import netCDF4 as nc
 import torch
@@ -44,14 +45,26 @@ class W2DSimuDataset(Dataset):
     
     def normalize_imgwise(self, data, name):
         
+        normparams = {
+            'min'  : np.zeros(data.shape[0]),
+            'max'  : np.zeros(data.shape[0]),
+            'mean' : 0.,
+            'std'  : 0.
+        }
+        
         for i in range(data.shape[0]):
             data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
+            normparams['min'][i] = data[i].min()
+            normparams['max'][i] = data[i].max()
         #end
         
         img_mean = data.mean()
         img_std  = data.std()
+        normparams['mean'] = img_mean
+        normparams['std']  = img_std
         data = (data - img_mean) / img_std
         
+        self.normparams = normparams
         return data
     #end
     
@@ -75,6 +88,10 @@ class W2DSimuDataset(Dataset):
     def to_tensor(self):
         
         self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
+    #end
+    
+    def get_normparams(self):
+        return self.normparams
     #end
 #end
 
@@ -158,6 +175,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.train_dataset  = W2DSimuDataset(train_set, normalize = self.normalize)
         self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize)
         self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize)
+        self.save_nparams()
     #end
     
     def get_buoy_locations(self, lat, lon):
@@ -206,6 +224,13 @@ class W2DSimuDataModule(pl.LightningDataModule):
         #end
         
         return buoy_positions
+    #end
+    
+    def save_nparams(self):
+        
+        with open(os.path.join(self.path_data, f'{self.data_name}-normparams-test.pkl'), 'wb') as f:
+            pickle.dump(self.test_dataset.get_normparams(), f)
+        #end
     #end
     
     def train_dataloader(self):
