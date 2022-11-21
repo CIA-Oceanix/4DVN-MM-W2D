@@ -53,9 +53,9 @@ class W2DSimuDataset(Dataset):
         }
         
         for i in range(data.shape[0]):
-            data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
             normparams['min'][i] = data[i].min()
             normparams['max'][i] = data[i].max()
+            data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
         #end
         
         img_mean = data.mean()
