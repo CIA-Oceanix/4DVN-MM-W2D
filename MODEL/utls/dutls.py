@@ -98,7 +98,7 @@ class W2DSimuDataset(Dataset):
 
 class W2DSimuDataModule(pl.LightningDataModule):
     
-    def __init__(self, path_data, cparams, normalize = True):
+    def __init__(self, path_data, cparams, normalize = False):
         super(W2DSimuDataModule, self).__init__()
         
         self.path_data     = path_data
@@ -176,6 +176,10 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize)
         self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize)
         self.save_nparams()
+        
+        with open(os.path.join(self.path_data, 'testset.pkl'), 'wb') as f:
+            pickle.dump(self.test_dataset, f)
+        f.close()
     #end
     
     def get_buoy_locations(self, lat, lon):
@@ -230,7 +234,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         with open(os.path.join(self.path_data, f'{self.data_name}-normparams-test.pkl'), 'wb') as f:
             pickle.dump(self.test_dataset.get_normparams(), f)
-        #end
+        f.close()
     #end
     
     def train_dataloader(self):
