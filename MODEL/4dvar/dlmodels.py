@@ -602,18 +602,18 @@ class LitModel_OSSE1(LitModel_Base):
             
             if self.hparams.inversion == 'fp':
                 outputs = self.Phi(input_data)
-                reco_lr = data_lr.clone()   # NOTE : forse qui data_lr_input ???
+                reco_lr = data_lr_input.clone()   # NOTE : forse qui data_lr_input ???
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             elif self.hparams.inversion == 'gs':
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
-                reco_lr = data_lr.clone()
+                reco_lr = data_lr_input.clone()
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
             elif self.hparams.inversion == 'bl':
                 outputs = self.Phi(input_data)
-                reco_lr = data_lr.clone()
-                reco_hr = data_lr_input.clone() + 0. * outputs[:,48:,:,:]
+                reco_lr = data_lr_input.clone()
+                reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
             #end
         #end
         
