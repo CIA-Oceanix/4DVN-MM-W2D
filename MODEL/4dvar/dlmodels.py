@@ -534,10 +534,6 @@ class LitModel_OSSE1(LitModel_Base):
         timesteps = _data_lr.shape[1]
         lr_sfreq  = self.hparams.lr_mask_sfreq
         
-        # Downsample and interpolate
-        # _data_lr = F.avg_pool2d(data_lr, kernel_size = self.hparams.lr_kernel_size)
-        # _data_lr = F.interpolate(_data_lr, size = tuple(img_shape), mode = 'bicubic', align_corners = False)
-        
         # Isolate timesteps related to LR data
         data_lr = torch.zeros((_data_lr.shape[0], timesteps // lr_sfreq + 1, *img_shape))
         for t in range(timesteps):
@@ -581,7 +577,7 @@ class LitModel_OSSE1(LitModel_Base):
             data_lr_input = data_lr.clone()
         #end
         
-        # data_lr_input = self.get_baseline(data_lr_input)
+        data_lr_input = self.get_baseline(data_lr_input)
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         
         # Prepare input state initialized
