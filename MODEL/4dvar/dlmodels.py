@@ -581,7 +581,7 @@ class LitModel_OSSE1(LitModel_Base):
             data_lr_input = data_lr.clone()
         #end
         
-        data_lr_input = self.get_baseline(data_lr_input)
+        # data_lr_input = self.get_baseline(data_lr_input)
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         
         # Prepare input state initialized
