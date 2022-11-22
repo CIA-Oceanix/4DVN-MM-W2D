@@ -343,7 +343,7 @@ class LitModel_OSSE1(LitModel_Base):
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
         self.hparams.mr_kernel_size         = config_params.MR_KERNELSIZE
-        self.hparams.fixed_point            = config_params.FIXED_POINT
+        self.hparams.inversion              = config_params.INVERSION
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
         self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
@@ -509,18 +509,6 @@ class LitModel_OSSE1(LitModel_Base):
         return mask
     #end
     
-    def forward(self, batch, phase = 'train'):
-        
-        state_init = None
-        for n in range(self.hparams.n_fourdvar_iter):
-            
-            loss, outs = self.compute_loss(batch, iteration = n, phase = phase, init_state = state_init)
-            state_init = outs.detach()
-        #end
-        
-        return loss, outs
-    #end
-    
     def get_data_lr_delay(self, data_lr):
         
         batch_size, timesteps = data_lr.shape[:2]
@@ -540,9 +528,49 @@ class LitModel_OSSE1(LitModel_Base):
         return data_lr
     #end
     
+    def get_baseline(self, _data_lr):
+        
+        img_shape = _data_lr.shape[-2:]
+        timesteps = _data_lr.shape[1]
+        lr_sfreq  = self.hparams.lr_mask_sfreq
+        
+        # Downsample and interpolate
+        # _data_lr = F.avg_pool2d(data_lr, kernel_size = self.hparams.lr_kernel_size)
+        # _data_lr = F.interpolate(_data_lr, size = tuple(img_shape), mode = 'bicubic', align_corners = False)
+        
+        # Isolate timesteps related to LR data
+        data_lr = torch.zeros((_data_lr.shape[0], timesteps // lr_sfreq + 1, *img_shape))
+        for t in range(timesteps):
+            if t % lr_sfreq == 0:
+                data_lr[:, t // lr_sfreq, :,:] = torch.Tensor(_data_lr[:,t,:,:])
+            #end
+        #end
+        data_lr[:,-1,:,:] = torch.Tensor(_data_lr[:,-1,:,:] )
+        
+        # Interpolate channel-wise (that is, timesteps)
+        baseline = F.interpolate(data_lr.permute(0,2,3,1), [img_shape[0], timesteps], mode = 'bicubic', align_corners = False)
+        baseline = baseline.permute(0,3,1,2)
+        
+        return baseline
+    #end
+    
+    def forward(self, batch, phase = 'train'):
+        
+        state_init = None
+        for n in range(self.hparams.n_fourdvar_iter):
+            
+            loss, outs = self.compute_loss(batch, iteration = n, phase = phase, init_state = state_init)
+            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
+                state_init = outs.detach()
+            #end
+        #end
+        
+        return loss, outs
+    #end
+    
     def compute_loss(self, data, iteration, phase = 'train', init_state = None):
         
-        # Prepare input data : import, donwsample and iterpolate, produce anomaly field
+        # Prepare input data : import, downsample and iterpolate, produce anomaly field
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
@@ -553,6 +581,7 @@ class LitModel_OSSE1(LitModel_Base):
             data_lr_input = data_lr.clone()
         #end
         
+        data_lr_input = self.get_baseline(data_lr_input)
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         
         # Prepare input state initialized
@@ -575,20 +604,23 @@ class LitModel_OSSE1(LitModel_Base):
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
-            if self.hparams.fixed_point:
+            if self.hparams.inversion == 'fp':
                 outputs = self.Phi(input_data)
-                reco_lr = data_lr.clone()
+                reco_lr = data_lr.clone()   # NOTE : forse qui data_lr_input ???
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
-            else:
+            elif self.hparams.inversion == 'gs':
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = data_lr.clone()
                 reco_an = outputs[:,48:,:,:]
-                
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+            elif self.hparams.inversion == 'bl':
+                outputs = self.Phi(input_data)
+                reco_lr = data_lr.clone()
+                reco_hr = data_lr_input.clone() + 0. * outputs[:,48:,:,:]
             #end
         #end
-                
+        
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data_hr.detach().cpu(), 
@@ -611,8 +643,10 @@ class LitModel_OSSE1(LitModel_Base):
         loss += loss_grad * self.hparams.grad_coeff
         
         ## Regularization
-        regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
-        loss += regularization * self.hparams.reg_coeff
+        if not self.hparams.inversion == 'bl':
+            regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+            loss += regularization * self.hparams.reg_coeff
+        #end
         
         return dict({'loss' : loss}), outputs
     #end

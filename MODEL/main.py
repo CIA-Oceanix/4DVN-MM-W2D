@@ -11,6 +11,7 @@ import argparse
 from collections import namedtuple
 import torch
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathmng import PathManager
@@ -28,9 +29,33 @@ else:
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
 
+
+class SaveWeights(Callback):
+    def __init__(self, path_ckpt):
+        super(Callback, self).__init__()
+        
+        self.path_ckpt = path_ckpt
+        self.last_epoch = None
+    #end
+    
+    def on_train_epoch_start(self, trainer, pl_module):
+        torch.save(pl_module.state_dict(),
+                   os.path.join(self.path_ckpt, 'model_params.ckpt'))
+    #end
+    
+    def on_train_epoch_end(self, trainer, pl_module):
+        self.last_epoch = pl_module.current_epoch
+    #end
+    
+    def get_last_epoch(self):
+        return self.last_epoch
+    #end
+    
+#end
+
 class Experiment:
     
-    def __init__(self, versioning = True):
+    def __init__(self, versioning = False, tabula_rasa = False):
         
         # Load configuration file
         load_dotenv(os.path.join(os.getcwd(), 'config.env'))
@@ -56,15 +81,24 @@ class Experiment:
     
     def check_inconstistency(self):
         
-        if self.cparams.GS_TRAIN and self.cparams.FIXED_POINT:
-            raise ValueError('Either fixed point or gradient train')
+        if self.cparams.INVERSION == 'fp':
+            pass
+        elif self.cparams.INVERSION == 'gs':
+            pass
+        elif self.cparams.INVERSION == 'bl':
+            pass
+        else:
+            raise ValueError('Inversion given not implemented')
         #end
         
-        if self.cparams.LOAD_CKPT and self.cparams.FIXED_POINT:
+        if self.cparams.INVERSION == 'bl' and self.cparams.HR_MASK_SFREQ is not None:
+            raise ValueError('Baseline run does not allow HR observations')
+        
+        if self.cparams.LOAD_CKPT and self.cparams.INVERSION == 'fp':
             raise ValueError('Load ckpt and fixed point, it`s probabily a mistake')
         #end
         
-        if not self.cparams.FIXED_POINT and self.cparams.HR_MASK_SFREQ == 1:
+        if not self.cparams.INVERSION == 'fp' and self.cparams.HR_MASK_SFREQ == 1:
             raise ValueError('Reference run requires fixed point')
         #end
         
@@ -79,6 +113,7 @@ class Experiment:
         if self.cparams.HR_MASK_MODE.__class__ is list and self.cparams.HR_MASK_MODE[0] != 'buoy':
             raise ValueError('Specification of in-situ point only if it is a buoy')
         #end
+        
     #end
         
     def initialize_model_names_paths(self, path_manager):
@@ -126,7 +161,7 @@ class Experiment:
         print('Experiment\n')
         print('Model name                 : {}'.format(self.model_name))
         print('Prior                      : {}'.format(self.cparams.PRIOR))
-        print('Fixed point                : {}'.format(self.cparams.FIXED_POINT))
+        print('Inversion                  : {}'.format(self.cparams.INVERSION))
         print('Trainable varcost params   : {}'.format(self.cparams.LEARN_VC_PARAMS))
         print('Masking mode               : {}'.format(self.cparams.HR_MASK_MODE))
         print('Path source                : {}'.format(self.path_checkpoint_source))
@@ -207,11 +242,14 @@ class Experiment:
             monitor      = 'loss',
             patience     = 50,
             check_finite = True,
-            
         )
         
+        weight_save = SaveWeights(path_ckpt)
+        
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, early_stopping])
+        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, 
+                                                             early_stopping,
+                                                             weight_save])
         
         # Train and test
         ## Train
@@ -229,6 +267,10 @@ class Experiment:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             #end
+            
+            # lit_model.load_state_dict(os.path.join(self.path_checkpoint, 'model_params.ckpt'))
+            # profiler_kwargs['max_epochs'] = self.cparams.EPOCHS - weight_save.get_last_epoch()
+            # return_value = 0
             
         else:
             
@@ -280,6 +322,6 @@ if __name__ == '__main__':
     versioning  = bool(versioning)
     tabula_rasa = bool(tabula_rasa)
     
-    exp = Experiment(versioning = versioning)
+    exp = Experiment(versioning = versioning, tabula_rasa = tabula_rasa)
     exp.run_simulation()
 #end

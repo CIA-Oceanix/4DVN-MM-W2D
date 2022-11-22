@@ -9,101 +9,110 @@ import numpy as np
 
 
 
-def get_model_name(cparams, versioning):
+def get_model_name(cparams, versioning = False):
     
-    pass
+    # MODEL  NAME
+    # format : 4DVN-W2D-<mask_HR>[-ckpt-gs_n_itref]-<inversion>-<lr_hr_sfreqs / "REFRUN">-<prior>
+    model_name = f'{cparams.VNAME}'
+    
+    hr_mask_mode = cparams.HR_MASK_MODE
+    if hr_mask_mode.__class__ is list:
+        mode = hr_mask_mode[0]
+        nbuoy = hr_mask_mode[1]
+        model_name = f'{model_name}-{mode}{nbuoy}'
+    else:
+        model_name = f'{model_name}-{cparams.HR_MASK_MODE}'
+    #end
+    
+    if cparams.HR_MASK_SFREQ == 1:
+        
+        exp_osse_1_specs = 'REFRUN'
+    else:
+        
+        # parse LR description
+        lr_sampling_freq = cparams.LR_MASK_SFREQ
+        if lr_sampling_freq is None:
+            lr_sampling_freq_tag = '0'
+        else:
+            if lr_sampling_freq.__class__ is list:
+                
+                lr_sampling_freq_tag = '_'
+                for item in lr_sampling_freq:
+                    lr_sampling_freq_tag += (str(item) + '_')
+                #end
+            
+            else:
+                lr_sampling_freq_tag = '{}'.format(lr_sampling_freq)
+            #end
+        #end
+        
+        if cparams.LR_SAMP_DELAY:
+            lr_sampling_freq_tag += 'rd'
+        #end
+        
+        # parse HR description
+        hr_sampling_freq = cparams.HR_MASK_SFREQ
+        if hr_sampling_freq is None:
+            hr_sampling_freq_tag = '0'
+        else:
+            if hr_sampling_freq.__class__ is list:
+                
+                hr_sampling_freq_tag = '_'
+                for item in hr_sampling_freq:
+                    hr_sampling_freq_tag += (str(item) + '_')
+                #end
+                
+            else:
+                hr_sampling_freq_tag = '{}'.format(hr_sampling_freq)
+            #end
+        #end
+        
+        exp_osse_1_specs = f'sflr{lr_sampling_freq_tag}-sfhr{hr_sampling_freq_tag}'
+    #end
+    
+    if cparams.INVERSION == 'gs':
+        
+        nsol_iter = cparams.NSOL_ITER
+        nsol_iter_ref = cparams.NSOL_IT_REF
+        
+        if cparams.LOAD_CKPT:
+            model_source = f'{model_name}-gs{nsol_iter_ref}it-{exp_osse_1_specs}-{cparams.PRIOR}'
+            inversion = f'ckpt-gs{nsol_iter_ref}it-gs{nsol_iter}it'
+        else:
+            model_source = None
+            inversion = f'gs{nsol_iter}it'
+        #end
+        
+    elif cparams.INVERSION == 'fp':
+        model_source = None
+        inversion = 'fp1it'
+    
+    elif cparams.INVERSION == 'bl':
+        model_source = None
+        inversion = 'baseline'
+    #end
+    
+    model_name += f'-{inversion}-{exp_osse_1_specs}-{cparams.PRIOR}'
+    return model_name, model_source
 #end
 
 class PathManager:
     
-    def __init__(self, mother_dir, cparams, versioning = True, tabula_rasa = False):
+    def __init__(self, mother_dir, cparams, versioning = False, tabula_rasa = False):
         
         if tabula_rasa:
             os.system(r'rm -rf {}/*'.format(mother_dir))
         #end
         
         #---------------------------------------------------------------------------------------------
-        # MODEL  NAME
-        # format : 4DVN-W2D-<mask_HR>[-ckpt-gs_n_itref]-<inversion>-<lr_hr_sfreqs / "REFRUN">-<prior>
-        hr_mask_mode = cparams.HR_MASK_MODE
-        if hr_mask_mode.__class__ is list:
-            mode = hr_mask_mode[0]
-            nbuoy = hr_mask_mode[1]
-            model_name = f'{cparams.VNAME}-{mode}{nbuoy}'
-        else:
-            model_name = f'{cparams.VNAME}-{cparams.HR_MASK_MODE}'
-        #end
+        model_name, model_source = get_model_name(cparams, versioning)
         
-        if cparams.HR_MASK_SFREQ == 1:
-            
-            exp_osse_1_specs = 'REFRUN'
+        if model_source is not None:
+            self.path_ckpt_source = os.path.join(mother_dir, model_source, 'ckpt')
         else:
-            
-            # parse LR description
-            lr_sampling_freq = cparams.LR_MASK_SFREQ
-            if lr_sampling_freq is None:
-                lr_sampling_freq_tag = '0'
-            else:
-                if lr_sampling_freq.__class__ is list:
-                    
-                    lr_sampling_freq_tag = '_'
-                    for item in lr_sampling_freq:
-                        lr_sampling_freq_tag += (str(item) + '_')
-                    #end
-                
-                else:
-                    lr_sampling_freq_tag = '{}'.format(lr_sampling_freq)
-                #end
-            #end
-            
-            if cparams.LR_SAMP_DELAY:
-                lr_sampling_freq_tag += 'rd'
-            #end
-            
-            # parse HR description
-            hr_sampling_freq = cparams.HR_MASK_SFREQ
-            if hr_sampling_freq is None:
-                hr_sampling_freq_tag = '0'
-            else:
-                if hr_sampling_freq.__class__ is list:
-                    
-                    hr_sampling_freq_tag = '_'
-                    for item in hr_sampling_freq:
-                        hr_sampling_freq_tag += (str(item) + '_')
-                    #end
-                    
-                else:
-                    hr_sampling_freq_tag = '{}'.format(hr_sampling_freq)
-                #end
-            #end
-            
-            exp_osse_1_specs = f'sflr{lr_sampling_freq_tag}-sfhr{hr_sampling_freq_tag}'
+            self.path_ckpt_source = None
         #end
-        
-        if cparams.GS_TRAIN and not versioning:
-            
-            nsol_iter = cparams.NSOL_ITER
-            nsol_iter_ref = cparams.NSOL_IT_REF
-            
-            if cparams.LOAD_CKPT:
-                model_source = f'{model_name}-gs{nsol_iter_ref}it-{exp_osse_1_specs}-{cparams.PRIOR}'
-                path_ckpt_source = os.path.join(mother_dir, model_source, 'ckpt')
-                inversion = f'ckpt-gs{nsol_iter_ref}it-gs{nsol_iter}it'
-            else:
-                model_source = None
-                path_ckpt_source = None
-                inversion = f'gs{nsol_iter}it'
-            #end
-            
-        else:
-            model_source = None
-            path_ckpt_source = None
-            inversion = 'fp1it'
-        #end
-        
-        self.path_ckpt_source = path_ckpt_source
         self.model_source = model_source
-        model_name += f'-{inversion}-{exp_osse_1_specs}-{cparams.PRIOR}'
         
         if versioning:
             time_now = datetime.datetime.now()
