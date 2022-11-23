@@ -278,7 +278,11 @@ class LitModel_Base(pl.LightningModule):
         
         metrics, out = self.forward(batch, phase = 'train')
         loss = metrics['loss']
-        self.log('loss', loss,   on_step = True, on_epoch = True, prog_bar = True)
+        self.log('loss', loss, on_step = True, on_epoch = True, prog_bar = True)
+        self.log('data_mean',  metrics['data_mean'], on_step = True, on_epoch = True, prog_bar = False)
+        self.log('state_mean', metrics['state_mean'], on_step = True, on_epoch = True, prog_bar = False)
+        self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+        self.log('reco_mean',  metrics['reco_mean'], on_step = True, on_epoch = True, prog_bar = False)
         
         return loss
     #end
@@ -596,6 +600,13 @@ class LitModel_OSSE1(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
+        _log_data_mean = torch.mean(input_data)
+        _log_state_mean = torch.mean(input_state)
+        
+        _log_model_params = torch.mean(
+            torch.Tensor([ param.mean() for param in self.parameters() ])
+        )
+        
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
@@ -616,6 +627,8 @@ class LitModel_OSSE1(LitModel_Base):
                 reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
             #end
         #end
+        
+        _log_reco_hr_mean = torch.mean(reco_hr)
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
@@ -644,7 +657,26 @@ class LitModel_OSSE1(LitModel_Base):
             loss += regularization * self.hparams.reg_coeff
         #end
         
-        return dict({'loss' : loss}), outputs
+        return dict({'loss' : loss,
+                     'data_mean'    : _log_data_mean,
+                     'state_mean'   : _log_state_mean,
+                     'model_params' : _log_model_params,
+                     'reco_mean'    : _log_reco_hr_mean,
+                     }), outputs
+    #end
+    
+    def on_after_backward(self):
+        
+        gradients = []
+        for param in self.parameters():
+            try:
+                gradients.append(param.grad.mean())
+            except:
+                pass
+            #end
+        #end
+        _log_params_grad = torch.mean(torch.Tensor(gradients))
+        self.log('param_grad', _log_params_grad, on_step = True, on_epoch = True, prog_bar = False)
     #end
 #end
 

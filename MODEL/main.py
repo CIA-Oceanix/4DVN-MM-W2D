@@ -13,6 +13,7 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.loggers import CSVLogger
 
 from pathmng import PathManager
 from dlmodels import LitModel_OSSE1, model_selection
@@ -246,10 +247,17 @@ class Experiment:
         
         weight_save = SaveWeights(path_ckpt)
         
+        logger = CSVLogger(
+            save_dir = path_ckpt,
+            name     = 'csv-log.csv'
+        )
+        
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, callbacks = [model_checkpoint, 
-                                                             early_stopping,
-                                                             weight_save])
+        trainer = pl.Trainer(**profiler_kwargs, 
+                             callbacks = [model_checkpoint, 
+                                          early_stopping,
+                                          weight_save],
+                             logger = logger)
         
         # Train and test
         ## Train
@@ -270,6 +278,7 @@ class Experiment:
             
             # lit_model.load_state_dict(os.path.join(self.path_checkpoint, 'model_params.ckpt'))
             # profiler_kwargs['max_epochs'] = self.cparams.EPOCHS - weight_save.get_last_epoch()
+            # trainer.fit()
             # return_value = 0
             
         else:
@@ -288,8 +297,8 @@ class Experiment:
                                                 self.cparams,
                                                 *lit_model.get_learning_curves(),
                                                 run)
-            lit_model.remove_saved_outputs()
-            self.path_manager.save_litmodel_trainer(lit_model, trainer)
+            # lit_model.remove_saved_outputs()
+            # self.path_manager.save_litmodel_trainer(lit_model, trainer)
             
             print('\nTraining and test successful')
             print('Returning ...')
