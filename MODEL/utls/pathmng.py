@@ -178,6 +178,11 @@ class PathManager:
     def remove_checkpoints(self, run_to_remove = None):
         
         if run_to_remove is None:
+            try:
+                os.system(r'rm -rf {}/csv-log.csv'.format(self.path_ckpt))
+            except:
+                pass
+            #end
             os.system(r'rm -f {}/*'.format(self.path_ckpt))
             print('REMOVE CKPTS in {}'.format(self.path_ckpt))
         else:
