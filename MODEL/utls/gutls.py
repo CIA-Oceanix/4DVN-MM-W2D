@@ -1,280 +1,232 @@
 
-'''
-NOTE that for titling purposes, I load the CONSTANTS.pkl file in which I
-previoulsy store all the PATH_DATA, PATH_MODEL ...
-'''
-
 import os
-import numpy as np
+import pickle
 import matplotlib.pyplot as plt
+plt.style.use('seaborn-white')
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import numpy as np
 import torch
 
 
-PATH_PLOTS = os.path.join(os.getcwd(), 'plots')
-if not os.path.exists(PATH_PLOTS):
-    os.mkdir(PATH_PLOTS)
+def plot_all(pdata, ppool, preco, plcvs, path_eval, model):
+    
+    fig = img_data_grad_distr(pdata)
+    # fig.savefig(os.path.join(path_eval, f'{model}-data-grads.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    pickle.dump(fig, open(os.path.join(path_eval, f'{model}-data-grads.fig'), 'wb'))
+    
+    fig = img_distribution(pdata)
+    # fig.savefig(os.path.join(path_eval, f'{model}-data-hist.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    pickle.dump(fig, open(os.path.join(path_eval, f'{model}-data-hist.fig'), 'wb'))
+    
+    fig = img_data_reco_mse(pdata, ppool, 'Interpolation')
+    # fig.savefig(os.path.join(path_eval, f'{model}-data-bline-mse.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    pickle.dump(fig, open(os.path.join(path_eval, f'{model}-data-bline-mse.fig'), 'wb'))
+    
+    fig = img_data_reco_mse(pdata, preco, 'Model')
+    # fig.savefig(os.path.join(path_eval, f'{model}-data-model-mse.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    pickle.dump(fig, open(os.path.join(path_eval, f'{model}-data-model-mse.fig'), 'wb'))
+    
+    fig = img_baseline_model(pdata, preco, ppool)
+    # fig.savefig(os.path.join(path_eval, f'{model}-bline-model.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    pickle.dump(fig, open(os.path.join(path_eval, f'{model}-bline-model.fig'), 'wb'))
+    
+    fig = img_grads_mse(pdata, preco)
+    # fig.savefig(os.path.join(path_eval, f'{model}-grads-mse.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    pickle.dump(fig, open(os.path.join(path_eval, f'{model}-grads-mse.fig'), 'wb'))
+    
+    # fig = hist_pdf(cp_data, cp_reco, cp_pool)
+    # # fig.savefig(os.path.join(path_eval, f'{model}-hist.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    # pickle.dump(fig, open(os.path.join(path_eval, f'{model}-hist.fig'), 'wb'))
+    
+    fig = learning_curves(plcvs)
+    # fig.savefig(os.path.join(path_eval, f'{model}-lcvs.png'), format = 'png', dpi = 300, bbox_inches = 'tight')
+    pickle.dump(fig, open(os.path.join(path_eval, f'{model}-lcvs.fig'), 'wb'))
 #end
 
-def plot_loss(train_loss, title = None, pformat = 'pdf'):
+def img_data_grad_distr(_data, bidx = 0, tidx = 0):
     
-    fig, ax = plt.subplots(figsize = (5,4), dpi = 150)
+    data = _data.clone().numpy()
+    gradients = np.gradient(data, axis = (3,2))
+    grad = np.sqrt( np.power(gradients[0], 2) + np.power(gradients[1], 2) )
     
-    if type(train_loss) == np.ndarray:
-        ax.plot(np.arange(train_loss.size), train_loss, 'k', alpha = 0.75, lw = 2)
-        ylabel = 'Loss'
-    if type(train_loss) == dict:
-        
-        loss_x = ax.plot(np.arange(train_loss['Loss X'].size), train_loss['Loss X'], color = 'b', alpha = 0.75, lw = 2, label = 'Loss X')
-        loss_y = ax.plot(np.arange(train_loss['Loss Y'].size), train_loss['Loss Y'], color = 'orange', alpha = 0.75, lw = 2, label = 'Loss Y')
-        loss_z = ax.plot(np.arange(train_loss['Loss Z'].size), train_loss['Loss Z'], color = 'r', alpha = 0.75, lw = 2, label = 'Loss Z')
-        
-        ax_ = ax.twinx()
-        ax_.set_ylabel('Losses U', color = 'g')
-        loss_u  = ax_.plot(np.arange(train_loss['Loss U'].size), train_loss['Loss U'], color = 'forestgreen', alpha = 0.75, lw = 2, label = 'Loss U')
-        loss_ux = ax_.plot(np.arange(train_loss['Loss Ux'].size), train_loss['Loss Ux'], color = 'limegreen', alpha = 0.75, lw = 2, label = 'Loss Ux')
-        loss_uy = ax_.plot(np.arange(train_loss['Loss Uy'].size), train_loss['Loss Uy'], color = 'darkgreen', alpha = 0.75, lw = 2, label = 'Loss Uy')
-        ax_.tick_params(axis = 'y', labelcolor = 'g')
-        
-        losses = loss_x + loss_y + loss_z + loss_u + loss_ux + loss_uy
-        labels = [l.get_label() for l in losses]
-        ax.legend(losses, labels, bbox_to_anchor = (1.4, 1.05))
-        # ax_.legend()
-        ylabel = 'Losses'
-    #end
+    fig, ax = plt.subplots(1,2)
+    ax0 = ax[0].imshow(data[bidx,tidx,:,:], cmap = 'Blues')
+    divider = make_axes_locatable(ax[0])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax0, cax = cax, orientation = 'vertical')
+    ax[0].set_title('Data')
     
-    ax.set_xlabel('Epochs', fontsize = 12)
-    ax.set_ylabel(ylabel, fontsize = 12)
-    ax.grid(lw = 0.5, axis = 'both')
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = pformat, bbox_inches = 'tight')
-    #end
-    plt.show(fig)
-#end
-
-
-def plot_losses(losses, title = None, pformat = 'pdf'):
+    ax1 = ax[1].imshow(grad[bidx,tidx], cmap = 'nipy_spectral', vmax = grad[bidx,tidx,:,:].max(), vmin = grad[bidx,tidx,:,:].min())
+    divider = make_axes_locatable(ax[1])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax1, cax = cax, orientation = 'vertical')
+    ax[1].set_title('Gradients norm')
     
-    fig, axes = plt.subplots(1,3, figsize = (10,3), dpi = 150)
-    for loss, ax, color, norm, name in zip(losses, axes, ['r', 'g', 'b'],
-                                            [r'$L^2$', r'$L^2$', r'$L^1$'],
-                                            ['SAR images', 'UPA records', 'ECMWF wind']):
-        
-        losses = np.array(loss)[list(~np.isnan(loss))]
-        lsize = losses.shape[0]
-        upper_magnitude = np.power(10, np.floor(np.log10(lsize) + 1))
-        support = np.zeros(np.int32(np.ceil(lsize / upper_magnitude) * upper_magnitude))
-        support[list(np.arange(losses.size))] = losses
-        
-        lsupport = support.shape[0]
-        grouping_size = np.int32(np.power(10, np.floor(np.log10(lsupport) - 2)))
-        losses = support.reshape(grouping_size, -1).mean(axis = 0)
-        
-        ax.plot(np.arange(losses.size) ,losses, color = color, alpha = 0.75, lw = 1.5)
-        ax.set_title(name, fontsize = 12)
-        ax.set_xlabel('Epochs', fontsize = 12)
-        ax.set_ylabel('{} Loss'.format(norm), fontsize = 12)
-        ax.grid(axis = 'both', lw = 0.5)
-    #end
+    for i in range(2): ax[i].set_xticks([]); ax[i].set_yticks([])
     fig.tight_layout()
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = pformat, bbox_inches = 'tight')
-    plt.show(fig)
+    # plt.show()
+    
+    return fig
 #end
 
+def img_distribution(_data):
+    
+    data = _data.clone()
+    fig, ax = plt.subplots()
+    ax.hist(data.flatten().numpy(), bins = 50, facecolor = 'tab:blue', alpha = 0.5)
+    ax.set_title('Wind values distribution')
+    ax.set_xlabel('Wind values')
+    # plt.show()
+    return fig
+#end
 
-def plot_SAR(samples, title = None, pformat = 'pdf'):
+def img_data_reco_mse(_data, _reco, label, bidx = 0, tidx = 0):
     
-    data = samples[0]['x_data'].detach(); data = data.reshape(-1, data.shape[-1])
-    reco = samples[0]['x_reco'].detach(); reco = reco.reshape(-1, reco.shape[-1])
+    data = _data.clone(); reco = _reco.clone()
+    errors = (data - reco).pow(2).div(data.std())
     
-    nonzero_idx = torch.nonzero(data[:,0])[:3]
-    if nonzero_idx.__len__() > 20:
-        nonzero_idx = nonzero_idx[:20]
-    #end
+    wmax = np.max([data[bidx, tidx].max(), reco[bidx, tidx].max()])
+    wmin = np.min([data[bidx, tidx].min(), reco[bidx, tidx].min()])
     
-    img_dim = np.int32(np.sqrt(data[0].shape[-1]))
+    fig, ax = plt.subplots(1,4)
+    ax0 = ax[0].imshow(data[bidx, tidx], cmap = 'Blues', vmax = wmax, vmin = wmin)
+    divider = make_axes_locatable(ax[0])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax0, cax = cax, orientation = 'vertical')
+    ax[0].set_title(r'Data $u$')
     
-    fig, ax = plt.subplots(2, nonzero_idx.shape[0], figsize = (10, 5))
-    for j, idx in enumerate(nonzero_idx):
-        
-        for i, who in zip(range(2), [data[idx], reco[idx]]):
-            
-            img = ax[i,j].imshow(who.view(img_dim, img_dim), cmap = 'jet')
-            divider = make_axes_locatable(ax[i,j])
-            cax = divider.append_axes('right', size = '5%', pad = 0.05)
-            plt.colorbar(img, cax = cax)
-            ax[i,j].set_xticks([]); ax[i,j].set_yticks([])
-        #end
-        
-    #end
-    ax[0,0].set_ylabel('$X_{data}$', fontsize = 14)
-    ax[1,0].set_ylabel('$X_{reco}$', fontsize = 14)
+    ax1 = ax[1].imshow(reco[bidx, tidx], cmap = 'Blues', vmax = wmax, vmin = wmin)
+    divider = make_axes_locatable(ax[1])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax1, cax = cax, orientation = 'vertical')
+    ax[1].set_title(label)
+    
+    ax2 = ax[2].imshow(errors[bidx, tidx], cmap = 'nipy_spectral')
+    divider = make_axes_locatable(ax[2])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax2, cax = cax, orientation = 'vertical')
+    ax[2].set_title(r'MSE')
+    
+    abs_difference = (data - reco)
+    
+    ax3 = ax[3].imshow(abs_difference[bidx, tidx], cmap = 'Blues')
+    divider = make_axes_locatable(ax[3])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax3, cax = cax, orientation = 'vertical')
+    ax[3].set_title(r'Absolute difference')
+    
+    for i in range(4): ax[i].set_xticks([]); ax[i].set_yticks([])    
     fig.tight_layout()
+    # plt.show()
     
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = 'pdf', bbox_inches = 'tight')
-    #end
-    
-    plt.show(fig)
+    return fig
 #end
 
-
-def plot_SAR_emulated(samples, howmany = 3, title = None, pformat = 'pdf'):
+def img_baseline_model(_data, _reco, _pool, bidx = 0, tidx = 0):
     
-    data = samples[0]['x_data'].detach(); data = data.view(data.shape[0] * 24, data.shape[-1])
-    reco = samples[0]['x_from_y'].detach(); reco = reco.view(reco.shape[0] * 24, reco.shape[-1])
+    data = _data.clone(); reco = _reco.clone(); pool = _pool.clone()
+    wmax = np.max([data[bidx, tidx].max(), reco[bidx, tidx].max()])
+    wmin = np.min([data[bidx, tidx].min(), reco[bidx, tidx].min()])
     
-    nonzero_idx = list(torch.nonzero(data[:,0])[:howmany**2])
-    indices     = list(torch.arange(1, data.shape[0]))
-    suitable_idx = [int(idx.numpy()) for idx in indices if idx not in nonzero_idx]
-    suitable_idx = np.random.choice(np.array(suitable_idx), howmany**2)
-    img_dim = np.int32(np.sqrt(data[0].shape[-1]))
+    fig, ax = plt.subplots(1,3)
+    ax1 = ax[0].imshow(data[bidx, tidx,:,:], vmin = wmin, vmax = wmax, cmap = 'Blues')
+    ax[0].set_xticks([]); ax[0].set_yticks([])
+    divider = make_axes_locatable(ax[0])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax1, cax = cax, orientation = 'vertical')
+    ax[0].set_title('Data')
     
-    fig, ax = plt.subplots(howmany, howmany, figsize = (2 * howmany, 2 * howmany))
+    ax2 = ax[1].imshow(pool[bidx, tidx,:,:], vmin = wmin, vmax = wmax, cmap = 'Blues')
+    ax[1].set_xticks([]); ax[1].set_yticks([])
+    divider = make_axes_locatable(ax[1])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax2, cax = cax, orientation = 'vertical')
+    ax[1].set_title('Interpolation')
     
-    idx = 0
-    for i in range(howmany):
-        for j in range(howmany):
-            img = ax[i,j].imshow(reco[idx].reshape(img_dim, img_dim), cmap = 'jet')
-            divider = make_axes_locatable(ax[i,j])
-            cax = divider.append_axes('right', size = '5%', pad = 0.05)
-            plt.colorbar(img, cax = cax)
-            ax[i,j].set_xticks([]); ax[i,j].set_yticks([])
-            idx += 1
-        #end
-    #end
+    ax5 = ax[2].imshow(reco[bidx, tidx,:,:], vmin = wmin, vmax = wmax, cmap = 'Blues')
+    ax[2].set_xticks([]); ax[2].set_yticks([])
+    divider = make_axes_locatable(ax[2])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax5, cax = cax, orientation = 'vertical')
+    ax[2].set_title('Model')
     
     fig.tight_layout()
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = pformat, bbox_inches = 'tight')
-    #end
-    
-    plt.show(fig)
+    # plt.show()
+    return fig
 #end
 
-
-def plot_UPA(samples, title = None, pformat = 'pdf'):
+def img_grads_mse(_data, _reco, bidx = 0, tidx = 0):
     
-    data = samples[0]['y_data'].detach(); data = data.reshape(-1, data.shape[-1])
-    reco = samples[0]['y_reco'].detach(); reco = reco.reshape(-1, reco.shape[-1])
+    data = _data.clone(); reco = _reco.clone()
     
-    nonzero_idx = torch.nonzero(data[:,0])[:3]
-    if nonzero_idx.__len__() == 0:
-        num_rows = 10
-    else:
-        num_rows = nonzero_idx.shape[0]
-    #end
+    g_data_x, g_data_y = torch.gradient(data, dim = (-1,-2))
+    g_reco_x, g_reco_y = torch.gradient(reco, dim = (-1,-2))
     
-    fig, ax = plt.subplots(1, num_rows, sharex = True, figsize = (10, 3))
-    for i, idx in enumerate(nonzero_idx):
-        
-        span = np.arange(data[idx].shape[1]).flatten()
-        ax[i].plot(span, data[idx].flatten(), lw = 2, color = 'g', label = r'$Y_{data}$')
-        ax[i].plot(span, reco[idx].flatten(), lw = 2, color = 'r', label = r'$Y_{reco}$')
-        ax[i].grid(axis = 'both', lw = 0.5)
-        ax[i].legend()
-    #end
-    ax[0].set_ylabel('SPL (dB)', fontsize = 14)
-    ax[1].set_xlabel('Frequency', fontsize = 14)
-    fig.tight_layout()
+    grad_data = torch.sqrt( (g_data_x.pow(2) + g_data_y.pow(2)) )
+    grad_reco = torch.sqrt( (g_reco_x.pow(2) + g_reco_y.pow(2)) )
     
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = pformat, bbox_inches = 'tight')
-    #end
+    error_grad = (grad_data - grad_reco).pow(2)
     
-    # plt.show(fig)
-    plt.show()
+    fig, ax = plt.subplots(1,3, figsize = (10,5))
+    ax1 = ax[0].imshow(grad_data[bidx, tidx,:,:], cmap = 'Blues', vmax = grad_data[bidx,tidx,:,:].max(), vmin = grad_data[bidx,tidx,:,:].min())
+    ax[0].set_xticks([]); ax[0].set_yticks([])
+    divider = make_axes_locatable(ax[0])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax1, cax = cax, orientation = 'vertical')
+    ax[0].set_title(r'Norm gradient data')
+    
+    ax2 = ax[1].imshow(grad_reco[bidx, tidx,:,:], cmap = 'Blues', vmax = grad_reco[bidx,tidx,:,:].max(), vmin = grad_reco[bidx,tidx,:,:].min())
+    ax[1].set_xticks([]); ax[1].set_yticks([])
+    divider = make_axes_locatable(ax[1])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax2, cax = cax, orientation = 'vertical')
+    ax[1].set_title(r'Norm gradient reco')
+    
+    ax3 = ax[2].imshow(error_grad[bidx, tidx,:,:], cmap = 'nipy_spectral')
+    ax[2].set_xticks([]); ax[2].set_yticks([])
+    divider = make_axes_locatable(ax[2])
+    cax = divider.append_axes('right', size = '5%', pad = 0.05)
+    fig.colorbar(ax3, cax = cax, orientation = 'vertical')
+    ax[2].set_title(r'Norm gradient SE')
+    
+    # plt.show()
+    return fig
 #end
 
-
-def plot_UPA_emulated(samples, howmany = 4, title = None, pformat = 'pdf'):
+def hist_pdf(_data, _reco, _pool = None, nbins = 50, bidx = 0, tidx = 0):
     
-    data = samples[0]['y_data'].detach(); data = data.view(data.shape[0] * 24, data.shape[-1])
-    reco = samples[0]['y_from_x'].detach(); reco = reco.view(reco.shape[0] * 24, reco.shape[-1])
+    data = _data.clone(); reco = _reco.clone()
     
-    nonzero_idx = torch.nonzero(data[:,0])[:howmany]
-    
-    fig, ax = plt.subplots(howmany, 1, sharex = True, figsize = (3, 2 * howmany))
-    
-    for i, idx in enumerate(nonzero_idx):
-        
-        span = np.arange(data[idx].shape[1]).flatten()
-        ax[i].plot(span, data[idx].flatten(), lw = 2, color = 'g', label = r'$Y_{data}$')
-        ax[i].plot(span, reco[idx].flatten(), lw = 2, color = 'r', label = r'$Y_{reco}$')
-        ax[i].grid(axis = 'both', lw = 0.5)
-        ax[i].legend()
-    #end
-    ax[0].set_ylabel('SPL (dB)', fontsize = 14)
-    ax[1].set_xlabel('Frequency', fontsize = 14)
-    fig.tight_layout()
-    
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = pformat, bbox_inches = 'tight')
+    data_flat = data.flatten().numpy()
+    reco_flat = reco.flatten().numpy()
+    if _pool is not None:
+        pool = _pool.clone()
+        pool_flat = pool.flatten().numpy()
     #end
     
-    plt.show(fig)
+    fig, ax = plt.subplots()
+    ax.hist(data_flat, bins = nbins, facecolor = 'tab:blue', alpha = 0.5, label = 'Data')
+    ax.hist(reco_flat, bins = nbins, facecolor = 'tab:orange', alpha = 0.5, label = 'Model')
+    if _pool is not None:
+        ax.hist(pool_flat, bins = nbins, facecolor = 'tab:green', alpha = 0.5, label = 'Baseline')
+    #end
+    ax.legend()
+    ax.set_xlabel('Wind - Central patch')
+    # plt.show()
+    
+    return fig
 #end
 
-
-def plot_WS(samples, title = None, pformat = 'pdf'):
+def learning_curves(lcvs):
     
-    data = samples[0]['u_data'].detach(); data = data.view(data.shape[0], 24, data.shape[-1])
-    reco = samples[0]['u_reco'].detach(); reco = reco.view(reco.shape[0], 24, reco.shape[-1])
+    fig, ax = plt.subplots()
+    ax.plot(lcvs['train'], c = 'g', lw = 2, alpha = 0.75, label = 'Train')
+    ax.plot(lcvs['val'],   c = 'r', lw = 2, alpha = 0.75, label = 'Validation')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('MSE')
+    ax.grid()
+    ax.legend()
+    # plt.show()
     
-    # mismatch_from_mean = (reco - data.mean()).mean()
-    
-    fig, ax = plt.subplots(5, 2, sharex = True, sharey = True, figsize = (15,10))
-    for k in range(10):
-        
-        j = k // 5
-        i = k - j * 5
-        span = np.arange(data.shape[1])
-        ax[i,j].plot(span, data[k,:], color = 'k', lw = 2, label = r'$u_{data}$')
-        ax[i,j].plot(span, reco[k,:], color = 'b', lw = 2, label = r'$u_{reco}$')
-        ax[i,j].grid(axis = 'both', lw = 0.5)
-        ax[i,j].legend()
-    #end
-    ax[2,0].set_ylabel('Wind speed [m/s]', fontsize = 14)
-    ax[4,0].set_xlabel('Time [h]', fontsize = 14)
-    ax[4,1].set_xlabel('Time [h]', fontsize = 14)
-    fig.tight_layout()
-    
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = pformat, bbox_inches = 'tight')
-    #end
-    
-    # plt.show(fig)
-    plt.show()
-#end
-
-def plot_WS_scatter(samples, mod_name, title = None, exclude = False, pformat = 'pdf'):
-    
-    data = samples[0]['u_data'].detach(); data = data.reshape(-1, data.shape[-1])
-    reco = samples[0]['u_reco'].detach(); reco = reco.reshape(-1, reco.shape[-1])
-    
-    if exclude:
-        x = samples[0]['{}_data'.format(mod_name)].detach(); x = x.view(-1, x.shape[-1])
-        nonzero_idx = torch.nonzero(x[:,0])
-        data = data[nonzero_idx].view(-1)
-        reco = reco[nonzero_idx].view(-1)
-    #end
-    
-    u_max = torch.max(data.max(), reco.max())
-    bisector = np.linspace(0, u_max, 100)
-    
-    fig, ax = plt.subplots(figsize = (5, 5))
-    
-    ax.scatter(data, reco, alpha = 0.75)
-    ax.set_xlabel('True values [m/s]', fontsize = 14)
-    ax.set_ylabel('Predicted values [m/s]', fontsize = 14)
-    ax.plot(bisector, bisector, color = 'k', alpha = 0.75, lw = 2)
-    ax.grid(axis = 'both', lw = 0.5)
-    
-    if title is not None:
-        fig.savefig(os.path.join(PATH_PLOTS, title), dpi = 300, format = pformat, bbox_inches = 'tight')
-    #end
-    
-    # plt.show(fig)
-    plt.show()
+    return fig
 #end

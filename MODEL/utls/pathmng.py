@@ -92,7 +92,11 @@ def get_model_name(cparams, versioning = False):
         inversion = 'baseline'
     #end
     
-    model_name += f'-{inversion}-{exp_osse_1_specs}-{cparams.PRIOR}'
+    if cparams.INVERSION == 'bl':
+        model_name = f'{cparams.VNAME}-baseline-sflr{lr_sampling_freq_tag}-{cparams.PRIOR}'
+    else:
+        model_name += f'-{inversion}-{exp_osse_1_specs}-{cparams.PRIOR}'
+    #end
     return model_name, model_source
 #end
 

@@ -29,7 +29,7 @@ else:
     gpus = 0
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
-
+torch.autograd.set_detect_anomaly(True)
 
 class SaveWeights(Callback):
     def __init__(self, path_ckpt):
@@ -275,12 +275,7 @@ class Experiment:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             #end
-            
-            # lit_model.load_state_dict(os.path.join(self.path_checkpoint, 'model_params.ckpt'))
-            # profiler_kwargs['max_epochs'] = self.cparams.EPOCHS - weight_save.get_last_epoch()
-            # trainer.fit()
-            # return_value = 0
-            
+                        
         else:
             
             ## Test
