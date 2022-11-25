@@ -276,7 +276,7 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        metrics, out = self.forward(batch, phase = 'train')
+        metrics, out = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
         self.log('loss', loss, on_step = True, on_epoch = True, prog_bar = True)
         self.log('data_mean',  metrics['data_mean'], on_step = True, on_epoch = True, prog_bar = False)
@@ -299,7 +299,7 @@ class LitModel_Base(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         
-        metrics, out = self.forward(batch, phase = 'train')
+        metrics, out = self.forward(batch, batch_idx, phase = 'train')
         val_loss = metrics['loss']
         self.log('val_loss', val_loss)
         
@@ -319,7 +319,7 @@ class LitModel_Base(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         
         with torch.no_grad():
-            metrics, outs = self.forward(batch, phase = 'test')
+            metrics, outs = self.forward(batch, batch_idx, phase = 'test')
             
             test_loss = metrics['loss']
             self.log('test_loss', test_loss.item())
@@ -554,12 +554,12 @@ class LitModel_OSSE1(LitModel_Base):
         return baseline
     #end
     
-    def forward(self, batch, phase = 'train'):
+    def forward(self, batch, batch_idx, phase = 'train'):
         
         state_init = None
         for n in range(self.hparams.n_fourdvar_iter):
             
-            loss, outs = self.compute_loss(batch, iteration = n, phase = phase, init_state = state_init)
+            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
             if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
                 state_init = outs.detach()
             #end
@@ -568,7 +568,7 @@ class LitModel_OSSE1(LitModel_Base):
         return loss, outs
     #end
     
-    def compute_loss(self, data, iteration, phase = 'train', init_state = None):
+    def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Prepare input data : import, downsample and iterpolate, produce anomaly field
         data_hr = data.clone()
@@ -616,12 +616,16 @@ class LitModel_OSSE1(LitModel_Base):
                 reco_lr = data_lr_input.clone()   # NOTE : forse qui data_lr_input ???
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                
             elif self.hparams.inversion == 'gs':
+                
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = data_lr_input.clone()
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                
             elif self.hparams.inversion == 'bl':
+                
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()
                 reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
@@ -650,7 +654,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad * self.hparams.grad_coeff
-        
+                
         ## Regularization
         if not self.hparams.inversion == 'bl':
             regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
@@ -663,20 +667,6 @@ class LitModel_OSSE1(LitModel_Base):
                      'model_params' : _log_model_params,
                      'reco_mean'    : _log_reco_hr_mean,
                      }), outputs
-    #end
-    
-    def on_after_backward(self):
-        
-        gradients = []
-        for param in self.parameters():
-            try:
-                gradients.append(param.grad.mean())
-            except:
-                pass
-            #end
-        #end
-        _log_params_grad = torch.mean(torch.Tensor(gradients))
-        self.log('param_grad', _log_params_grad, on_step = True, on_epoch = True, prog_bar = False)
     #end
 #end
 

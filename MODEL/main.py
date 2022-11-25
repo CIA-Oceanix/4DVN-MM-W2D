@@ -29,7 +29,7 @@ else:
     gpus = 0
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 
 class SaveWeights(Callback):
     def __init__(self, path_ckpt):
@@ -40,16 +40,52 @@ class SaveWeights(Callback):
     #end
     
     def on_train_epoch_start(self, trainer, pl_module):
-        torch.save(pl_module.state_dict(),
-                   os.path.join(self.path_ckpt, 'model_params.ckpt'))
+        self.epoch_start_checkpoint = os.path.join(self.path_ckpt, 'sane_model_params.ckpt')
+        torch.save(pl_module.state_dict(), self.epoch_start_checkpoint)
     #end
     
     def on_train_epoch_end(self, trainer, pl_module):
         self.last_epoch = pl_module.current_epoch
+        
+        has_nans = False
+        for param in pl_module.parameters():
+            if torch.any(param.isnan()):
+                has_nans = True
+            #end
+        #end
+        
+        if has_nans:
+            print('\nNans in model params')
+            print('Loading checkpoint ...')
+            sane_model_params = torch.load(self.epoch_start_checkpoint)
+            pl_module = pl_module.load_state_dict(sane_model_params)
+        #end
     #end
     
     def get_last_epoch(self):
         return self.last_epoch
+    #end
+    
+    def on_after_backward(self, trainer, pl_module):
+        # After loss.backward() and before optimizer.step()
+        # Also "on_before_optimizer_step()" is available
+        # See pytorch_lightning docs in Callback API
+        
+        gradients = []
+        for param in pl_module.parameters():
+            try:
+                gradients.append(param.grad.mean())
+            except:
+                pass
+            #end
+        #end
+        _log_params_grad = torch.mean(torch.Tensor(gradients))
+        pl_module.log('param_grad', _log_params_grad, on_step = True, on_epoch = True, prog_bar = False)
+    #end
+    
+    def on_before_zero_grad(self, trainer, pl_module, optimizer):
+        
+        pass
     #end
     
 #end
@@ -255,7 +291,7 @@ class Experiment:
         ## Instantiate Trainer
         trainer = pl.Trainer(**profiler_kwargs, 
                              callbacks = [model_checkpoint, 
-                                          early_stopping,
+                                          # early_stopping,
                                           weight_save],
                              logger = logger)
         
@@ -275,7 +311,7 @@ class Experiment:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             #end
-                        
+            
         else:
             
             ## Test
