@@ -59,6 +59,12 @@ class SaveWeights(Callback):
             print('Loading checkpoint ...')
             sane_model_params = torch.load(self.epoch_start_checkpoint)
             pl_module = pl_module.load_state_dict(sane_model_params)
+            
+            for param in pl_module.parameters():
+                if torch.any(param.isnan()):
+                    print('Still nans')
+                #end
+            #end
         #end
     #end
     
