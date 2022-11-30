@@ -167,6 +167,11 @@ class W2DSimuDataModule(pl.LightningDataModule):
         val_set   = wind2D[n_train : n_train + n_val, :, :]
         test_set  = wind2D[n_train + n_val : n_train + n_val + n_test, :, :]
         
+        print('Train dataset shape : ', train_set.shape)
+        print('Val   dataset shape : ', val_set.shape)
+        print('Test  dataset shape : ', test_set.shape)
+        print()
+        
         train_set = self.extract_time_series(train_set, 36 + 1, 300)
         val_set   = self.extract_time_series(val_set, 36 + 1, 50)
         test_set  = self.extract_time_series_test(test_set, 36 + 1, self.test_days)
