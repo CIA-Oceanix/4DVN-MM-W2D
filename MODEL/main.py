@@ -58,15 +58,11 @@ class SaveWeights(Callback):
             print('\nNans in model params')
             print('Loading checkpoint ...')
             
-            for param in pl_module.parameters():
-                param.grad = torch.zeros(param.grad.shape)
-            #end
-            
             sane_model_params = torch.load(self.epoch_start_checkpoint)
             pl_module.load_state_dict(sane_model_params)
             
             for param in pl_module.parameters():
-                if torch.any(param.isnan()) or torch.any(param.grad.isnan()):
+                if torch.any(param.isnan()):
                     print('Still nans')
                 #end
             #end
