@@ -206,7 +206,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         for t in range(test_days - 2):
             t_true = 18 + 24 * t
-            print(t, t_true, t_true + ts_length)
             new_wind[t, :,:,:] = wind_data[t_true : t_true + ts_length,:,:]
         #end
         
