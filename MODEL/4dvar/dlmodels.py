@@ -537,11 +537,13 @@ class LitModel_OSSE1(LitModel_Base):
         delay_min        = delay_min
         
         for m in range(batch_size):
+            
+            # constant delay for sample (for all timesteps)
+            delay = np.random.randint(delay_min, delay_max)
             for t in range(timesteps):
                 t_true = t + timewindow_start
                 if t % self.hparams.lr_mask_sfreq == 0:
                     try:
-                        delay = np.random.randint(delay_min, delay_max)
                         data_lr[m,t_true,:,:] = data_lr[m,t_true + delay, :,:]
                     except:
                         pass
@@ -580,38 +582,36 @@ class LitModel_OSSE1(LitModel_Base):
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 25):
         
         data_hr = data.clone()
+        
+        # Downsample to obtain ERA-like data
         data_lr = self.avgpool2d_keepsize(data_hr)
+        
+        # Obtain anomaly
         data_an = data_hr - data_lr
         
+        # Delay mode
         if self.hparams.lr_sampl_delay:
             data_lr_input = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
         else:
             data_lr_input = data_lr.clone()
         #end
         
+        # Alpha mode
+        # if ...
+        
+        # Isolate the 24 central timesteps
         data_lr_input = data_lr_input[:, timewindow_start : timewindow_end + 1, :,:]
         data_hr       = data_hr[:, timewindow_start : timewindow_end + 1, :,:]
         data_lr       = data_lr[:, timewindow_start : timewindow_end + 1, :,:]
         data_an       = data_an[:, timewindow_start : timewindow_end + 1, :,:]
+        
+        # Temporal interpolation
         data_lr_input = self.get_baseline(data_lr_input, timesteps)
         
         return data_hr, data_lr, data_lr_input, data_an
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
-        
-        # Prepare input data : import, downsample and iterpolate, produce anomaly field
-        # data_hr = data.clone()
-        # data_lr = self.avgpool2d_keepsize(data_hr)
-        # data_an = data_hr - data_lr
-        
-        # if self.hparams.lr_sampl_delay:
-        #     data_lr_input = self.get_data_lr_delay(data_lr.clone())
-        # else:
-        #     data_lr_input = data_lr.clone()
-        # #end
-        
-        # data_lr_input = self.get_baseline(data_lr_input)
         
         data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
@@ -644,6 +644,7 @@ class LitModel_OSSE1(LitModel_Base):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
             
             if self.hparams.inversion == 'fp':
+                
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()   # NOTE : forse qui data_lr_input ???
                 reco_an = outputs[:,50:,:,:]

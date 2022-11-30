@@ -106,8 +106,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.region_extent = cparams.REGION_EXTENT_PX
         self.hr_mask_mode  = cparams.HR_MASK_MODE
         self.batch_size    = cparams.BATCH_SIZE
-        self.ttsplit       = cparams.TR_TE_SPLIT
-        self.tvsplit       = cparams.TR_VA_SPLIT
+        self.test_days     = cparams.TEST_DAYS
+        self.val_days      = cparams.VAL_DAYS
         self.timesteps     = timesteps
         self.normalize     = normalize
         self.data_name     = cparams.DATASET_NAME
@@ -147,9 +147,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         shape = wind2D.shape[-2:]
         
         if self.region_case == 'coast-MA':
-            # wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -self.region_extent:, -self.region_extent:]
-            wind2D, indices = self.extract_time_series(wind2D, 36, 400)
-            wind2D = wind2D[:,:,-self.region_extent:, -self.region_extent:]
+            wind2D = wind2D[:,-self.region_extent:, -self.region_extent:]
             mask_land = mask_land[-self.region_extent:, -self.region_extent:]
             region_lat = region_lat[-self.region_extent:, -self.region_extent:]
             region_lon = region_lon[-self.region_extent:, -self.region_extent:]
@@ -157,16 +155,21 @@ class W2DSimuDataModule(pl.LightningDataModule):
             raise ValueError('Not implemented yet')
         #end
         
+        # wind2D, indices = self.extract_time_series(wind2D, 36, 400)
         self.shapeData = (self.batch_size, self.timesteps, *tuple(shape))
         
-        n_test  = np.int32(wind2D.__len__() * self.ttsplit)
+        n_test  = np.int32(24 * self.test_days)
         n_train = np.int32(wind2D.__len__() - n_test)
-        n_val   = np.int32(n_train * self.tvsplit)
+        n_val   = np.int32(24 * self.val_days)
         n_train = np.int32(n_train - n_val)
         
         train_set = wind2D[:n_train, :, :]
         val_set   = wind2D[n_train : n_train + n_val, :, :]
         test_set  = wind2D[n_train + n_val : n_train + n_val + n_test, :, :]
+        
+        train_set = self.extract_time_series(train_set, 36 + 1, 300)
+        val_set   = self.extract_time_series(val_set, 36 + 1, 50)
+        test_set  = self.extract_time_series_test(test_set, 36 + 1, self.test_days)
         
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)
@@ -194,7 +197,20 @@ class W2DSimuDataModule(pl.LightningDataModule):
             indices.append(np.arange(idx_series_start, idx_series_start + ts_length))
         #end
         
-        return new_wind, indices
+        return new_wind
+    #end
+    
+    def extract_time_series_test(self, wind_data, ts_length, test_days):
+        
+        new_wind = np.zeros((test_days - 2, ts_length, *wind_data.shape[-2:]))
+        
+        for t in range(test_days - 2):
+            t_true = 18 + 24 * t
+            print(t, t_true, t_true + 36)
+            new_wind[t, :,:,:] = wind_data[t_true : t_true + 36,:,:]
+        #end
+        
+        return new_wind
     #end
     
     def get_buoy_locations(self, lat, lon):
