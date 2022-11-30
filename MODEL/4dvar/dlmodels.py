@@ -417,6 +417,20 @@ class LitModel_OSSE1(LitModel_Base):
         return optimizers
     #end
     
+    def forward(self, batch, batch_idx, phase = 'train'):
+        
+        state_init = None
+        for n in range(self.hparams.n_fourdvar_iter):
+            
+            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
+            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
+                state_init = outs.detach()
+            #end
+        #end
+        
+        return loss, outs
+    #end
+    
     def avgpool2d_keepsize(self, data):
         
         img_size = data.shape[-2:]
@@ -513,15 +527,22 @@ class LitModel_OSSE1(LitModel_Base):
         return mask
     #end
     
-    def get_data_lr_delay(self, data_lr):
+    def get_data_lr_delay(self, data_lr, timesteps = 25, timewindow_start = 6,
+                          delay_max = 7, delay_min = -6):
         
-        batch_size, timesteps = data_lr.shape[:2]
+        batch_size       = data_lr.shape[0]
+        timesteps        = timesteps
+        timewindow_start = timewindow_start
+        delay_max        = delay_max
+        delay_min        = delay_min
+        
         for m in range(batch_size):
             for t in range(timesteps):
+                t_true = t + timewindow_start
                 if t % self.hparams.lr_mask_sfreq == 0:
                     try:
-                        delay = np.random.randint(0, 3)
-                        data_lr[m,t,:,:] = data_lr[m,t + delay, :,:]
+                        delay = np.random.randint(delay_min, delay_max)
+                        data_lr[m,t_true,:,:] = data_lr[m,t_true + delay, :,:]
                     except:
                         pass
                     #end
@@ -532,10 +553,10 @@ class LitModel_OSSE1(LitModel_Base):
         return data_lr
     #end
     
-    def get_baseline(self, _data_lr):
+    def get_baseline(self, _data_lr, timesteps = 25):
         
         img_shape = _data_lr.shape[-2:]
-        timesteps = _data_lr.shape[1]
+        timesteps = timesteps
         lr_sfreq  = self.hparams.lr_mask_sfreq
         
         # Isolate timesteps related to LR data
@@ -548,40 +569,51 @@ class LitModel_OSSE1(LitModel_Base):
         data_lr[:,-1,:,:] = torch.Tensor(_data_lr[:,-1,:,:] )
         
         # Interpolate channel-wise (that is, timesteps)
-        baseline = F.interpolate(data_lr.permute(0,2,3,1), [img_shape[0], timesteps], mode = 'bicubic', align_corners = False)
+        baseline = F.interpolate(data_lr.permute(0,2,3,1), 
+                                 [img_shape[0], timesteps], 
+                                 mode = 'bicubic', align_corners = False)
         baseline = baseline.permute(0,3,1,2)
         
         return baseline
     #end
     
-    def forward(self, batch, batch_idx, phase = 'train'):
+    def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 25):
         
-        state_init = None
-        for n in range(self.hparams.n_fourdvar_iter):
-            
-            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
-            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
-                state_init = outs.detach()
-            #end
-        #end
-        
-        return loss, outs
-    #end
-    
-    def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
-        
-        # Prepare input data : import, downsample and iterpolate, produce anomaly field
         data_hr = data.clone()
         data_lr = self.avgpool2d_keepsize(data_hr)
         data_an = data_hr - data_lr
         
         if self.hparams.lr_sampl_delay:
-            data_lr_input = self.get_data_lr_delay(data_lr.clone())
+            data_lr_input = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
         else:
             data_lr_input = data_lr.clone()
         #end
         
-        data_lr_input = self.get_baseline(data_lr_input)
+        data_lr_input = data_lr_input[:, timewindow_start : timewindow_end + 1, :,:]
+        data_hr       = data_hr[:, timewindow_start : timewindow_end + 1, :,:]
+        data_lr       = data_lr[:, timewindow_start : timewindow_end + 1, :,:]
+        data_an       = data_an[:, timewindow_start : timewindow_end + 1, :,:]
+        data_lr_input = self.get_baseline(data_lr_input, timesteps)
+        
+        return data_hr, data_lr, data_lr_input, data_an
+    #end
+    
+    def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
+        
+        # Prepare input data : import, downsample and iterpolate, produce anomaly field
+        # data_hr = data.clone()
+        # data_lr = self.avgpool2d_keepsize(data_hr)
+        # data_an = data_hr - data_lr
+        
+        # if self.hparams.lr_sampl_delay:
+        #     data_lr_input = self.get_data_lr_delay(data_lr.clone())
+        # else:
+        #     data_lr_input = data_lr.clone()
+        # #end
+        
+        # data_lr_input = self.get_baseline(data_lr_input)
+        
+        data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         
         # Prepare input state initialized
@@ -614,21 +646,21 @@ class LitModel_OSSE1(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()   # NOTE : forse qui data_lr_input ???
-                reco_an = outputs[:,48:,:,:]
+                reco_an = outputs[:,50:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
             elif self.hparams.inversion == 'gs':
                 
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = data_lr_input.clone()
-                reco_an = outputs[:,48:,:,:]
+                reco_an = outputs[:,50:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()
-                reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
+                reco_hr = reco_lr + 0. * outputs[:,50:,:,:]
             #end
         #end
         

@@ -98,7 +98,7 @@ class W2DSimuDataset(Dataset):
 
 class W2DSimuDataModule(pl.LightningDataModule):
     
-    def __init__(self, path_data, cparams, normalize = False):
+    def __init__(self, path_data, cparams, timesteps = 25, normalize = False):
         super(W2DSimuDataModule, self).__init__()
         
         self.path_data     = path_data
@@ -108,6 +108,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.batch_size    = cparams.BATCH_SIZE
         self.ttsplit       = cparams.TR_TE_SPLIT
         self.tvsplit       = cparams.TR_VA_SPLIT
+        self.timesteps     = timesteps
         self.normalize     = normalize
         self.data_name     = cparams.DATASET_NAME
         self.shapeData     = None
@@ -146,7 +147,9 @@ class W2DSimuDataModule(pl.LightningDataModule):
         shape = wind2D.shape[-2:]
         
         if self.region_case == 'coast-MA':
-            wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -self.region_extent:, -self.region_extent:]
+            # wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -self.region_extent:, -self.region_extent:]
+            wind2D, indices = self.extract_time_series(wind2D, 36, 100)
+            wind2D = wind2D[:,:,-self.region_extent:, -self.region_extent:]
             mask_land = mask_land[-self.region_extent:, -self.region_extent:]
             region_lat = region_lat[-self.region_extent:, -self.region_extent:]
             region_lon = region_lon[-self.region_extent:, -self.region_extent:]
@@ -154,7 +157,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
             raise ValueError('Not implemented yet')
         #end
         
-        self.shapeData = (self.batch_size, 24, *tuple(shape))
+        self.shapeData = (self.batch_size, self.timesteps, *tuple(shape))
         
         n_test  = np.int32(wind2D.__len__() * self.ttsplit)
         n_train = np.int32(wind2D.__len__() - n_test)
@@ -176,6 +179,22 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize)
         self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize)
         self.save_nparams()
+    #end
+    
+    def extract_time_series(self, wind_data, ts_length, num_subseries):
+        
+        new_wind = np.zeros((num_subseries, ts_length, *wind_data.shape[-2:]))
+        indices = list()
+        
+        for i in range(num_subseries):
+            
+            idx_series_start = np.random.randint(18, wind_data.shape[0] - 18 - 36)
+            new_series = wind_data[idx_series_start : idx_series_start + ts_length, :,:]
+            new_wind[i,:,:] = new_series
+            indices.append(np.arange(idx_series_start, idx_series_start + ts_length))
+        #end
+        
+        return new_wind, indices
     #end
     
     def get_buoy_locations(self, lat, lon):

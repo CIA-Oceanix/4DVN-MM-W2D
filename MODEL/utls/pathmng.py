@@ -204,7 +204,7 @@ class PathManager:
         
         dataset = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'w', format = 'NETCDF4_CLASSIC')
         dataset.createDimension('extent', region_extent)
-        dataset.createDimension('time', 24)
+        dataset.createDimension('time', 25)
         dataset.createDimension('one', 1)
         dataset.createDimension('run', runs)
         dataset.createDimension('batch', None)
