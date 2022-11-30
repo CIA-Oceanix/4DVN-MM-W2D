@@ -148,7 +148,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         if self.region_case == 'coast-MA':
             # wind2D = wind2D.reshape(-1, 24, *tuple(shape))[:,:, -self.region_extent:, -self.region_extent:]
-            wind2D, indices = self.extract_time_series(wind2D, 36, 100)
+            wind2D, indices = self.extract_time_series(wind2D, 36, 400)
             wind2D = wind2D[:,:,-self.region_extent:, -self.region_extent:]
             mask_land = mask_land[-self.region_extent:, -self.region_extent:]
             region_lat = region_lat[-self.region_extent:, -self.region_extent:]
