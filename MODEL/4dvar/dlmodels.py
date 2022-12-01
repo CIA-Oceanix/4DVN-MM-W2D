@@ -528,7 +528,7 @@ class LitModel_OSSE1(LitModel_Base):
     #end
     
     def get_data_lr_delay(self, data_lr, timesteps = 25, timewindow_start = 6,
-                          delay_max = 7, delay_min = -6):
+                          delay_max = 5, delay_min = -4):
         
         batch_size       = data_lr.shape[0]
         timesteps        = timesteps
