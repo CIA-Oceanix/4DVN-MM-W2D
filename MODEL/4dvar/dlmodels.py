@@ -537,7 +537,6 @@ class LitModel_OSSE1(LitModel_Base):
         delay_min        = delay_min
         
         for m in range(batch_size):
-            
             # constant delay for sample (for all timesteps)
             delay = np.random.randint(delay_min, delay_max)
             for t in range(timesteps):
