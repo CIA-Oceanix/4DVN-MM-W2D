@@ -675,7 +675,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Compute loss
         ## Reconstruction loss
-        loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
+        loss_lr = self.loss_fn( (reco_lr - data_lr_input), mask = None )
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
