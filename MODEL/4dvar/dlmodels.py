@@ -684,13 +684,20 @@ class LitModel_OSSE1(LitModel_Base):
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
+        # LOG GRADIENTS. Then I'll remove all this joke of variables, promised
+        _log_grad_reco_loss = torch.mean(grad_reco)
+        _log_grad_data_loss = torch.mean(grad_data)
+        
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad * self.hparams.grad_coeff
-                
+        
         ## Regularization
         if not self.hparams.inversion == 'bl':
+            
             regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
+            
+            _log_reg_loss = regularization
         #end
         
         return dict({'loss' : loss,
@@ -698,6 +705,9 @@ class LitModel_OSSE1(LitModel_Base):
                      'state_mean'   : _log_state_mean,
                      'model_params' : _log_model_params,
                      'reco_mean'    : _log_reco_hr_mean,
+                     'grad_reco'    : _log_grad_reco_loss,
+                     'grad_data'    : _log_grad_data_loss,
+                     'reg_loss'     : _log_reg_loss
                      }), outputs
     #end
 #end
