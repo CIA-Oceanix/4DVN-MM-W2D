@@ -45,7 +45,7 @@ class SaveWeights(Callback):
         torch.save(pl_module.state_dict(), self.epoch_start_params)
         
         self.epoch_start_optstate = os.path.join(self.path_ckpt, 'sane_optimizer_state.ckpt')
-        torch.save(trainer.optimizers[0].state_dict(), self.epoch_start_optstate)
+        torch.save(trainer.optimizers[0].state_dict, self.epoch_start_optstate)
     #end
     
     def on_train_epoch_end(self, trainer, pl_module):
