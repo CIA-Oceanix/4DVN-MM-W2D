@@ -652,7 +652,7 @@ class LitModel_OSSE1(LitModel_Base):
             elif self.hparams.inversion == 'gs':
                 
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
-                reco_lr = data_lr_input.clone()
+                reco_lr = outputs[:,:25,:,:]
                 reco_an = outputs[:,50:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
@@ -674,7 +674,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Compute loss
         ## Reconstruction loss
-        loss_lr = self.loss_fn( (reco_lr - data_lr_input), mask = None )
+        loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         

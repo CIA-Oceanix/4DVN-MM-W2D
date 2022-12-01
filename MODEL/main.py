@@ -48,7 +48,7 @@ class SaveWeights(Callback):
         torch.save(trainer.optimizers[0].state_dict, self.epoch_start_optstate)
     #end
     
-    def on_train_batch_end(self, trainer, pl_module):
+    def on_train_epoch_end(self, trainer, pl_module):
         self.last_epoch = pl_module.current_epoch
         
         has_nans = False
