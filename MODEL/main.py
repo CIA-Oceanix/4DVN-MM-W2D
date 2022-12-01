@@ -40,8 +40,12 @@ class SaveWeights(Callback):
     #end
     
     def on_train_epoch_start(self, trainer, pl_module):
-        self.epoch_start_checkpoint = os.path.join(self.path_ckpt, 'sane_model_params.ckpt')
-        torch.save(pl_module.state_dict(), self.epoch_start_checkpoint)
+        
+        self.epoch_start_params = os.path.join(self.path_ckpt, 'sane_model_params.ckpt')
+        torch.save(pl_module.state_dict(), self.epoch_start_params)
+        
+        self.epoch_start_optstate = os.path.join(self.path_ckpt, 'sane_optimizer_state.ckpt')
+        torch.save(trainer.optimizers[0].state_dict(), self.epoch_start_optstate)
     #end
     
     def on_train_epoch_end(self, trainer, pl_module):
@@ -56,10 +60,13 @@ class SaveWeights(Callback):
         
         if has_nans:
             print('\nNans in model params')
-            print('Loading checkpoint ...')
+            print('Loading checkpoint model params and optimizer state ...')
             
-            sane_model_params = torch.load(self.epoch_start_checkpoint)
+            sane_model_params = torch.load(self.epoch_start_params)
             pl_module.load_state_dict(sane_model_params)
+            
+            sane_opt_state = torch.load(self.epoch_start_optstate)
+            trainer.optimizers[0].state_dict = sane_opt_state
             
             for param in pl_module.parameters():
                 if torch.any(param.isnan()):
