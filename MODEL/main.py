@@ -295,7 +295,7 @@ class Experiment:
             check_finite = True,
         )
         
-        weight_save = SaveWeights(path_ckpt)
+        # weight_save = SaveWeights(path_ckpt)
         
         logger = CSVLogger(
             save_dir = path_ckpt,
@@ -303,11 +303,15 @@ class Experiment:
         )
         
         ## Instantiate Trainer
-        trainer = pl.Trainer(**profiler_kwargs, 
-                             callbacks = [model_checkpoint, 
-                                          # early_stopping,
-                                          weight_save],
-                             logger = logger)
+        trainer = pl.Trainer(
+            **profiler_kwargs, 
+            callbacks = [
+                model_checkpoint, 
+                early_stopping,
+                # weight_save
+            ],
+            logger = logger
+        )
         
         # Train and test
         ## Train

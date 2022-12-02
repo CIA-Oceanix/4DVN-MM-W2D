@@ -167,8 +167,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
         val_set   = wind2D[n_train : n_train + n_val, :, :]
         test_set  = wind2D[n_train + n_val : n_train + n_val + n_test, :, :]
         
-        train_set = self.extract_time_series(train_set, 36 + 1, 300)
-        val_set   = self.extract_time_series(val_set, 36 + 1, 50)
+        train_set = self.extract_time_series(train_set, 36 + 1, 1000)
+        val_set   = self.extract_time_series(val_set, 36 + 1, 200)
         test_set  = self.extract_time_series_test(test_set, 36 + 1, self.test_days)
         
         print('Train dataset shape : ', train_set.shape)
@@ -187,14 +187,12 @@ class W2DSimuDataModule(pl.LightningDataModule):
     def extract_time_series(self, wind_data, ts_length, num_subseries):
         
         new_wind = np.zeros((num_subseries, ts_length, *wind_data.shape[-2:]))
-        indices = list()
         
         for i in range(num_subseries):
             
             idx_series_start = np.random.randint(0, wind_data.shape[0] - ts_length)
             new_series = wind_data[idx_series_start : idx_series_start + ts_length, :,:]
             new_wind[i,:,:] = new_series
-            indices.append(np.arange(idx_series_start, idx_series_start + ts_length))
         #end
         
         return new_wind

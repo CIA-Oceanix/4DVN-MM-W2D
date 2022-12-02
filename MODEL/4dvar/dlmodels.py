@@ -527,7 +527,7 @@ class LitModel_OSSE1(LitModel_Base):
         mask_hr_dx1 = get_resolution_mask(hr_sfreq, mask_hr_dx1, 'hr')
         
         mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
-        return mask
+        return mask + 1e-10
     #end
     
     def get_data_lr_delay(self, data_lr, timesteps = 25, timewindow_start = 6,
@@ -557,20 +557,20 @@ class LitModel_OSSE1(LitModel_Base):
         return data_lr
     #end
     
-    def get_baseline(self, _data_lr, timesteps = 25):
+    def get_baseline(self, data_lr_, timesteps = 25):
         
-        img_shape = _data_lr.shape[-2:]
+        img_shape = data_lr_.shape[-2:]
         timesteps = timesteps
         lr_sfreq  = self.hparams.lr_mask_sfreq
         
         # Isolate timesteps related to LR data
-        data_lr = torch.zeros((_data_lr.shape[0], timesteps // lr_sfreq + 1, *img_shape))
+        data_lr = torch.zeros((data_lr_.shape[0], timesteps // lr_sfreq + 1, *img_shape))
         for t in range(timesteps):
             if t % lr_sfreq == 0:
-                data_lr[:, t // lr_sfreq, :,:] = torch.Tensor(_data_lr[:,t,:,:])
+                data_lr[:, t // lr_sfreq, :,:] = torch.Tensor(data_lr_[:,t,:,:])
             #end
         #end
-        data_lr[:,-1,:,:] = torch.Tensor(_data_lr[:,-1,:,:] )
+        data_lr[:,-1,:,:] = torch.Tensor(data_lr_[:,-1,:,:] )
         
         # Interpolate channel-wise (that is, timesteps)
         baseline = F.interpolate(data_lr.permute(0,2,3,1), 
