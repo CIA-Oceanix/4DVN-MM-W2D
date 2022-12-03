@@ -618,6 +618,11 @@ class LitModel_OSSE1(LitModel_Base):
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
+        # Get the optimizer
+        opt = self.optimizers()
+        opt.zero_grad()
+        
+        # Get and manipulate the data as desider
         data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         
@@ -637,9 +642,9 @@ class LitModel_OSSE1(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
+        # LOGGING — hopefully to be removed soon
         _log_data_mean = torch.mean(input_data)
         _log_state_mean = torch.mean(input_state)
-        
         _log_model_params = torch.mean(
             torch.Tensor([ param.mean() for param in self.parameters() ])
         )
@@ -707,6 +712,10 @@ class LitModel_OSSE1(LitModel_Base):
         else:
             _log_reg_loss = torch.Tensor([0.])
         #end
+        
+        # Manual backward
+        self.manual_backward(loss)
+        opt.step()
         
         return dict({'loss' : loss,
                      'data_mean'    : _log_data_mean,
