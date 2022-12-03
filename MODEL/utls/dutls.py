@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 if torch.cuda.is_available():
     DEVICE  = torch.device('cuda')
-    WORKERS = 16
+    WORKERS = 64
 else:
     DEVICE  = torch.device('cpu')
     WORKERS = 8
@@ -178,9 +178,9 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         self.mask_land = mask_land
         self.buoy_positions = self.get_buoy_locations(region_lat, region_lon)
-        self.train_dataset  = W2DSimuDataset(train_set, normalize = self.normalize)
-        self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize)
-        self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize)
+        self.train_dataset  = W2DSimuDataset(train_set, normalize = self.normalize); print('Train set done')
+        self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize); print('Val set done')
+        self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize); print('Test set done')
         self.save_nparams()
     #end
     
