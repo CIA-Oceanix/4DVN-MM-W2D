@@ -276,6 +276,10 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
+        # Get the optimizer
+        opt = self.optimizers()
+        opt.zero_grad()
+        
         metrics, out = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
         self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
@@ -286,6 +290,10 @@ class LitModel_Base(pl.LightningModule):
         self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+        
+        # Manual backward, to use mixed precision
+        self.manual_backward(loss)
+        opt.step()
         
         return loss
     #end
@@ -618,10 +626,6 @@ class LitModel_OSSE1(LitModel_Base):
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        # Get the optimizer
-        opt = self.optimizers()
-        opt.zero_grad()
-        
         # Get and manipulate the data as desider
         data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
@@ -652,6 +656,10 @@ class LitModel_OSSE1(LitModel_Base):
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
+            input_data  = torch.autograd.Variable(input_data, requires_grad = True)
+            data_lr     = torch.autograd.Variable(data_lr, requires_grad = True)
+            data_lr_input = torch.autograd.Variable(data_lr_input, requires_grad = True)
+            data_hr     = torch.autograd.Variable(data_hr, requires_grad = True)
             
             if self.hparams.inversion == 'fp':
                 
@@ -712,11 +720,6 @@ class LitModel_OSSE1(LitModel_Base):
         else:
             _log_reg_loss = torch.Tensor([0.])
         #end
-        
-        # Manual backward, to use mixed precision
-        loss.requires_grad = True
-        self.manual_backward(loss)
-        opt.step()
         
         return dict({'loss' : loss,
                      'data_mean'    : _log_data_mean,
