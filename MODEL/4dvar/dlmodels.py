@@ -278,27 +278,16 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        # Get the optimizer
-        opt = self.optimizers()
-        opt.zero_grad()
-        
-        with torch.amp.autocast(device_type = DEVICE.type, dtype = self.s_dtype):
-            metrics, out = self.forward(batch, batch_idx, phase = 'train')
-            loss = metrics['loss']
-            self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-            self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-            self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-            self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
-        #end
-        
-        # Manual backward, to use mixed precision
-        self.scaler.scale(loss)
-        self.manual_backward(loss)
-        self.scaler.step(opt)
+        metrics, out = self.forward(batch, batch_idx, phase = 'train')
+        loss = metrics['loss']
+        self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
+        self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
+        self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+        self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
         
         return loss
     #end
@@ -385,16 +374,10 @@ class LitModel_OSSE1(LitModel_Base):
         self.hparams.dropout                = config_params.SOL_DROPOUT
         self.hparams.n_solver_iter          = config_params.NSOL_ITER
         self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
-        self.automatic_optimization         = False
+        self.automatic_optimization         = True
         self.has_any_nan                    = False
         self.run                            = run
-        
-        if config_params.PRECISION == 16:
-            self.s_dtype = torch.bfloat16
-        elif config_params.PRECISION == 32:
-            self.s_dtype = torch.float32
-        #end
-        
+                
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
         mgrad_shapedata = [ts_length * 3, height, width]
