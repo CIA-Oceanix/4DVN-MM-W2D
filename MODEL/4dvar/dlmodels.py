@@ -714,6 +714,7 @@ class LitModel_OSSE1(LitModel_Base):
         #end
         
         # Manual backward, to use mixed precision
+        loss.requires_grad = True
         self.manual_backward(loss)
         opt.step()
         
