@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 if torch.cuda.is_available():
     DEVICE  = torch.device('cuda')
-    WORKERS = 0
+    WORKERS = 16
 else:
     DEVICE  = torch.device('cpu')
     WORKERS = 8
@@ -267,16 +267,16 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def train_dataloader(self):
         
-        return DataLoader(self.train_dataset, batch_size = self.batch_size)
+        return DataLoader(self.train_dataset, batch_size = self.batch_size, num_workers=WORKERS)
     #end
     
     def val_dataloader(self):
         
-        return DataLoader(self.val_dataset, batch_size = self.batch_size)
+        return DataLoader(self.val_dataset, batch_size = self.batch_size, num_workers=WORKERS)
     #end
     
     def test_dataloader(self):
         
-        return DataLoader(self.test_dataset, batch_size = self.batch_size)
+        return DataLoader(self.test_dataset, batch_size = self.batch_size, num_workers=WORKERS)
     #end
 #end

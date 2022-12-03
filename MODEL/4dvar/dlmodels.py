@@ -285,7 +285,7 @@ class LitModel_Base(pl.LightningModule):
         self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+        self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
         
         return loss
     #end
@@ -527,7 +527,7 @@ class LitModel_OSSE1(LitModel_Base):
         mask_hr_dx1 = get_resolution_mask(hr_sfreq, mask_hr_dx1, 'hr')
         
         mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
-        return mask + 1e-10
+        return mask
     #end
     
     def get_data_lr_delay(self, data_lr, timesteps = 25, timewindow_start = 6,
@@ -700,7 +700,7 @@ class LitModel_OSSE1(LitModel_Base):
             regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
             
-            # _log_reg_loss = regularization
+            _log_reg_loss = regularization
         #end
         
         return dict({'loss' : loss,
@@ -709,8 +709,8 @@ class LitModel_OSSE1(LitModel_Base):
                      'model_params' : _log_model_params,
                      'reco_mean'    : _log_reco_hr_mean,
                      'grad_reco'    : _log_grad_reco_loss,
-                     'grad_data'    : _log_grad_data_loss
-                     # 'reg_loss'     : _log_reg_loss
+                     'grad_data'    : _log_grad_data_loss,
+                      'reg_loss'     : _log_reg_loss
                      }), outputs
     #end
 #end
