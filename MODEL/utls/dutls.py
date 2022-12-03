@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 if torch.cuda.is_available():
     DEVICE  = torch.device('cuda')
-    WORKERS = 64
+    WORKERS = 32
 else:
     DEVICE  = torch.device('cpu')
     WORKERS = 8
