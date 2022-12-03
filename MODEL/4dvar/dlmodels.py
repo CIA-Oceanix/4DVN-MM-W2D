@@ -217,6 +217,8 @@ class LitModel_Base(pl.LightningModule):
         self.__test_losses       = list()
         self.__test_batches_size = list()
         self.__samples_to_save   = list()
+        
+        self.scaler = torch.cuda.amp.GradScaler()
     #end
     
     def has_nans(self):
@@ -280,20 +282,23 @@ class LitModel_Base(pl.LightningModule):
         opt = self.optimizers()
         opt.zero_grad()
         
-        metrics, out = self.forward(batch, batch_idx, phase = 'train')
-        loss = metrics['loss']
-        self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-        self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-        self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-        self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+        with torch.amp.autocast(device_type = DEVICE.type, dtype = self.s_dtype):
+            metrics, out = self.forward(batch, batch_idx, phase = 'train')
+            loss = metrics['loss']
+            self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
+            self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
+            self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+            self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+        #end
         
         # Manual backward, to use mixed precision
+        self.scaler.scale(loss)
         self.manual_backward(loss)
-        opt.step()
+        self.scaler.step(opt)
         
         return loss
     #end
@@ -383,6 +388,12 @@ class LitModel_OSSE1(LitModel_Base):
         self.automatic_optimization         = False
         self.has_any_nan                    = False
         self.run                            = run
+        
+        if config_params.PRECISION == 16:
+            self.s_dtype = torch.bfloat16
+        elif config_params.PRECISION == 32:
+            self.s_dtype = torch.float32
+        #end
         
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
