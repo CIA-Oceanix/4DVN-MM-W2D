@@ -372,7 +372,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.hparams.dropout                = config_params.SOL_DROPOUT
         self.hparams.n_solver_iter          = config_params.NSOL_ITER
         self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
-        self.hparams.automatic_optimization = True
+        self.hparams.automatic_optimization = False
         self.has_any_nan                    = False
         self.run                            = run
         
