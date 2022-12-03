@@ -191,15 +191,15 @@ class ObsModel_Mask(nn.Module):
             
             dy1 = (x - y_obs).mul(mask)
             
-            yhr = y_obs[:,24:48,:,:]
-            xhr = x[:,24:48,:,:]
+            yhr = y_obs[:,25:50,:,:]
+            xhr = x[:,25:50,:,:]
             
             ymr = F.avg_pool2d(yhr, kernel_size = self.mr_kernelsize)
             ymr = F.interpolate(ymr, tuple(y_obs.shape[-2:]), mode = 'bicubic', align_corners = False)
             xmr = F.avg_pool2d(xhr, kernel_size = self.mr_kernelsize)
             xmr = F.interpolate(xmr, tuple(x.shape[-2:]), mode = 'bicubic', align_corners = False)
             
-            dy2 = (xmr - ymr).mul(mask[:,24:48,:,:])
+            dy2 = (xmr - ymr).mul(mask[:,25:50,:,:])
             
             return [dy1, dy2]
         #end
@@ -544,6 +544,9 @@ class LitModel_OSSE1(LitModel_Base):
             delay = np.random.randint(delay_min, delay_max)
             for t in range(timesteps):
                 t_true = t + timewindow_start
+                
+                # NON È CHE È t_true QUI ????
+                
                 if t % self.hparams.lr_mask_sfreq == 0:
                     try:
                         data_lr[m,t_true,:,:] = data_lr[m,t_true + delay, :,:]
@@ -701,6 +704,8 @@ class LitModel_OSSE1(LitModel_Base):
             loss += regularization * self.hparams.reg_coeff
             
             _log_reg_loss = regularization
+        else:
+            _log_reg_loss = torch.Tensor([0.])
         #end
         
         return dict({'loss' : loss,
