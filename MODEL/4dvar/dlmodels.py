@@ -713,7 +713,7 @@ class LitModel_OSSE1(LitModel_Base):
             _log_reg_loss = torch.Tensor([0.])
         #end
         
-        # Manual backward
+        # Manual backward, to use mixed precision
         self.manual_backward(loss)
         opt.step()
         
