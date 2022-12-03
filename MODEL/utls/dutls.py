@@ -87,7 +87,7 @@ class W2DSimuDataset(Dataset):
     
     def to_tensor(self):
         
-        self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
+        self.wind2D = torch.Tensor(self.wind2D).type(torch.float32)
     #end
     
     def get_normparams(self):
@@ -266,17 +266,17 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
-        
-        return DataLoader(self.train_dataset, batch_size = self.batch_size)#, num_workers=WORKERS)
+        # .to(DEVICE)
+        return DataLoader(self.train_dataset, batch_size = self.batch_size, num_workers=WORKERS)
     #end
     
     def val_dataloader(self):
         
-        return DataLoader(self.val_dataset, batch_size = self.batch_size)#, num_workers=WORKERS)
+        return DataLoader(self.val_dataset, batch_size = self.batch_size, num_workers=WORKERS)
     #end
     
     def test_dataloader(self):
         
-        return DataLoader(self.test_dataset, batch_size = self.batch_size)#, num_workers=WORKERS)
+        return DataLoader(self.test_dataset, batch_size = self.batch_size, num_workers=WORKERS)
     #end
 #end
