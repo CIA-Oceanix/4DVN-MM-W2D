@@ -267,7 +267,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
-        # .to(DEVICE)
+        
         return DataLoader(self.train_dataset, batch_size = self.batch_size)
     #end
     

@@ -296,10 +296,6 @@ class LitModel_Base(pl.LightningModule):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'train')
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        #end
     #end
     
     def validation_step(self, batch, batch_idx):
@@ -546,12 +542,31 @@ class LitModel_OSSE1(LitModel_Base):
             delay = np.random.randint(delay_min, delay_max)
             for t in range(timesteps):
                 t_true = t + timewindow_start
-                
-                # NON È CHE È t_true QUI ????
-                
-                if t % self.hparams.lr_mask_sfreq == 0:
+                if t_true % self.hparams.lr_mask_sfreq == 0:
                     try:
                         data_lr[m,t_true,:,:] = data_lr[m,t_true + delay, :,:]
+                    except:
+                        pass
+                    #end
+                #end
+            #end
+        #end
+        
+        return data_lr
+    #end
+    
+    def get_data_lr_alpha(self, data_lr, timesteps = 25, timewindow_start = 6,
+                          intensity_min = 0.8, intensity_max = 1.2):
+        
+        batch_size = data_lr.shape[0]
+        
+        for m in range(batch_size):
+            intensity = np.random.uniform(intensity_min, intensity_max)
+            for t in range(timesteps):
+                t_true = t + timewindow_start
+                if t_true % self.hparams.lr_mask_sfreq == 0:
+                    try:
+                        data_lr[m,t_true,:,:] = data_lr[:,t_true,:,:] * intensity
                     except:
                         pass
                     #end
@@ -594,17 +609,16 @@ class LitModel_OSSE1(LitModel_Base):
         data_lr = self.avgpool2d_keepsize(data_hr)
         
         # Obtain anomaly
-        data_an = data_hr - data_lr
+        data_an = (data_hr - data_lr)
         
         # Delay mode
         if self.hparams.lr_sampl_delay:
             data_lr_input = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
+        elif self.hparams.lr_intensity:
+            data_lr_input = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
         else:
             data_lr_input = data_lr.clone()
         #end
-        
-        # Alpha mode
-        # if ...
         
         # Isolate the 24 central timesteps
         data_lr_input = data_lr_input[:, timewindow_start : timewindow_end + 1, :,:]
@@ -650,10 +664,6 @@ class LitModel_OSSE1(LitModel_Base):
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
-            input_data  = torch.autograd.Variable(input_data, requires_grad = True)
-            data_lr     = torch.autograd.Variable(data_lr, requires_grad = True)
-            data_lr_input = torch.autograd.Variable(data_lr_input, requires_grad = True)
-            data_hr     = torch.autograd.Variable(data_hr, requires_grad = True)
             
             if self.hparams.inversion == 'fp':
                 
