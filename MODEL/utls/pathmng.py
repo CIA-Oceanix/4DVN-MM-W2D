@@ -50,6 +50,10 @@ def get_model_name(cparams, versioning = False):
             lr_sampling_freq_tag += 'rd'
         #end
         
+        if cparams.LR_INTENSITY:
+            lr_sampling_freq_tag += 'ri'
+        #end
+        
         # parse HR description
         hr_sampling_freq = cparams.HR_MASK_SFREQ
         if hr_sampling_freq is None:
