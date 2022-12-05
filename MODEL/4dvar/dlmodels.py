@@ -353,6 +353,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
         self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
         self.hparams.lr_sampl_delay         = config_params.LR_SAMP_DELAY
+        self.hparams.lr_intensity           = config_params.LR_INTENSITY
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
         self.hparams.reg_coeff              = config_params.REG_COEFF
