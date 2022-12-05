@@ -17,7 +17,6 @@ else:
 #end
 
 
-
 class W2DSimuDataset(Dataset):
     
     def __init__(self, data, normalize):
@@ -88,7 +87,6 @@ class W2DSimuDataset(Dataset):
     def to_tensor(self):
         
         self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
-        print('In dataset : ', self.wind2D.device)
     #end
     
     def get_normparams(self):
@@ -179,9 +177,9 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         self.mask_land = mask_land
         self.buoy_positions = self.get_buoy_locations(region_lat, region_lon)
-        self.train_dataset  = W2DSimuDataset(train_set, normalize = self.normalize); print('Train set done')
-        self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize); print('Val set done')
-        self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize); print('Test set done')
+        self.train_dataset  = W2DSimuDataset(train_set, normalize = self.normalize)
+        self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize)
+        self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize)
         self.save_nparams()
     #end
     
