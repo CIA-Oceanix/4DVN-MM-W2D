@@ -614,7 +614,7 @@ class LitModel_OSSE1(LitModel_Base):
             
             # with probability p ...
             p = np.random.uniform(0,1)
-            if p > 0.1:
+            if p > 0.25:
                 delay = np.random.randint(delay_min, delay_max)
             else:
                 delay = 0
