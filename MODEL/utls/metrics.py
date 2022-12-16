@@ -180,16 +180,16 @@ class NormLoss(nn.Module):
         
     #end
     
-    def forward(self, item, mask = None):
+    def forward(self, item, mask = None, grad_mask = True):
         
         if item.__class__ is not torch.Tensor:
             item = torch.Tensor(item)
         #end
         
         if mask is None:
-            mask = torch.ones_like(item)
+            mask = torch.ones_like(item)#, requires_grad = grad_mask)
         elif mask.__class__ is not torch.Tensor:
-            mask = torch.Tensor(mask)
+            mask = torch.Tensor(mask)#, requires_grad = grad_mask)
         #end
         
         argument = item.pow(2)

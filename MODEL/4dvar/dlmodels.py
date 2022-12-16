@@ -167,6 +167,16 @@ def model_selection(shape_data, config_params):
 #end
 
 
+class ModelObs_base(nn.Module):
+    def __init__(self, shape_data, dim_obs):
+        super(ModelObs_base, self).__init__()
+        
+        self.shape_data = shape_data
+        self.dim_obs    = dim_obs
+    #end
+#end
+
+
 class ObsModel_Mask(nn.Module):
     ''' Observation model '''
     
@@ -179,7 +189,7 @@ class ObsModel_Mask(nn.Module):
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
         self.mr_kernelsize = mr_kernelsize
     #end
-        
+    
     def forward(self, x, y_obs, mask):
         
         if self.dim_obs == 1:
@@ -191,18 +201,72 @@ class ObsModel_Mask(nn.Module):
             
             dy1 = (x - y_obs).mul(mask)
             
-            yhr = y_obs[:,25:50,:,:]
-            xhr = x[:,25:50,:,:]
+            yhr = y_obs[:,24:48,:,:]
+            xhr = x[:,24:48,:,:]
             
             ymr = F.avg_pool2d(yhr, kernel_size = self.mr_kernelsize)
             ymr = F.interpolate(ymr, tuple(y_obs.shape[-2:]), mode = 'bicubic', align_corners = False)
             xmr = F.avg_pool2d(xhr, kernel_size = self.mr_kernelsize)
             xmr = F.interpolate(xmr, tuple(x.shape[-2:]), mode = 'bicubic', align_corners = False)
             
-            dy2 = (xmr - ymr).mul(mask[:,25:50,:,:])
+            dy2 = (xmr - ymr).mul(mask[:,24:48,:,:])
             
             return [dy1, dy2]
         #end
+    #end
+#end
+
+
+class ModelObs_MM(nn.Module):
+    def __init__(self, shape_data, dim_obs):
+        super(ModelObs_MM, self).__init__()
+        
+        self.dim_obs    = dim_obs
+        self.shape_data = shape_data
+        self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        timesteps       = shape_data[1]
+        in_channels     = timesteps * 2
+        
+        self.net_state = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels,in_channels, kernel_size = (5,5)),
+            torch.nn.AvgPool2d((7,3)),
+            torch.nn.LeakyReLU(0.1),
+            torch.nn.Conv2d(in_channels,in_channels, kernel_size = (5,5)),
+            torch.nn.AvgPool2d((7,5)),
+            torch.nn.LeakyReLU(0.1),
+            torch.nn.Conv2d(in_channels,in_channels, kernel_size = (3,5))
+        )
+        
+        self.net_data = torch.nn.Sequential(
+            torch.nn.Conv1d(timesteps,in_channels, kernel_size = 3),
+            torch.nn.LeakyReLU(0.1),
+            torch.nn.Conv1d(in_channels,in_channels, kernel_size = 4)
+        )
+    #end
+    
+    def extract_feat_state(self, state):
+        
+        feat_state = self.net_state(state)
+        return feat_state
+    #end
+    
+    def extract_feat_data(self, data):
+        
+        feat_data = self.net_data(data)
+        return feat_data
+    #end
+    
+    def forward(self, x, y_obs, mask):
+        
+        # || x - y ||²
+        dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+        
+        # || h(x_situ) - g(y_situ) ||²
+        feat_state = self.extract_feat_state(x[1])
+        feat_data  = self.extract_feat_data(y_obs[1])
+        dy_situ = (feat_state - feat_data)
+        
+        return [dy_complete, dy_situ]
     #end
 #end
 
@@ -374,7 +438,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.automatic_optimization         = True
         self.has_any_nan                    = False
         self.run                            = run
-                
+        
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
         mgrad_shapedata = [ts_length * 3, height, width]
@@ -382,9 +446,16 @@ class LitModel_OSSE1(LitModel_Base):
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
         
+        # if self.hparams.hr_mask_mode == 'buoys':
+        if 0:
+            observation_model = ModelObs_MM(shape_data, dim_obs = 2)          
+        else:
+            observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
+        #end
+        
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             self.Phi,                                                       # Prior
-            ObsModel_Mask(shape_data, dim_obs = 1),                         # Observation model
+            observation_model,                                              # Observation model
             NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
                 mgrad_shapedata,                                              # m_Grad : Shape data
                 False,                                                        # m_Grad : Periodic BCs
@@ -529,7 +600,7 @@ class LitModel_OSSE1(LitModel_Base):
         return mask
     #end
     
-    def get_data_lr_delay(self, data_lr, timesteps = 25, timewindow_start = 6,
+    def get_data_lr_delay(self, data_lr, timesteps = 24, timewindow_start = 6,
                           delay_max = 5, delay_min = -4):
         
         batch_size       = data_lr.shape[0]
@@ -540,7 +611,15 @@ class LitModel_OSSE1(LitModel_Base):
         
         for m in range(batch_size):
             # constant delay for sample (for all timesteps)
-            delay = np.random.randint(delay_min, delay_max)
+            
+            # with probability p ...
+            p = np.random.uniform(0,1)
+            if p > 0.1:
+                delay = np.random.randint(delay_min, delay_max)
+            else:
+                delay = 0
+            #end
+            
             for t in range(timesteps):
                 t_true = t + timewindow_start
                 if t_true % self.hparams.lr_mask_sfreq == 0:
@@ -556,7 +635,7 @@ class LitModel_OSSE1(LitModel_Base):
         return data_lr
     #end
     
-    def get_data_lr_alpha(self, data_lr, timesteps = 25, timewindow_start = 6,
+    def get_data_lr_alpha(self, data_lr, timesteps = 24, timewindow_start = 6,
                           intensity_min = 0.8, intensity_max = 1.2):
         
         batch_size = data_lr.shape[0]
@@ -578,7 +657,7 @@ class LitModel_OSSE1(LitModel_Base):
         return data_lr
     #end
     
-    def get_baseline(self, data_lr_, timesteps = 25):
+    def get_baseline(self, data_lr_, timesteps = 24):
         
         img_shape = data_lr_.shape[-2:]
         timesteps = timesteps
@@ -602,11 +681,11 @@ class LitModel_OSSE1(LitModel_Base):
         return baseline
     #end
     
-    def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 25):
+    def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         data_hr = data.clone()
         
-        # Downsample to obtain ERA-like data
+        # Downsample to obtain ERA5-like data
         data_lr = self.avgpool2d_keepsize(data_hr)
         
         # Obtain anomaly
@@ -622,10 +701,10 @@ class LitModel_OSSE1(LitModel_Base):
         #end
         
         # Isolate the 24 central timesteps
-        data_lr_input = data_lr_input[:, timewindow_start : timewindow_end + 1, :,:]
-        data_hr       = data_hr[:, timewindow_start : timewindow_end + 1, :,:]
-        data_lr       = data_lr[:, timewindow_start : timewindow_end + 1, :,:]
-        data_an       = data_an[:, timewindow_start : timewindow_end + 1, :,:]
+        data_lr_input = data_lr_input[:, timewindow_start : timewindow_end, :,:]
+        data_hr       = data_hr[:, timewindow_start : timewindow_end, :,:]
+        data_lr       = data_lr[:, timewindow_start : timewindow_end, :,:]
+        data_an       = data_an[:, timewindow_start : timewindow_end, :,:]
         
         # Temporal interpolation
         data_lr_input = self.get_baseline(data_lr_input, timesteps)
@@ -670,21 +749,21 @@ class LitModel_OSSE1(LitModel_Base):
                 
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()   # NOTE : forse qui data_lr_input ???
-                reco_an = outputs[:,50:,:,:]
+                reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
             elif self.hparams.inversion == 'gs':
                 
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
-                reco_lr = outputs[:,:25,:,:]
-                reco_an = outputs[:,50:,:,:]
+                reco_lr = outputs[:,:24,:,:]
+                reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()
-                reco_hr = reco_lr + 0. * outputs[:,50:,:,:]
+                reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
             #end
         #end
         
