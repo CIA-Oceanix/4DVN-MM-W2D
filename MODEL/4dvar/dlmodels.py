@@ -488,19 +488,26 @@ class LitModel_OSSE1(LitModel_Base):
     
     def configure_optimizers(self):
         
-        optimizers = torch.optim.Adam(
-            [
-                {'params'       : self.model.model_Grad.parameters(),
-                 'lr'           : self.hparams.mgrad_lr,
-                 'weight_decay' : self.hparams.mgrad_wd},
-                {'params'       : self.model.Phi.parameters(),
-                 'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd},
-                {'params'       : self.model.model_VarCost.parameters(),
-                 'lr'           : self.hparams.varcost_lr,
-                 'weight_decay' : self.hparams.varcost_wd}
-            ]
-        )
+        params = [
+            {'params'       : self.model.model_Grad.parameters(),
+             'lr'           : self.hparams.mgrad_lr,
+             'weight_decay' : self.hparams.mgrad_wd},
+            {'params'       : self.model.Phi.parameters(),
+             'lr'           : self.hparams.prior_lr,
+             'weight_decay' : self.hparams.prior_wd},
+            {'params'       : self.model.model_VarCost.parameters(),
+             'lr'           : self.hparams.varcost_lr,
+             'weight_decay' : self.hparams.varcost_wd}
+        ]
+        if self.hparams.hr_mask_mode == 'buoys':
+            params.append(
+                {'params'       : self.observation_model.parameters(),
+                 'lr'           : self.hparams.mod_h_lr,
+                 'weight_decay' : self.hparams.mod_h_wd}
+            )
+        #end
+        
+        optimizers = torch.optim.Adam(params)
         return optimizers
     #end
     
