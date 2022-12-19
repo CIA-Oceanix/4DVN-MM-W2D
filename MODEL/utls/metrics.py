@@ -186,6 +186,10 @@ class NormLoss(nn.Module):
             item = torch.Tensor(item)
         #end
         
+        if item.shape.__len__() <= 3:
+            item = item.unsqueeze(-1)
+        #end
+        
         if mask is None:
             mask = torch.ones_like(item)#, requires_grad = grad_mask)
         elif mask.__class__ is not torch.Tensor:
