@@ -439,6 +439,8 @@ class LitModel_OSSE1(LitModel_Base):
         self.hparams.grad_coeff             = config_params.GRAD_COEFF
         self.hparams.weight_hres            = config_params.WEIGHT_HRES
         self.hparams.weight_lres            = config_params.WEIGHT_LRES
+        self.hparams.mod_h_lr               = config_params.MODEL_H_LR
+        self.hparams.mod_h_wd               = config_params.MODEL_H_WD
         self.hparams.mgrad_lr               = config_params.SOLVER_LR
         self.hparams.mgrad_wd               = config_params.SOLVER_WD
         self.hparams.prior_lr               = config_params.PHI_LR
@@ -462,14 +464,14 @@ class LitModel_OSSE1(LitModel_Base):
         alpha_reg = config_params.ALPHA_REG
         
         if self.hparams.hr_mask_mode == 'buoys':
-            observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)          
+            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)          
         else:
-            observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
+            self.observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
         #end
         
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             self.Phi,                                                       # Prior
-            observation_model,                                              # Observation model
+            self.observation_model,                                         # Observation model
             NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
                 mgrad_shapedata,                                              # m_Grad : Shape data
                 False,                                                        # m_Grad : Periodic BCs
