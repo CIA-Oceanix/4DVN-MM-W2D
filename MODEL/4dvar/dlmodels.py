@@ -17,6 +17,7 @@ else:
 #end
 
 
+# CUSTOM TORCH LAYERS
 class Print(nn.Module):
     def __init__(self):
         super(Print, self).__init__()
@@ -25,6 +26,17 @@ class Print(nn.Module):
     def forward(self, signal):
         print(signal.shape)
         return signal
+    #end
+#end
+
+class FlattenSpatialDim(nn.Module):
+    def __init__(self):
+        super(FlattenSpatialDim, self).__init__()
+    #end
+    
+    def forward(self, data):
+        batch_size, ts_length = data.shape[:2]
+        return data.reshape(batch_size, ts_length, -1)
     #end
 #end
 
@@ -218,29 +230,31 @@ class ObsModel_Mask(nn.Module):
 
 
 class ModelObs_MM(nn.Module):
-    def __init__(self, shape_data, dim_obs):
+    def __init__(self, shape_data, buoys_coords, dim_obs = 2):
         super(ModelObs_MM, self).__init__()
         
         self.dim_obs    = dim_obs
         self.shape_data = shape_data
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        self.buoys_coords = buoys_coords
         timesteps       = shape_data[1]
         in_channels     = timesteps * 2
         
-        self.net_state = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels,in_channels, kernel_size = (5,5)),
-            torch.nn.AvgPool2d((7,3)),
-            torch.nn.LeakyReLU(0.1),
-            torch.nn.Conv2d(in_channels,in_channels, kernel_size = (5,5)),
-            torch.nn.AvgPool2d((7,5)),
-            torch.nn.LeakyReLU(0.1),
-            torch.nn.Conv2d(in_channels,in_channels, kernel_size = (3,5))
+        self.net_state = nn.Sequential(
+            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(in_channels, in_channels, kernel_size = (5,5)),
+            nn.AvgPool2d((5,5)),
+            FlattenSpatialDim(),
+            nn.Linear(16,4)
         )
         
-        self.net_data = torch.nn.Sequential(
-            torch.nn.Conv1d(timesteps,in_channels, kernel_size = 3),
-            torch.nn.LeakyReLU(0.1),
-            torch.nn.Conv1d(in_channels,in_channels, kernel_size = 4)
+        self.net_data = nn.Sequential(
+            nn.Conv1d(timesteps, in_channels, kernel_size = 3),
+            nn.LeakyReLU(0.1),
+            nn.Conv1d(in_channels, in_channels, kernel_size = 4),
+            nn.Linear(8,4)
         )
     #end
     
@@ -262,8 +276,9 @@ class ModelObs_MM(nn.Module):
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
         # || h(x_situ) - g(y_situ) ||²
+        y_situ = y_obs[1][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
         feat_state = self.extract_feat_state(x[1])
-        feat_data  = self.extract_feat_data(y_obs[1])
+        feat_data  = self.extract_feat_data(y_situ)
         dy_situ = (feat_state - feat_data)
         
         return [dy_complete, dy_situ]
@@ -446,9 +461,8 @@ class LitModel_OSSE1(LitModel_Base):
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
         
-        # if self.hparams.hr_mask_mode == 'buoys':
-        if 0:
-            observation_model = ModelObs_MM(shape_data, dim_obs = 2)          
+        if self.hparams.hr_mask_mode == 'buoys':
+            observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)          
         else:
             observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
         #end

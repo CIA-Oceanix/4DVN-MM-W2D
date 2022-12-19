@@ -436,7 +436,7 @@ class Model_Var_Cost(nn.Module):
             loss += self.alphaObs[0].pow(2) * self.normObs(data_fidelty)
         else:
             for kk in range(0, self.dim_obs):
-                loss += self.alphaObs[0,kk].pow(2) * self.normObs(data_fidelty[kk])
+                loss += self.alphaObs[kk,0].pow(2) * self.normObs(data_fidelty[kk])
             #end
         #end
         
@@ -536,11 +536,12 @@ class Solver_Grad_4DVarNN(nn.Module):
         if self.model_H.dim_obs == 1:
             data_fidelty = self.model_H(x, yobs, mask)
         elif self.model_H.dim_obs == 2:
-            x_complete = x[:,:25,:,:]
-            x_situ     = x[:,25:50,:,:]
-            y_complete = yobs[:,:25,:,:]
-            y_situ     = yobs[:,25:50,:,:]
-            data_fidelty = self.model_H([x_complete, x_situ], [y_complete, y_situ])
+            x_complete = x[:,:24,:,:]; x_situ = x[:,24:48,:,:]
+            y_complete = yobs[:,:24,:,:]; y_situ = yobs[:,24:48,:,:]
+            mask_complete = mask[:,:24,:,:]; mask_situ = mask[:,24:48,:,:]
+            data_fidelty = self.model_H([x_complete, x_situ],
+                                        [y_complete, y_situ],
+                                        [mask_complete, mask_situ])
         #end
         
         regularization = x - self.Phi(x)
