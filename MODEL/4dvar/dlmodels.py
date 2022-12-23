@@ -244,17 +244,15 @@ class ModelObs_MM(nn.Module):
             nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, in_channels, kernel_size = (5,5)),
+            nn.Conv2d(in_channels, timesteps, kernel_size = (3,3)),
             nn.AvgPool2d((5,5)),
             FlattenSpatialDim(),
-            nn.Linear(16,4)
+            nn.Linear(25,11)
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv1d(timesteps, in_channels, kernel_size = 3),
-            nn.LeakyReLU(0.1),
-            nn.Conv1d(in_channels, in_channels, kernel_size = 4),
-            nn.Linear(8,4)
+            nn.Conv1d(timesteps, timesteps, kernel_size = 3),
+            nn.LeakyReLU(0.1)
         )
     #end
     
