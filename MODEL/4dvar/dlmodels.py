@@ -657,7 +657,7 @@ class LitModel_OSSE1(LitModel_Base):
     #end
     
     def get_data_lr_alpha(self, data_lr, timesteps = 24, timewindow_start = 6,
-                          intensity_min = 0.8, intensity_max = 1.2):
+                          intensity_min = 0.5, intensity_max = 1.5):
         
         batch_size = data_lr.shape[0]
         
