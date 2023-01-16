@@ -589,7 +589,12 @@ class LitModel_OSSE1(LitModel_Base):
                 return mask
             else:
                 if freq.__class__ is list:
-                    mask[:, freq, :,:] = 1.
+                    if wfreq == 'lr':
+                        mask[:, freq, :,:] = 1.
+                    elif wfreq == 'hr':
+                        mask [:, freq, :,:] = self.mask_land
+                    #end
+                    
                 elif freq.__class__ is int:
                     for t in range(mask.shape[1]):
                         if t % freq == 0:
@@ -597,6 +602,7 @@ class LitModel_OSSE1(LitModel_Base):
                                 mask[:,t,:,:] = 1.
                             elif wfreq == 'hr':
                                 mask[:,t,:,:] = self.mask_land
+                            #end
                         #end
                     #end
                 #end

@@ -138,7 +138,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         # NetCDF4 dataset
         ds_wind2D = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name), 'r')
-        wind2D = np.array(ds_wind2D['wind']); wind2D[-1] = wind2D[-2]
+        wind2D = np.array(ds_wind2D['wind'])
         mask_land = np.array(ds_wind2D['mask_land'])
         region_lat = np.array(ds_wind2D['lat'])
         region_lon = np.array(ds_wind2D['lon'])
