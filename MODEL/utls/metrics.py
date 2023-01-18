@@ -18,6 +18,10 @@ def crop_central_patch(img_ts, length):
 # B-distances
 def get_batched_histograms(img_ts, bins = 30, flat = False):
     
+    if img_ts.__class__ is not torch.Tensor:
+        img_ts = torch.Tensor(img_ts)
+    #end
+    
     if not flat:
         img = img_ts.reshape(-1, *img_ts.shape[-2:])
     else:

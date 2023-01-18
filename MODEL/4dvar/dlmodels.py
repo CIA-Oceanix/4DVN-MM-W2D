@@ -8,6 +8,7 @@ from torch.nn import functional as F
 import pytorch_lightning as pl
 import solver as NN_4DVar
 from metrics import NormLoss
+from unet import UNet4
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
@@ -173,6 +174,8 @@ def model_selection(shape_data, config_params):
         return ResNet(shape_data, config_params)
     elif config_params.PRIOR == 'UN':
         return UNet(shape_data, config_params)
+    elif config_params.PRIOR == 'UN4':
+        return UNet4(shape_data[1] * 3, shape_data[1] * 3)
     else:
         raise NotImplementedError('No valid prior')
     #end
