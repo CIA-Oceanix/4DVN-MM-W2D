@@ -461,7 +461,7 @@ class LitModel_OSSE1(LitModel_Base):
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
         
-        if self.hparams.hr_mask_mode == 'buoys':
+        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None:
             self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)          
         else:
             self.observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
