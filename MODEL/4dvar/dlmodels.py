@@ -18,7 +18,10 @@ else:
 #end
 
 
-# CUSTOM TORCH LAYERS
+###############################################################################
+##### CUSTOM TORCH LAYERS #####################################################
+###############################################################################
+
 class Print(nn.Module):
     def __init__(self):
         super(Print, self).__init__()
@@ -40,6 +43,11 @@ class FlattenSpatialDim(nn.Module):
         return data.reshape(batch_size, ts_length, -1)
     #end
 #end
+
+
+###############################################################################
+##### DEEP LEARNING MODELS ####################################################
+###############################################################################
 
 class dw_conv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, padding, stride, groups, bias):
@@ -103,10 +111,10 @@ class ResNet(nn.Module):
     #end
 #end
 
-class Block(nn.Sequential):
+class CBlock(nn.Sequential):
     
     def __init__(self, in_channels, out_channels, kernel_size, padding):
-        super(Block, self).__init__(
+        super(CBlock, self).__init__(
             nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), 
                       padding = 'same',
                       padding_mode = 'reflect',
@@ -125,7 +133,7 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            Block(ts_length, 32, 5, 2),
+            CBlock(ts_length, 32, 5, 2),
             nn.Conv2d(32, ts_length, (5,5),
                       padding = 'same',
                       padding_mode = 'reflect',
@@ -166,21 +174,84 @@ class UNet(nn.Module):
     #end
 #end
 
-def model_selection(shape_data, config_params):
+
+class DoubleConv(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(DoubleConv, self).__init__()
+        
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
+        )
+    #end
     
-    if config_params.PRIOR == 'SN':
-        return ConvNet(shape_data, config_params)
-    elif config_params.PRIOR == 'RN':
-        return ResNet(shape_data, config_params)
-    elif config_params.PRIOR == 'UN':
-        return UNet(shape_data, config_params)
-    elif config_params.PRIOR == 'UN4':
-        return UNet4(shape_data[1] * 3, shape_data[1] * 3)
-    else:
-        raise NotImplementedError('No valid prior')
+    def forward(self, data):
+        return self.conv(data)
     #end
 #end
 
+class Downsample(nn.Module):
+    def __init__(self, in_channels, out_channels, downsample_factor = 4):
+        super(Downsample, self).__init__()
+        
+        self.down_conv = nn.Sequential(
+            nn.MaxPool2d(downsample_factor),
+            DoubleConv(in_channels, out_channels)
+        )
+    #end
+    
+    def forward(self, data):
+        return self.down_conv(data)
+    #end
+#end
+
+class Upsample(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(Upsample, self).__init__()
+        
+        self.up_conv = nn.Sequential(
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
+            nn.LeakyReLU(0.1),
+            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2)
+        )
+        self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 5, padding = 2)
+    #end
+    
+    def forward(self, scale1_data, scale2_data):
+        
+        scale2_data_upscaled = self.up_conv(scale2_data)
+        data = torch.cat([scale1_data, scale2_data_upscaled], dim = 1)
+        return self.conv(data)
+    #end
+#end
+
+class UNet1(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(UNet1, self).__init__()
+        
+        self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
+        self.down = Downsample(in_channels, 128)
+        self.up = Upsample(128, in_channels)
+        self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
+    #end
+    
+    def forward(self, data):
+        
+        x1 = self.in_conv(data)
+        x2 = self.down(x1)
+        
+        x3 = self.up(x1, x2)
+        out = self.out_conv(x3)
+        return out
+    #end
+#end
+
+
+
+###############################################################################
+##### 4DVARNET OBSERVATION MODELS #############################################
+###############################################################################
 
 class ModelObs_base(nn.Module):
     def __init__(self, shape_data, dim_obs):
@@ -286,6 +357,32 @@ class ModelObs_MM(nn.Module):
     #end
 #end
 
+
+###############################################################################
+##### MODEL SELECTION #########################################################
+###############################################################################
+
+def model_selection(shape_data, config_params):
+    
+    if config_params.PRIOR == 'SN':
+        return ConvNet(shape_data, config_params)
+    elif config_params.PRIOR == 'RN':
+        return ResNet(shape_data, config_params)
+    elif config_params.PRIOR == 'UN':
+        return UNet(shape_data, config_params)
+    elif config_params.PRIOR == 'UN1':
+        return UNet1(shape_data[1] * 3, shape_data[1] * 3)
+    elif config_params.PRIOR == 'UN4':
+        return UNet4(shape_data[1] * 3, shape_data[1] * 3)
+    else:
+        raise NotImplementedError('No valid prior')
+    #end
+#end
+
+
+###############################################################################
+##### LIT MODELS ##############################################################
+###############################################################################
 
 class LitModel_Base(pl.LightningModule):
     
