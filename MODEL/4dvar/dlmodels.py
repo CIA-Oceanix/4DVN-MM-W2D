@@ -405,7 +405,7 @@ class ModelObs_MM2d(nn.Module):
         # || h(x) - g(y) ||²
         feat_data = self.extract_feat_data(y_obs[1])
         feat_state = self.extract_feat_state(x[1])
-        dy_spatial = (feat_state - feat_data).mul(mask[1])
+        dy_spatial = (feat_state - feat_data)
         
         return [dy_complete, dy_spatial]
     #end
