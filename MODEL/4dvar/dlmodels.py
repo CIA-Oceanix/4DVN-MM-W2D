@@ -321,7 +321,7 @@ class ModelObs_MM(nn.Module):
             nn.Conv2d(in_channels, timesteps, kernel_size = (3,3)),
             nn.AvgPool2d((5,5)),
             FlattenSpatialDim(),
-            nn.Linear(25,11)
+            nn.Linear(25,11)  # Conv1d
         )
         
         self.net_data = nn.Sequential(
@@ -354,6 +354,60 @@ class ModelObs_MM(nn.Module):
         dy_situ = (feat_state - feat_data)
         
         return [dy_complete, dy_situ]
+    #end
+#end
+
+
+class ModelObs_MM2d(nn.Module):
+    def __init__(self, shape_data, dim_obs = 2):
+        super(ModelObs_MM2d, self).__init__()
+        
+        self.dim_obs    = dim_obs
+        self.shape_data = shape_data
+        self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        timesteps       = shape_data[1]
+        in_channels     = timesteps * 2
+        
+        self.net_state = nn.Sequential(
+            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.AvgPool2d((5,5)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(in_channels, in_channels * 2, kernel_size = (5,5)),
+            nn.AvgPool2d((5,5))
+        )
+        
+        self.net_data = nn.Sequential(
+            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.AvgPool2d((5,5)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(in_channels, in_channels * 2, kernel_size = (5,5)),
+            nn.AvgPool2d((5,5))
+        )
+    #end
+    
+    def extract_feat_state(self, state):
+        
+        feat_state = self.net_state(state)
+        return feat_state
+    #end
+    
+    def extract_feat_data(self, data):
+        
+        feat_data = self.net_data(data)
+        return feat_data
+    #end
+    
+    def forward(self, x, y_obs, mask):
+        
+        # || x - y ||²
+        dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+        
+        # || h(x) - g(y) ||²
+        feat_data = self.extract_feat_data(y_obs[1])
+        feat_state = self.extract_feat_state(x[1])
+        dy_spatial = (feat_state - feat_data).mul(mask[1])
+        
+        return [dy_complete, dy_spatial]
     #end
 #end
 
@@ -523,7 +577,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.loss_fn = NormLoss()
         
         # Hyper-parameters, learning and workflow
-        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE   # NOTE : 15 for 150x150 img and 31 for 324x324 img
+        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE
         self.hparams.mr_kernel_size         = config_params.MR_KERNELSIZE
         self.hparams.inversion              = config_params.INVERSION
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
@@ -561,12 +615,21 @@ class LitModel_OSSE1(LitModel_Base):
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
         
+        # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None:
-            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)          
+            # Case time series plus obs HR, multi-modal term of 1d features
+            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)    
+            
+        elif self.hparams.hr_mask_mode == 'zeroesMM':
+            # Case obs HR, multi-modal term of 2D features
+            self.observation_model = ModelObs_MM2d(shape_data, dim_obs = 2)
+        
         else:
+            # Case default. No multi-modal term at all
             self.observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
         #end
         
+        # Instantiation of the gradient solver
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             self.Phi,                                                       # Prior
             self.observation_model,                                         # Observation model
@@ -664,7 +727,7 @@ class LitModel_OSSE1(LitModel_Base):
             mask[:,:, center_h - delta_x : center_h + delta_x, 
                  center_w - delta_x : center_w + delta_x] = 1.
             
-        elif mode == 'zeroes':
+        elif mode == 'zeroes' or mode == 'zeroesMM':
             
             mask = torch.zeros(data_shape)
             
