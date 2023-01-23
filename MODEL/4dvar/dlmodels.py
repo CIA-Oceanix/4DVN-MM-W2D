@@ -369,19 +369,17 @@ class ModelObs_MM2d(nn.Module):
         in_channels     = timesteps * 2
         
         self.net_state = nn.Sequential(
-            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
-            nn.AvgPool2d((5,5)),
+            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5), padding = 2),
+            nn.AvgPool2d((3,3)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, in_channels * 2, kernel_size = (5,5)),
-            nn.AvgPool2d((5,5))
+            nn.Conv2d(in_channels, in_channels * 2, kernel_size = (5,5), padding = 2)
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
-            nn.AvgPool2d((5,5)),
+            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5), padding = 2),
+            nn.AvgPool2d((3,3)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, in_channels * 2, kernel_size = (5,5)),
-            nn.AvgPool2d((5,5))
+            nn.Conv2d(in_channels, in_channels * 2, kernel_size = (5,5), padding = 2)
         )
     #end
     
