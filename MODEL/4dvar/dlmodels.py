@@ -401,8 +401,20 @@ class ModelObs_MM2d(nn.Module):
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
         # || h(x) - g(y) ||²
+        
         feat_data = self.extract_feat_data(y_obs[1])
         feat_state = self.extract_feat_state(x[1])
+        
+        batch_size, timesteps = x[1].shape[:2]
+        mask1 = torch.zeros(batch_size, timesteps, *feat_state.shape[-2:])
+        for m in range(batch_size):
+            for t in range(timesteps):
+                if mask[1][m,t].max() > 0:
+                    mask1[m,t] = 1.
+                #end
+            #end
+        #end
+        
         dy_spatial = (feat_state - feat_data)
         
         return [dy_complete, dy_spatial]
