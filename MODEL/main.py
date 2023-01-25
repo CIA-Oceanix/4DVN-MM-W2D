@@ -297,10 +297,10 @@ class Experiment:
         
         # weight_save = SaveWeights(path_ckpt)
         
-        logger = CSVLogger(
-            save_dir = path_ckpt,
-            name     = 'csv-log.csv'
-        )
+        # logger = CSVLogger(
+        #     save_dir = path_ckpt,
+        #     name     = 'csv-log.csv'
+        # )
         
         ## Instantiate Trainer
         trainer = pl.Trainer(
@@ -309,8 +309,8 @@ class Experiment:
                 model_checkpoint, 
                 early_stopping,
                 # weight_save
-            ],
-            logger = logger
+            ]#,
+            # logger = logger
         )
         
         # Train and test
