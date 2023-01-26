@@ -286,19 +286,19 @@ class PathManager:
         #end
         
         with open(os.path.join(path_models_statedicts, 'Phi.pkl'), 'wb') as f:
-            torch.save(lit_model.Phi.state_dict().cpu(), f)
+            torch.save(lit_model.Phi.state_dict(), f)
         f.close()
         
         with open(os.path.join(path_models_statedicts, 'ObsModel.pkl'), 'wb') as f:
-            torch.save(lit_model.observation_model.state_dict().cpu(), f)
+            torch.save(lit_model.observation_model.state_dict(), f)
         f.close()
         
         with open(os.path.join(path_models_statedicts, 'GradSolverLSTM.pkl'), 'wb') as f:
-            torch.save(lit_model.model.Solver_Grad_4DVarNN.state_dict().cpu(), f)
+            torch.save(lit_model.model.Solver_Grad_4DVarNN.state_dict(), f)
         f.close()
         
         with open(os.path.join(path_models_statedicts, 'VarCost.pkl'), 'wb') as f:
-            torch.save(lit_model.model.model_VarCost.state_dict().cpu, f)
+            torch.save(lit_model.model.model_VarCost.state_dict(), f)
         f.close()
     #end
     
