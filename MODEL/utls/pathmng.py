@@ -294,7 +294,7 @@ class PathManager:
         f.close()
         
         with open(os.path.join(path_models_statedicts, 'GradSolverLSTM.pkl'), 'wb') as f:
-            torch.save(lit_model.model.Solver_Grad_4DVarNN.state_dict(), f)
+            torch.save(lit_model.model.model_GradUpdateLSTM.state_dict(), f)
         f.close()
         
         with open(os.path.join(path_models_statedicts, 'VarCost.pkl'), 'wb') as f:
