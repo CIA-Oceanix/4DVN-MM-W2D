@@ -281,7 +281,7 @@ class PathManager:
         # #end
         
         path_models_statedicts = os.path.join(self.path_litmodel_trainer, 'models_statedicts')
-        if not os.exists(path_models_statedicts):
+        if not os.path.exists(path_models_statedicts):
             os.mkdir(path_models_statedicts)
         #end
         
