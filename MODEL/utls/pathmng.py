@@ -272,13 +272,34 @@ class PathManager:
     
     def save_litmodel_trainer(self, lit_model, trainer):
         
-        with open(os.path.join(self.path_litmodel_trainer, 'lit_model.pkl'), 'wb') as f:
-            torch.save(lit_model.cpu(), f)
+        # with open(os.path.join(self.path_litmodel_trainer, 'lit_model.pkl'), 'wb') as f:
+        #     torch.save(lit_model.cpu(), f)
+        # f.close()
+        
+        # with open(os.path.join(self.path_litmodel_trainer, 'trainer.pkl'), 'wb') as f:
+        #     pickle.dump(trainer, f)
+        # #end
+        
+        path_models_statedicts = os.path.join(self.path_litmodel_trainer, 'models_statedicts')
+        if not os.exists(path_models_statedicts):
+            os.mkdir(path_models_statedicts)
+        #end
+        
+        with open(os.path.join(path_models_statedicts, 'Phi.pkl'), 'wb') as f:
+            torch.save(lit_model.Phi.state_dict().cpu(), f)
         f.close()
         
-        with open(os.path.join(self.path_litmodel_trainer, 'trainer.pkl'), 'wb') as f:
-            pickle.dump(trainer, f)
-        #end
+        with open(os.path.join(path_models_statedicts, 'ObsModel.pkl'), 'wb') as f:
+            torch.save(lit_model.observation_model.state_dict().cpu(), f)
+        f.close()
+        
+        with open(os.path.join(path_models_statedicts, 'GradSolverLSTM.pkl'), 'wb') as f:
+            torch.save(lit_model.model.Solver_Grad_4DVarNN.state_dict().cpu(), f)
+        f.close()
+        
+        with open(os.path.join(path_models_statedicts, 'VarCost.pkl'), 'wb') as f:
+            torch.save(lit_model.model.model_VarCost.state_dict().cpu, f)
+        f.close()
     #end
     
     def save_model_output(self, outputs, mask_land, cparams, train_losses, val_losses, run):

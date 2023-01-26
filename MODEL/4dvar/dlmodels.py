@@ -618,6 +618,8 @@ class LitModel_OSSE1(LitModel_Base):
         self.has_any_nan                    = False
         self.run                            = run
         
+        self.__samples_to_save   = list()
+        
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
         mgrad_shapedata = [ts_length * 3, height, width]
