@@ -143,7 +143,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
         region_lat = np.array(ds_wind2D['lat'])
         region_lon = np.array(ds_wind2D['lon'])
         ds_wind2D.close()
-        shape = wind2D.shape[-2:]
         
         if self.region_case == 'coast-MA':
             wind2D = wind2D[:,-self.region_extent:, -self.region_extent:]
@@ -154,6 +153,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
             raise ValueError('Not implemented yet')
         #end
         
+        shape = wind2D.shape[-2:]
         self.shapeData = (self.batch_size, self.timesteps, *tuple(shape))
         
         n_test  = np.int32(24 * self.test_days)

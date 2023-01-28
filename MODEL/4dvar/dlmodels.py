@@ -458,8 +458,7 @@ class LitModel_Base(pl.LightningModule):
         self.__test_losses       = list()
         self.__test_batches_size = list()
         self.__samples_to_save   = list()
-        
-        self.scaler = torch.cuda.amp.GradScaler()
+        self.__var_cost_values   = list()
     #end
     
     def has_nans(self):
@@ -496,6 +495,16 @@ class LitModel_Base(pl.LightningModule):
     def get_saved_samples(self):
         
         return self.__samples_to_save
+    #end
+    
+    def save_var_cost_values(self, var_cost_values):
+        
+        self.__var_cost_values = var_cost_values
+    #end
+    
+    def get_var_cost_values(self):
+        
+        return self.__var_cost_values
     #end
     
     def save_epoch_loss(self, loss, epoch, quantity):
@@ -975,6 +984,10 @@ class LitModel_OSSE1(LitModel_Base):
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data_hr.detach().cpu(), 
                                'reco' : reco_hr.detach().cpu()})
+            
+            if self.hparams.inversion == 'gs':
+                self.save_var_cost_values(self.model.var_cost_values)
+            #end
         #end
         
         # Compute loss

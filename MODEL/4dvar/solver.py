@@ -487,6 +487,8 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         self.stochastic = stochastic
         
+        self.var_cost_values = list()
+        
         with torch.no_grad():
             self.n_grad = int(n_iter_grad)
         #end
@@ -504,12 +506,16 @@ class Solver_Grad_4DVarNN(nn.Module):
         cell = None 
         normgrad_ = 0.
         
-        for _ in range(self.n_grad):
+        var_cost_values_tmp = np.zeros(self.n_grad)
+        
+        for _iter in range(self.n_grad):
             
-            x_k_plus_1, hidden, cell, normgrad_ = self.solver_step(x_k, obs, mask, hidden, cell, normgrad_)
+            x_k_plus_1, hidden, cell, normgrad_, vvar_cost = self.solver_step(x_k, obs, mask, hidden, cell, normgrad_)
             x_k = torch.mul(x_k_plus_1,1.)
+            var_cost_values_tmp[_iter] = vvar_cost
         #end
         
+        self.var_cost_values.append(var_cost_values_tmp)
         return x_k_plus_1, hidden, cell, normgrad_
     #end
     
@@ -527,7 +533,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         grad *= 1./ self.n_grad
         x_k_plus_1 = x_k - grad
         
-        return x_k_plus_1, hidden, cell, normgrad_
+        return x_k_plus_1, hidden, cell, normgrad_, var_cost
     #end
     
     def var_cost(self, x, yobs, mask):
