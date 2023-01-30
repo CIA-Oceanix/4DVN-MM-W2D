@@ -321,7 +321,7 @@ class ModelObs_MM(nn.Module):
             nn.Conv2d(in_channels, timesteps, kernel_size = (3,3)),
             nn.AvgPool2d((5,5)),
             FlattenSpatialDim(),
-            nn.Linear(25,11)  # Conv1d
+            nn.Linear(25,11)
         )
         
         self.net_data = nn.Sequential(
@@ -370,16 +370,16 @@ class ModelObs_MM2d(nn.Module):
         
         self.net_state = nn.Sequential(
             nn.Conv2d(timesteps, in_channels, kernel_size = (3,3), padding = 1),
-            # nn.AvgPool2d((3,3)),
+            nn.AvgPool2d((3,3)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
+            # nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
         )
         
         self.net_data = nn.Sequential(
             nn.Conv2d(timesteps, in_channels, kernel_size = (3,3), padding = 1),
-            # nn.AvgPool2d((3,3)),
+            nn.AvgPool2d((3,3)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
+            # nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
         )
     #end
     
@@ -415,9 +415,54 @@ class ModelObs_MM2d(nn.Module):
             #end
         #end
         
-        dy_spatial = (feat_state - feat_data)
+        dy_spatial = (feat_state - feat_data) * mask1
         
         return [dy_complete, dy_spatial]
+    #end
+#end
+
+
+class ModelObs_MM1d(nn.Module):
+    def __init__(self, shape_data, buoys_coords, dim_obs = 1):
+        super(ModelObs_MM1d, self).__init__()
+        
+        self.dim_obs = dim_obs
+        self.shape_data = shape_data
+        self.buoys_coords = buoys_coords
+        self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        timesteps = shape_data[1]
+        in_channels = timesteps
+        
+        self.net_state = nn.Sequential(
+            nn.Conv1d(in_channels, 72, kernel_size = 3, padding = 'same'),
+            nn.LeakyReLU(0.1),
+            nn.Conv1d(72, in_channels, kernel_size = 3, padding = 'same')
+        )
+        
+        self.net_data = nn.Sequential(
+            nn.Conv1d(in_channels, 72, kernel_size = 3, padding = 'same'),
+            nn.LeakyReLU(0.1),
+            nn.Conv1d(72, in_channels, kernel_size = 3, padding = 'same')
+        )
+    #end
+    
+    def extract_feat_state(self, state):
+        return self.net_state(state)
+    #end
+    
+    def extract_feat_data(self, data):
+        return self.net_data(data)
+    #end
+    
+    def forward(self, x, y_obs, mask):
+        
+        y_situ = y_obs[:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_situ = x[:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        
+        feat_state = self.extract_feat_state(x_situ)
+        feat_data = self.extract_feat_data(y_situ)
+        obs_term = (feat_state - feat_data)
+        return obs_term
     #end
 #end
 
@@ -627,8 +672,6 @@ class LitModel_OSSE1(LitModel_Base):
         self.has_any_nan                    = False
         self.run                            = run
         
-        self.__samples_to_save   = list()
-        
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
         mgrad_shapedata = [ts_length * 3, height, width]
@@ -644,6 +687,10 @@ class LitModel_OSSE1(LitModel_Base):
         elif self.hparams.hr_mask_mode == 'zeroesMM':
             # Case obs HR, multi-modal term of 2D features
             self.observation_model = ModelObs_MM2d(shape_data, dim_obs = 2)
+            
+        elif self.hparams.hr_mask_mode == 'buoysMM':
+            # Case only time series, multi-modal term for in-situ data
+            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, dim_obs = 1)
         
         else:
             # Case default. No multi-modal term at all
@@ -734,7 +781,7 @@ class LitModel_OSSE1(LitModel_Base):
             mask = torch.zeros(data_shape)
             mask[:,:, center_h, center_w] = 1.
             
-        elif mode == 'buoy' or mode == 'buoys':
+        elif mode == 'buoy' or mode == 'buoys' or mode == 'buoysMM':
             
             buoy_coords = self.buoy_position
             mask = torch.zeros(data_shape)

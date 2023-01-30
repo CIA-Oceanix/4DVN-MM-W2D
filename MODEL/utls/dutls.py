@@ -240,7 +240,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
             buoy_positions = coord_to_index(lat, lon, coords)
             buoy_positions = np.array(buoy_positions).reshape(1,2)
             
-        elif self.hr_mask_mode == 'buoys':
+        elif self.hr_mask_mode == 'buoys' or self.hr_mask_mode == 'buoysMM':
             
             lcoords = list()
             for cdir in os.listdir(dir_buoys):
