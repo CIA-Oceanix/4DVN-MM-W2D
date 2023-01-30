@@ -457,8 +457,8 @@ class ModelObs_MM1d(nn.Module):
         
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
-        y_situ = y_obs[1][:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        x_situ = x[1][:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        y_situ = y_obs[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_situ = x[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
         
         feat_state = self.extract_feat_state(x_situ)
         feat_data = self.extract_feat_data(y_situ)
