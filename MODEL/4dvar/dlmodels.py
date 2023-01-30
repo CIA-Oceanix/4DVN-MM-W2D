@@ -369,14 +369,14 @@ class ModelObs_MM2d(nn.Module):
         in_channels     = timesteps * 2
         
         self.net_state = nn.Sequential(
-            nn.Conv2d(timesteps, in_channels, kernel_size = (3,3), padding = 1),
+            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3), padding = 1),
             nn.AvgPool2d((3,3)),
             nn.LeakyReLU(0.1),
             # nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv2d(timesteps, in_channels, kernel_size = (3,3), padding = 1),
+            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3), padding = 1),
             nn.AvgPool2d((3,3)),
             nn.LeakyReLU(0.1),
             # nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
@@ -406,9 +406,9 @@ class ModelObs_MM2d(nn.Module):
         feat_state = self.extract_feat_state(x[1])
         
         batch_size, timesteps = x[1].shape[:2]
-        mask1 = torch.zeros(batch_size, timesteps, *feat_state.shape[-2:])
-        for m in range(batch_size):
-            for t in range(timesteps):
+        mask1 = torch.zeros(feat_state.shape)
+        for m in range(mask1.shape[0]):
+            for t in range(mask1.shape[1]):
                 if mask[1][m,t].max() > 0:
                     mask1[m,t] = 1.
                 #end
