@@ -691,11 +691,11 @@ class LitModel_OSSE1(LitModel_Base):
             
         elif self.hparams.hr_mask_mode == 'buoysMM':
             # Case only time series, multi-modal term for in-situ data
-            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, dim_obs = 1)
+            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, dim_obs = 2)
         
         else:
             # Case default. No multi-modal term at all
-            self.observation_model = ObsModel_Mask(shape_data, dim_obs = 2)
+            self.observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
         #end
         
         # Instantiation of the gradient solver
