@@ -401,7 +401,6 @@ class ModelObs_MM2d(nn.Module):
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
         # || h(x) - g(y) ||²
-        
         feat_data = self.extract_feat_data(y_obs[1])
         feat_state = self.extract_feat_state(x[1])
         
@@ -423,7 +422,7 @@ class ModelObs_MM2d(nn.Module):
 
 
 class ModelObs_MM1d(nn.Module):
-    def __init__(self, shape_data, buoys_coords, dim_obs = 1):
+    def __init__(self, shape_data, buoys_coords, dim_obs = 2):
         super(ModelObs_MM1d, self).__init__()
         
         self.dim_obs = dim_obs
@@ -434,15 +433,15 @@ class ModelObs_MM1d(nn.Module):
         in_channels = timesteps
         
         self.net_state = nn.Sequential(
-            nn.Conv1d(in_channels, 72, kernel_size = 3, padding = 'same'),
+            nn.Conv1d(in_channels, 128, kernel_size = 5, padding = 'same'),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(72, in_channels, kernel_size = 3, padding = 'same')
+            nn.Conv1d(128, in_channels, kernel_size = 5, padding = 'same')
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv1d(in_channels, 72, kernel_size = 3, padding = 'same'),
+            nn.Conv1d(in_channels, 128, kernel_size = 5, padding = 'same'),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(72, in_channels, kernel_size = 3, padding = 'same')
+            nn.Conv1d(128, in_channels, kernel_size = 5, padding = 'same')
         )
     #end
     
@@ -456,13 +455,15 @@ class ModelObs_MM1d(nn.Module):
     
     def forward(self, x, y_obs, mask):
         
-        y_situ = y_obs[:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        x_situ = x[:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+        
+        y_situ = y_obs[1][:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_situ = x[1][:, 24:48, self.buoys_coords[:,0], self.buoys_coords[:,1]]
         
         feat_state = self.extract_feat_state(x_situ)
         feat_data = self.extract_feat_data(y_situ)
-        obs_term = (feat_state - feat_data)
-        return obs_term
+        dy_situ = (feat_state - feat_data)
+        return [dy_complete, dy_situ]
     #end
 #end
 
@@ -694,7 +695,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         else:
             # Case default. No multi-modal term at all
-            self.observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
+            self.observation_model = ObsModel_Mask(shape_data, dim_obs = 2)
         #end
         
         # Instantiation of the gradient solver
