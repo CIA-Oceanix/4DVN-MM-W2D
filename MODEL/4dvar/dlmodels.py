@@ -44,6 +44,17 @@ class FlattenSpatialDim(nn.Module):
     #end
 #end
 
+class Squeeze(nn.Module):
+    def __init__(self, squeeze_dim):
+        super(Squeeze, self).__init__()
+        self.squeeze_dim = squeeze_dim
+    #end
+    
+    def forward(self, data):
+        return data.squeeze(self.squeeze_dim)
+    #end
+#end
+
 
 ###############################################################################
 ##### DEEP LEARNING MODELS ####################################################
@@ -349,8 +360,10 @@ class ModelObs_MM(nn.Module):
         
         # || h(x_situ) - g(y_situ) ||²
         y_situ = y_obs[1][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        
         feat_state = self.extract_feat_state(x[1])
         feat_data  = self.extract_feat_data(y_situ)
+        
         dy_situ = (feat_state - feat_data)
         
         return [dy_complete, dy_situ]
@@ -369,17 +382,25 @@ class ModelObs_MM2d(nn.Module):
         in_channels     = timesteps * 2
         
         self.net_state = nn.Sequential(
-            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3), padding = 1),
-            nn.AvgPool2d((3,3)),
+            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            # nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
+            nn.Conv2d(in_channels, timesteps, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3)),
+            Squeeze(-1)
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3), padding = 1),
-            nn.AvgPool2d((3,3)),
+            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            # nn.Conv2d(in_channels, timesteps, kernel_size = (3,3), padding = 1)
+            nn.Conv2d(in_channels, timesteps, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3)),
+            Squeeze(-1)
         )
     #end
     
@@ -401,20 +422,10 @@ class ModelObs_MM2d(nn.Module):
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
         # || h(x) - g(y) ||²
-        feat_data = self.extract_feat_data(y_obs[1])
+        feat_data = self.extract_feat_data(y_obs[1] * mask[1])
         feat_state = self.extract_feat_state(x[1])
         
-        batch_size, timesteps = x[1].shape[:2]
-        mask1 = torch.zeros(feat_state.shape)
-        for m in range(mask1.shape[0]):
-            for t in range(mask1.shape[1]):
-                if mask[1][m,t].max() > 0:
-                    mask1[m,t] = 1.
-                #end
-            #end
-        #end
-        
-        dy_spatial = (feat_state - feat_data) * mask1
+        dy_spatial = (feat_state - feat_data)
         
         return [dy_complete, dy_spatial]
     #end
@@ -462,7 +473,9 @@ class ModelObs_MM1d(nn.Module):
         
         feat_state = self.extract_feat_state(x_situ)
         feat_data = self.extract_feat_data(y_situ)
+        
         dy_situ = (feat_state - feat_data)
+        
         return [dy_complete, dy_situ]
     #end
 #end
