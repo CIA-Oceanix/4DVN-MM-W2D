@@ -433,15 +433,15 @@ class ModelObs_MM1d(nn.Module):
         in_channels = timesteps
         
         self.net_state = nn.Sequential(
-            nn.Identity()
-            # nn.Conv1d(in_channels, 64, kernel_size = 5, padding = 'same'),
+            # nn.Identity()
+            nn.Conv1d(in_channels, in_channels, kernel_size = 5, padding = 'same'),
             # nn.LeakyReLU(0.1),
             # nn.Conv1d(64, in_channels, kernel_size = 3, padding = 'same'),
         )
         
         self.net_data = nn.Sequential(
-            nn.Identity()
-            # nn.Conv1d(in_channels, 64, kernel_size = 5, padding = 'same'),
+            # nn.Identity()
+            nn.Conv1d(in_channels, in_channels, kernel_size = 5, padding = 'same'),
             # nn.LeakyReLU(0.1),
             # nn.Conv1d(64, in_channels, kernel_size = 3, padding = 'same'),
         )
@@ -733,7 +733,7 @@ class LitModel_OSSE1(LitModel_Base):
              'lr'           : self.hparams.varcost_lr,
              'weight_decay' : self.hparams.varcost_wd}
         ]
-        if self.hparams.hr_mask_mode == 'buoys':
+        if self.hparams.hr_mask_mode == 'buoys' or self.hparams.hr_mask_mode == 'buoysMM' or self.hparams.hr_mask_mode == 'zeroesMM':
             params.append(
                 {'params'       : self.observation_model.parameters(),
                  'lr'           : self.hparams.mod_h_lr,
