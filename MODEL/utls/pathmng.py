@@ -24,6 +24,10 @@ def get_model_name(cparams, versioning = False):
         model_name = f'{model_name}-{cparams.HR_MASK_MODE}'
     #end
     
+    if cparams.MM_OBSMODEL:
+        model_name += '-MM'
+    #end
+    
     if cparams.HR_MASK_SFREQ == 1:
         
         exp_osse_1_specs = 'REFRUN'
