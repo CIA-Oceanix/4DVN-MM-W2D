@@ -263,11 +263,11 @@ class ModelObs_base(nn.Module):
 #end
 
 
-class ObsModel_Mask(nn.Module):
+class ModelObs_SM(nn.Module):
     ''' Observation model '''
     
     def __init__(self, shape_data, dim_obs, mr_kernelsize = None):
-        super(ObsModel_Mask, self).__init__()
+        super(ModelObs_SM, self).__init__()
         
         # NOTE : chennels == time series length
         self.shape_data = shape_data
@@ -648,6 +648,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
         self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
+        self.hparams.mm_obsmodel            = config_params.MM_OBSMODEL
         self.hparams.lr_sampl_delay         = config_params.LR_SAMP_DELAY
         self.hparams.lr_intensity           = config_params.LR_INTENSITY
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
@@ -681,21 +682,21 @@ class LitModel_OSSE1(LitModel_Base):
         alpha_reg = config_params.ALPHA_REG
         
         # Choice of observation model
-        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None:
+        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, multi-modal term of 1d features
             self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)    
             
-        elif self.hparams.hr_mask_mode == 'zeroesMM':
+        elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, multi-modal term of 2D features
             self.observation_model = ModelObs_MM2d(shape_data, dim_obs = 2)
             
-        elif self.hparams.hr_mask_mode == 'buoysMM':
+        elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
             # Case only time series, multi-modal term for in-situ data
             self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, dim_obs = 2)
         
         else:
             # Case default. No multi-modal term at all
-            self.observation_model = ObsModel_Mask(shape_data, dim_obs = 1)
+            self.observation_model = ModelObs_SM(shape_data, dim_obs = 1)
         #end
         
         # Instantiation of the gradient solver
@@ -731,12 +732,15 @@ class LitModel_OSSE1(LitModel_Base):
              'lr'           : self.hparams.varcost_lr,
              'weight_decay' : self.hparams.varcost_wd}
         ]
-        if self.hparams.hr_mask_mode == 'buoys' or self.hparams.hr_mask_mode == 'buoysMM' or self.hparams.hr_mask_mode == 'zeroesMM':
+        if self.hparams.mm_obsmodel:
+            print('Multi-modal obs model')
             params.append(
                 {'params'       : self.observation_model.parameters(),
                  'lr'           : self.hparams.mod_h_lr,
                  'weight_decay' : self.hparams.mod_h_wd}
             )
+        else:
+            print('Single-modal obs model')
         #end
         
         optimizers = torch.optim.Adam(params)
@@ -782,7 +786,7 @@ class LitModel_OSSE1(LitModel_Base):
             mask = torch.zeros(data_shape)
             mask[:,:, center_h, center_w] = 1.
             
-        elif mode == 'buoy' or mode == 'buoys' or mode == 'buoysMM':
+        elif mode == 'buoy' or mode == 'buoys':
             
             buoy_coords = self.buoy_position
             mask = torch.zeros(data_shape)
@@ -796,7 +800,7 @@ class LitModel_OSSE1(LitModel_Base):
             mask[:,:, center_h - delta_x : center_h + delta_x, 
                  center_w - delta_x : center_w + delta_x] = 1.
             
-        elif mode == 'zeroes' or mode == 'zeroesMM':
+        elif mode == 'zeroes':
             
             mask = torch.zeros(data_shape)
             
