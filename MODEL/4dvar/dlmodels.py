@@ -439,7 +439,7 @@ class ModelObs_MM1d(nn.Module):
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv1d(in_channels, in_channles, kernel_size = 5, padding = 'same'),
+            nn.Conv1d(in_channels, in_channels, kernel_size = 5, padding = 'same'),
             # nn.LeakyReLU(0.1),
             # nn.Conv1d(64, in_channels, kernel_size = 3, padding = 'same'),
         )
