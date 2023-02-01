@@ -51,7 +51,12 @@ class Squeeze(nn.Module):
     #end
     
     def forward(self, data):
-        return data.squeeze(self.squeeze_dim)
+        if data.shape[-2] > 1 or data.shape[-1] > 1:
+            cx, cy = data.shape[-2] // 2, data.shape[-1] // 2
+            return data[:,:,cx,cy].unsqueeze(-1)
+        else:
+            return data.squeeze(self.squeeze_dim)
+        #end
     #end
 #end
 
