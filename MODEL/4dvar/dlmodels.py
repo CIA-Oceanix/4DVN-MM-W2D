@@ -277,38 +277,19 @@ class ModelObs_base(nn.Module):
 class ModelObs_SM(nn.Module):
     ''' Observation model '''
     
-    def __init__(self, shape_data, dim_obs, mr_kernelsize = None):
+    def __init__(self, shape_data, dim_obs):
         super(ModelObs_SM, self).__init__()
         
         # NOTE : chennels == time series length
         self.shape_data = shape_data
         self.dim_obs = dim_obs
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
-        self.mr_kernelsize = mr_kernelsize
     #end
     
     def forward(self, x, y_obs, mask):
         
-        if self.dim_obs == 1:
-            
-            obs_term = (x - y_obs).mul(mask)
-            return obs_term
-            
-        else:
-            
-            dy1 = (x - y_obs).mul(mask)
-            
-            yhr = y_obs[:,24:48,:,:]
-            xhr = x[:,24:48,:,:]
-            
-            ymr = F.avg_pool2d(yhr, kernel_size = self.mr_kernelsize)
-            ymr = F.interpolate(ymr, tuple(y_obs.shape[-2:]), mode = 'bicubic', align_corners = False)
-            xmr = F.avg_pool2d(xhr, kernel_size = self.mr_kernelsize)
-            xmr = F.interpolate(xmr, tuple(x.shape[-2:]), mode = 'bicubic', align_corners = False)
-            
-            dy2 = (xmr - ymr).mul(mask[:,24:48,:,:])
-            
-            return [dy1, dy2]
+        obs_term = (x - y_obs).mul(mask)
+        return obs_term
         #end
     #end
 #end
@@ -444,15 +425,15 @@ class ModelObs_MM1d(nn.Module):
         in_channels = timesteps
         
         self.net_state = nn.Sequential(
-            nn.Conv1d(in_channels, in_channels, kernel_size = 5, padding = 'same'),
-            # nn.LeakyReLU(0.1),
-            # nn.Conv1d(64, in_channels, kernel_size = 3, padding = 'same'),
+            nn.Conv1d(in_channels, 64, kernel_size = 5, padding = 'same'),
+            nn.LeakyReLU(0.1),
+            nn.Conv1d(64, 128, kernel_size = 3, padding = 'same'),
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv1d(in_channels, in_channels, kernel_size = 5, padding = 'same'),
-            # nn.LeakyReLU(0.1),
-            # nn.Conv1d(64, in_channels, kernel_size = 3, padding = 'same'),
+            nn.Conv1d(in_channels, 64, kernel_size = 5, padding = 'same'),
+            nn.LeakyReLU(0.1),
+            nn.Conv1d(64, 128, kernel_size = 3, padding = 'same'),
         )
     #end
     
