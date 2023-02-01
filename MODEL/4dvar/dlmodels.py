@@ -367,8 +367,6 @@ class ModelObs_MM2d(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Conv2d(64, 128, kernel_size = (5,5)),
             nn.MaxPool2d((7,7)),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(128, 256, kernel_size = (3,3)),
             Squeeze(-1)
         )
         
@@ -378,8 +376,6 @@ class ModelObs_MM2d(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Conv2d(64, 128, kernel_size = (5,5)),
             nn.MaxPool2d((7,7)),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(128, 256, kernel_size = (3,3)),
             Squeeze(-1)
         )
     #end
