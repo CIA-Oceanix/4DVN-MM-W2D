@@ -360,27 +360,26 @@ class ModelObs_MM2d(nn.Module):
         self.shape_data = shape_data
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
         timesteps       = shape_data[1]
-        in_channels     = timesteps * 2
         
         self.net_state = nn.Sequential(
-            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.Conv2d(timesteps, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, timesteps, kernel_size = (5,5)),
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
             nn.MaxPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3)),
+            nn.Conv2d(128, 256, kernel_size = (3,3)),
             Squeeze(-1)
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.Conv2d(timesteps, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, timesteps, kernel_size = (5,5)),
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
             nn.MaxPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(timesteps, timesteps, kernel_size = (3,3)),
+            nn.Conv2d(128, 256, kernel_size = (3,3)),
             Squeeze(-1)
         )
     #end
