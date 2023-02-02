@@ -430,18 +430,18 @@ class ModelObs_MM1d(nn.Module):
         in_channels = timesteps
         
         self.net_state = nn.Sequential(
-            nn.Conv1d(in_channels, 64, kernel_size = 5),
+            nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(64, 128, kernel_size = 5),
+            nn.Conv1d(64, 128, kernel_size = 3),
             nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size = 3),
             nn.LeakyReLU(0.1)
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv1d(in_channels, 64, kernel_size = 5),
+            nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(64, 128, kernel_size = 5),
+            nn.Conv1d(64, 128, kernel_size = 3),
             nn.LeakyReLU(0.1),
             nn.Conv1d(128, 128, kernel_size = 3),
             nn.LeakyReLU(0.1)
