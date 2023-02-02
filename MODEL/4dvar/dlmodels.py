@@ -434,6 +434,7 @@ class ModelObs_MM1d(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Conv1d(64, 128, kernel_size = 5),
             nn.LeakyReLU(0.1),
+            nn.Conv1d(128, 128, kernel_size = 3)
         )
         
         self.net_data = nn.Sequential(
@@ -441,6 +442,7 @@ class ModelObs_MM1d(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Conv1d(64, 128, kernel_size = 5),
             nn.LeakyReLU(0.1),
+            nn.Conv1d(128, 128, kernel_size = 3)
         )
     #end
     
@@ -554,6 +556,19 @@ class LitModel_Base(pl.LightningModule):
         return self.__var_cost_values
     #end
     
+    def get_estimated_time(self):
+        
+        start_time = self.start_time
+        time_now = datetime.datetime.now()
+        elapsed_time = (time_now - start_time).seconds / 60
+        est_time = elapsed_time * (self.train_epochs / (self.current_epoch + 1) - 1)
+        # est_time_min = int(est_time)
+        # est_time_sec = (6/10) * (est_time - est_time_min)
+        # estim_time = est_time_min + est_time_sec
+        
+        return est_time
+    #end
+    
     def save_epoch_loss(self, loss, epoch, quantity):
         
         if quantity == 'train':
@@ -575,16 +590,12 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        start_time = self.start_time
-        time_now = datetime.datetime.now()
-        elapsed_time = (time_now - start_time).seconds / 60
-        est_time = elapsed_time * (self.train_epochs / (self.current_epoch + 1) - 1)
-        # est_time = str(datetime.timedelta(minutes = est_time))
-        
         metrics, out = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
+        estimated_time = self.get_estimated_time()
+        
         self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-        self.log('time', est_time,                      on_step = False, on_epoch = True, prog_bar = True)
+        self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
         self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
         self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)

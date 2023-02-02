@@ -39,6 +39,12 @@ class SaveWeights(Callback):
         self.last_epoch = None
     #end
     
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
+        
+        print()
+        pass
+    #end
+    
     def on_train_epoch_start(self, trainer, pl_module):
         
         self.epoch_start_params = os.path.join(self.path_ckpt, 'sane_model_params.ckpt')
@@ -299,7 +305,7 @@ class Experiment:
             check_finite = True,
         )
         
-        # weight_save = SaveWeights(path_ckpt)
+        weight_save = SaveWeights(path_ckpt)
         
         # logger = CSVLogger(
         #     save_dir = path_ckpt,
@@ -312,7 +318,7 @@ class Experiment:
             callbacks = [
                 model_checkpoint, 
                 early_stopping,
-                # weight_save
+                weight_save
             ]#,
             # logger = logger
         )
