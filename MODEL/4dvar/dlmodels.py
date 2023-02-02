@@ -1,6 +1,7 @@
 import sys
 sys.path.append('../utls')
 
+import datetime
 import numpy as np
 import torch
 from torch import nn
@@ -429,15 +430,17 @@ class ModelObs_MM1d(nn.Module):
         in_channels = timesteps
         
         self.net_state = nn.Sequential(
-            nn.Conv1d(in_channels, 64, kernel_size = 5, padding = 'same'),
+            nn.Conv1d(in_channels, 64, kernel_size = 5),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(64, 128, kernel_size = 3, padding = 'same'),
+            nn.Conv1d(64, 128, kernel_size = 3),
+            nn.LeakyReLU(0.1),
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv1d(in_channels, 64, kernel_size = 5, padding = 'same'),
+            nn.Conv1d(in_channels, 64, kernel_size = 5),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(64, 128, kernel_size = 3, padding = 'same'),
+            nn.Conv1d(64, 128, kernel_size = 3),
+            nn.LeakyReLU(0.1),
         )
     #end
     
@@ -572,9 +575,15 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
+        start_time = self.start_time
+        time_now = datetime.datetime.now()
+        elapsed_time = (time_now - start_time).seconds / 60
+        est_time = elapsed_time * (self.train_epochs / (self.current_epoch + 1) - 1)
+        
         metrics, out = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
         self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
+        self.log('time', est_time,                      on_step = False, on_epoch = True, prog_bar = True)
         self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
         self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
@@ -628,8 +637,10 @@ class LitModel_Base(pl.LightningModule):
 
 class LitModel_OSSE1(LitModel_Base):
     
-    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run):
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
         super(LitModel_OSSE1, self).__init__(config_params)
+        
+        self.start_time = start_time
         
         # Dynamical prior and mask for land/sea locations
         self.Phi = Phi
@@ -671,6 +682,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.automatic_optimization         = True
         self.has_any_nan                    = False
         self.run                            = run
+        self.train_epochs                   = config_params.EPOCHS
         
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
