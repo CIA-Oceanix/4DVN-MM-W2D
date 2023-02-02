@@ -1038,11 +1038,6 @@ class LitModel_OSSE1(LitModel_Base):
             torch.Tensor([ param.mean() for param in self.parameters() ])
         )
         
-        if self.current_epoch == 1 and batch_idx == 2:
-            input_data[0,0,20,45] = 1e36
-            print('HEHEHEHEHEHEHE ... I fuck your model up with evil overflow')
-        #end
-        
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
