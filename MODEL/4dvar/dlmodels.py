@@ -374,7 +374,7 @@ class ModelObs_MM2d(nn.Module):
             nn.MaxPool2d((7,7)),
             nn.LeakyReLU(0.1),
             nn.Conv2d(128, 64, kernel_size = (3,3)),
-            Squeeze(-1)
+            # Squeeze(-1)
         )
         
         self.net_data = nn.Sequential(
@@ -385,7 +385,7 @@ class ModelObs_MM2d(nn.Module):
             nn.MaxPool2d((7,7)),
             nn.LeakyReLU(0.1),
             nn.Conv2d(128, 64, kernel_size = (3,3)),
-            Squeeze(-1)
+            # Squeeze(-1)
         )
     #end
     
