@@ -432,14 +432,14 @@ class ModelObs_MM1d(nn.Module):
         self.net_state = nn.Sequential(
             nn.Conv1d(in_channels, 64, kernel_size = 5),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(64, 128, kernel_size = 3),
+            nn.Conv1d(64, 128, kernel_size = 5),
             nn.LeakyReLU(0.1),
         )
         
         self.net_data = nn.Sequential(
             nn.Conv1d(in_channels, 64, kernel_size = 5),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(64, 128, kernel_size = 3),
+            nn.Conv1d(64, 128, kernel_size = 5),
             nn.LeakyReLU(0.1),
         )
     #end
@@ -579,6 +579,7 @@ class LitModel_Base(pl.LightningModule):
         time_now = datetime.datetime.now()
         elapsed_time = (time_now - start_time).seconds / 60
         est_time = elapsed_time * (self.train_epochs / (self.current_epoch + 1) - 1)
+        # est_time = str(datetime.timedelta(minutes = est_time))
         
         metrics, out = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
