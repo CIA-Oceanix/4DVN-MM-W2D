@@ -592,30 +592,30 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        while True:
+        # while True:
+        
+        metrics, out = self.forward(batch, batch_idx, phase = 'train')
+        loss = metrics['loss']
+        estimated_time = self.get_estimated_time()
+        
+        self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
+        self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
+        self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
+        self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+        self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
+        self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
             
-            metrics, out = self.forward(batch, batch_idx, phase = 'train')
-            loss = metrics['loss']
-            estimated_time = self.get_estimated_time()
-            
-            self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-            self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
-            self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-            self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-            self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-            self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
-            
-            if not torch.isnan(loss):
-                break
-            else:
-                print('NAN IN LOSS')
-                print('Recomputing ...')
-            #end
+            # if not torch.isnan(loss):
+            #     break
+            # else:
+            #     print('NAN IN LOSS')
+            #     print('Recomputing ...')
+            # #end
         #end
-            
+        
         return loss
     #end
     
