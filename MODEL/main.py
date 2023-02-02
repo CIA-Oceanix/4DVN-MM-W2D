@@ -318,7 +318,7 @@ class Experiment:
             callbacks = [
                 model_checkpoint, 
                 early_stopping,
-                weight_save
+                # weight_save
             ]#,
             # logger = logger
         )

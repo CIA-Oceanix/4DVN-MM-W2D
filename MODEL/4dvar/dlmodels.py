@@ -604,6 +604,8 @@ class LitModel_Base(pl.LightningModule):
         self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
         
+        
+        
         return loss
     #end
     
