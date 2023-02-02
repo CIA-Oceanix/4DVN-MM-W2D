@@ -165,6 +165,10 @@ class Experiment:
             raise ValueError('Specification of in-situ point only if it is a buoy')
         #end
         
+        if self.cparams.HR_MASK_MODE == 'buoysMM' and self.cparams.HR_MASK_SFREQ is not None:
+            raise ValueError('Multi-modal term with buoys requires not to set sampling frequency for HR. Set it to "null"')
+        #end
+        
     #end
         
     def initialize_model_names_paths(self, path_manager):
@@ -263,7 +267,7 @@ class Experiment:
         
         ## Instantiate dynamical prior and lit model
         Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-        lit_model = LitModel_OSSE1(Phi, shape_data, land_buoy_coords, self.cparams, real_run).to(DEVICE)
+        lit_model = LitModel_OSSE1(Phi, shape_data, land_buoy_coords, self.cparams, real_run, start_time = start_time).to(DEVICE)
         
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')
