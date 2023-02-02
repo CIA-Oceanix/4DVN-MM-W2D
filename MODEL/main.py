@@ -41,7 +41,6 @@ class SaveWeights(Callback):
     
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
         
-        print()
         pass
     #end
     

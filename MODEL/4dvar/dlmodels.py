@@ -434,7 +434,8 @@ class ModelObs_MM1d(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Conv1d(64, 128, kernel_size = 5),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size = 3)
+            nn.Conv1d(128, 128, kernel_size = 3),
+            nn.LeakyReLU(0.1)
         )
         
         self.net_data = nn.Sequential(
@@ -442,7 +443,8 @@ class ModelObs_MM1d(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Conv1d(64, 128, kernel_size = 5),
             nn.LeakyReLU(0.1),
-            nn.Conv1d(128, 128, kernel_size = 3)
+            nn.Conv1d(128, 128, kernel_size = 3),
+            nn.LeakyReLU(0.1)
         )
     #end
     
@@ -590,22 +592,30 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        metrics, out = self.forward(batch, batch_idx, phase = 'train')
-        loss = metrics['loss']
-        estimated_time = self.get_estimated_time()
-        
-        self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-        self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
-        self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-        self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-        self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
-        
-        
-        
+        while True:
+            
+            metrics, out = self.forward(batch, batch_idx, phase = 'train')
+            loss = metrics['loss']
+            estimated_time = self.get_estimated_time()
+            
+            self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
+            self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
+            self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
+            self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+            self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
+            self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+            
+            if not torch.isnan(loss):
+                break
+            else:
+                print('NAN IN LOSS')
+                print('Recomputing ...')
+            #end
+        #end
+            
         return loss
     #end
     
@@ -1027,6 +1037,11 @@ class LitModel_OSSE1(LitModel_Base):
         _log_model_params = torch.mean(
             torch.Tensor([ param.mean() for param in self.parameters() ])
         )
+        
+        if self.current_epoch == 1 and batch_idx == 2:
+            input_data[0,0,20,45] = 1e36
+            print('HEHEHEHEHEHEHE ... I fuck your model up with evil overflow')
+        #end
         
         # Inverse problem solution
         with torch.set_grad_enabled(True):
