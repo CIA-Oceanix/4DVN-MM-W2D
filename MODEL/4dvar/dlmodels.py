@@ -351,6 +351,9 @@ class ModelObs_MM(nn.Module):
         feat_state = self.extract_feat_state(x[1])
         feat_data  = self.extract_feat_data(y_situ)
         
+        # || g_hr(x) - h_hr(y) ||²
+        # .......
+        
         dy_situ = (feat_state - feat_data)
         
         return [dy_complete, dy_situ]
@@ -429,26 +432,19 @@ class ModelObs_MM1d(nn.Module):
         timesteps = shape_data[1]
         in_channels = timesteps
         
-        self.net_state = nn.Sequential(
-            # nn.Identity()
-            nn.Conv1d(in_channels, 64, kernel_size = 3),
+        self.net_state = torch.nn.Sequential(
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            
-            # nn.Conv1d(64, 128, kernel_size = 3),
-            # nn.LeakyReLU(0.1),
-            # nn.Conv1d(128, 128, kernel_size = 3),
-            # nn.LeakyReLU(0.1)
+            nn.Conv2d(64, 64, kernel_size = (3,3), padding = 'same'),
+            nn.MaxPool2d((5,5)),
+            FlattenSpatialDim(),
+            nn.Linear(25, 11)
         )
         
         self.net_data = nn.Sequential(
-            # nn.Identity()
             nn.Conv1d(in_channels, 64, kernel_size = 3),
-            nn.LeakyReLU(0.1),
-            # nn.Conv1d(64, 64, kernel_size = 3, padding = 'same'),
-            # nn.LeakyReLU(0.1),
-            
-            # nn.Conv1d(128, 128, kernel_size = 3),
-            # nn.LeakyReLU(0.1)
+            nn.LeakyReLU(0.1)
         )
     #end
     
@@ -465,9 +461,10 @@ class ModelObs_MM1d(nn.Module):
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
         y_situ = y_obs[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        x_situ = x[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        # x_situ = x[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_hr_spatial = x[1]
         
-        feat_state = self.extract_feat_state(x_situ)
+        feat_state = self.extract_feat_state(x_hr_spatial)
         feat_data = self.extract_feat_data(y_situ)
         
         dy_situ = (feat_state - feat_data)
