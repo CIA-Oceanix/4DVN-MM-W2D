@@ -10,10 +10,11 @@ import json
 import argparse
 from collections import namedtuple
 import torch
+from torch import nn
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.loggers import CSVLogger
+# from pytorch_lightning.loggers import CSVLogger
 
 from pathmng import PathManager
 from dlmodels import LitModel_OSSE1, model_selection
@@ -286,6 +287,8 @@ class Experiment:
         
         if torch.cuda.is_available():
             profiler_kwargs.update({'gpus'        : gpus})
+            profiler_kwargs.update({'accelerator' : 'ddp'})
+            profiler_kwargs.update({'pluging'     : 'ddp_sharded'})
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
@@ -293,7 +296,7 @@ class Experiment:
         model_checkpoint = ModelCheckpoint(
             monitor    = 'val_loss',
             dirpath    = path_ckpt,
-            filename   = f'run{run}-' + self.model_name + '-{epoch:02d}', #+ name_append,
+            filename   = f'run{run}-' + self.model_name + '-{epoch:02d}',
             save_top_k = 1,
             mode       = 'min'
         )
@@ -304,7 +307,7 @@ class Experiment:
             check_finite = True,
         )
         
-        weight_save = SaveWeights(path_ckpt)
+        # weight_save = SaveWeights(path_ckpt)
         
         # logger = CSVLogger(
         #     save_dir = path_ckpt,

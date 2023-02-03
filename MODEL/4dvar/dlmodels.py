@@ -430,9 +430,9 @@ class ModelObs_MM1d(nn.Module):
         in_channels = timesteps
         
         self.net_state = nn.Sequential(
-            nn.Identity()
-            # nn.Conv1d(in_channels, 64, kernel_size = 3),
-            # nn.LeakyReLU(0.1),
+            # nn.Identity()
+            nn.Conv1d(in_channels, 64, kernel_size = 3),
+            nn.LeakyReLU(0.1),
             
             # nn.Conv1d(64, 128, kernel_size = 3),
             # nn.LeakyReLU(0.1),
@@ -441,9 +441,9 @@ class ModelObs_MM1d(nn.Module):
         )
         
         self.net_data = nn.Sequential(
-            nn.Identity()
-            # nn.Conv1d(in_channels, 64, kernel_size = 3),
-            # nn.LeakyReLU(0.1),
+            # nn.Identity()
+            nn.Conv1d(in_channels, 64, kernel_size = 3),
+            nn.LeakyReLU(0.1),
             # nn.Conv1d(64, 64, kernel_size = 3, padding = 'same'),
             # nn.LeakyReLU(0.1),
             
@@ -671,12 +671,12 @@ class LitModel_OSSE1(LitModel_Base):
         self.start_time = start_time
         
         # Dynamical prior and mask for land/sea locations
-        self.Phi = Phi
+        self.Phi = nn.DataParallel(Phi)
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
-        self.loss_fn = NormLoss()
+        self.loss_fn = nn.DataParallel(NormLoss())
         
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE
@@ -755,6 +755,11 @@ class LitModel_OSSE1(LitModel_Base):
             alphaReg = alpha_reg,                                           # alpha regularization
             varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
         )
+        
+        # Set to data parallel
+        # self.observation_model = nn.DataParallel(self.observation_model)
+        # self.model = nn.DataParallel(self.model)
+        
     #end
     
     def configure_optimizers(self):
