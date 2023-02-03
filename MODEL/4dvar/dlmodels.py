@@ -323,7 +323,7 @@ class ModelObs_MM(nn.Module):
             nn.Linear(25,11)
         )
         
-        self.net_state_Hsitu(
+        self.net_state_Hsitu = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
@@ -340,7 +340,7 @@ class ModelObs_MM(nn.Module):
         )
         
         # H hr obs: take the (rare) 2D fields so shares the same structure as for Hmm2d
-        self.net_data_Hhr(
+        self.net_data_Hhr = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
@@ -388,8 +388,8 @@ class ModelObs_MM(nn.Module):
         
         # || g_hr(x) - h_hr(y_hr) ||²
         y_spatial = y_obs[1].mul(mask[1])
-        feat_state_spatial = self.net_state_Hhr(x[1])
-        feat_data_spatial  = self.net_data_Hhr(y_spatial)
+        feat_state_spatial = self.extract_feat_state_Hhr(x[1])
+        feat_data_spatial  = self.extract_feat_data_Hhr(y_spatial)
         dy_spatial         = (feat_state_spatial - feat_data_spatial)
         
         return [dy_complete, dy_situ, dy_spatial]
@@ -744,7 +744,7 @@ class LitModel_OSSE1(LitModel_Base):
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, multi-modal term of 1d features
-            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 2)    
+            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 3)    
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, multi-modal term of 2D features
