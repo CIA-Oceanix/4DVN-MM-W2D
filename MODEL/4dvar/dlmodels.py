@@ -757,8 +757,8 @@ class LitModel_OSSE1(LitModel_Base):
         )
         
         # Set to data parallel
-        # self.observation_model = nn.DataParallel(self.observation_model)
-        # self.model = nn.DataParallel(self.model)
+        self.observation_model = nn.DataParallel(self.observation_model)
+        self.model = nn.DataParallel(self.model)
         
     #end
     
