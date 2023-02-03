@@ -265,6 +265,7 @@ class Experiment:
         
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
+        w2d_dm.to(DEVICE)
         
         # MODELS : initialize and configure
         ## Obtain shape data
