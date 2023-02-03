@@ -461,7 +461,6 @@ class ModelObs_MM1d(nn.Module):
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
         y_situ = y_obs[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        # x_situ = x[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
         x_hr_spatial = x[1]
         
         feat_state = self.extract_feat_state(x_hr_spatial)
@@ -593,8 +592,6 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        # while True:
-        
         metrics, out = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
         estimated_time = self.get_estimated_time()
@@ -608,14 +605,6 @@ class LitModel_Base(pl.LightningModule):
         self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
         self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
-            
-            # if not torch.isnan(loss):
-            #     break
-            # else:
-            #     print('NAN IN LOSS')
-            #     print('Recomputing ...')
-            # #end
-        #end
         
         return loss
     #end
