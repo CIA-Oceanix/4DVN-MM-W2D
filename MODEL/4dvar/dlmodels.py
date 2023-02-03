@@ -302,7 +302,7 @@ class ModelObs_SM(nn.Module):
 
 
 class ModelObs_MM(nn.Module):
-    def __init__(self, shape_data, buoys_coords, dim_obs = 2):
+    def __init__(self, shape_data, buoys_coords, dim_obs = 3):
         super(ModelObs_MM, self).__init__()
         
         self.dim_obs    = dim_obs
@@ -312,7 +312,8 @@ class ModelObs_MM(nn.Module):
         timesteps       = shape_data[1]
         in_channels     = timesteps
         
-        self.net_state = nn.Sequential(
+        # H situ state: same structure. The state is a 2D tensor either way
+        self.net_state_Hhr = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
@@ -322,21 +323,54 @@ class ModelObs_MM(nn.Module):
             nn.Linear(25,11)
         )
         
-        self.net_data = nn.Sequential(
+        self.net_state_Hsitu(
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(64, 64, kernel_size = (3,3)),
+            nn.AvgPool2d((5,5)),
+            FlattenSpatialDim(),
+            nn.Linear(25,11)
+        )
+        
+        # H situ obs: treating time series (local) so it is Conv1d
+        self.net_data_Hsitu = nn.Sequential(
             nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1)
         )
+        
+        # H hr obs: take the (rare) 2D fields so shares the same structure as for Hmm2d
+        self.net_data_Hhr(
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+        )
     #end
     
-    def extract_feat_state(self, state):
+    def extract_feat_state_Hhr(self, state):
         
-        feat_state = self.net_state(state)
+        feat_state = self.net_state_Hr(state)
         return feat_state
     #end
     
-    def extract_feat_data(self, data):
+    def extract_feat_state_Hsitu(self, state):
         
-        feat_data = self.net_data(data)
+        feat_state = self.net_state_Hsitu(state)
+        return feat_state
+    #end
+    
+    def extract_feat_data_Hhr(self, data):
+        
+        feat_data = self.net_data_Hhr(data)
+        return feat_data
+    #end
+    
+    def extract_feat_data_Hsitu(self, data):
+        
+        feat_data = self.net_data_Hsitu(data)
         return feat_data
     #end
     
@@ -345,18 +379,20 @@ class ModelObs_MM(nn.Module):
         # || x - y ||²
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
-        # || h(x_situ) - g(y_situ) ||²
+        # || h_situ(x) - g_situ(y_situ) ||²
         y_situ = y_obs[1][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
         
-        feat_state = self.extract_feat_state(x[1])
-        feat_data  = self.extract_feat_data(y_situ)
+        feat_state_situ = self.extract_feat_state_Hsitu(x[1])
+        feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
+        dy_situ         = (feat_state_situ - feat_data_situ)
         
-        # || g_hr(x) - h_hr(y) ||²
-        # .......
+        # || g_hr(x) - h_hr(y_hr) ||²
+        y_spatial = y_obs[1].mul(mask[1])
+        feat_state_spatial = self.net_state_Hhr(x[1])
+        feat_data_spatial  = self.net_data_Hhr(y_spatial)
+        dy_spatial         = (feat_state_spatial - feat_data_spatial)
         
-        dy_situ = (feat_state - feat_data)
-        
-        return [dy_complete, dy_situ]
+        return [dy_complete, dy_situ, dy_spatial]
     #end
 #end
 
@@ -411,7 +447,7 @@ class ModelObs_MM2d(nn.Module):
         dy_complete = (x[0] - y_obs[0]).mul(mask[0])
         
         # || h(x) - g(y) ||²
-        feat_data = self.extract_feat_data(y_obs[1] * mask[1])
+        feat_data = self.extract_feat_data(y_obs[1].mul(mask[1]))
         feat_state = self.extract_feat_state(x[1])
         
         dy_spatial = (feat_state - feat_data)
