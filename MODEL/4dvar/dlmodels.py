@@ -756,10 +756,6 @@ class LitModel_OSSE1(LitModel_Base):
             varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
         )
         
-        # Set to data parallel
-        # self.observation_model = nn.DataParallel(self.observation_model)
-        # self.model = nn.DataParallel(self.model)
-        
     #end
     
     def configure_optimizers(self):

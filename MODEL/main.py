@@ -22,7 +22,7 @@ from dutls import W2DSimuDataModule
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
-    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
     gpus = -1
     print('Program runs using device : {}\n'.format(DEVICE))
 else:
@@ -287,8 +287,6 @@ class Experiment:
         
         if torch.cuda.is_available():
             profiler_kwargs.update({'gpus'        : gpus})
-            profiler_kwargs.update({'accelerator' : 'ddp'})
-            profiler_kwargs.update({'plugins'     : 'ddp_sharded'})
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
