@@ -22,7 +22,7 @@ from dutls import W2DSimuDataModule
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
     gpus = -1
     print('Program runs using device : {}\n'.format(DEVICE))
 else:
@@ -265,7 +265,6 @@ class Experiment:
         
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
-        w2d_dm.to(DEVICE)
         
         # MODELS : initialize and configure
         ## Obtain shape data
