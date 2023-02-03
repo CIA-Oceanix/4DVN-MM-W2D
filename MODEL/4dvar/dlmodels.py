@@ -344,15 +344,17 @@ class ModelObs_MM(nn.Module):
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(64, 128, kernel_size = (5,5)),
-            nn.MaxPool2d((7,7)),
+            nn.Conv2d(64, 64, kernel_size = (3,3)),
+            nn.MaxPool2d((5,5)),
             nn.LeakyReLU(0.1),
+            FlattenSpatialDim(),
+            nn.Linear(25,11)
         )
     #end
     
     def extract_feat_state_Hhr(self, state):
         
-        feat_state = self.net_state_Hr(state)
+        feat_state = self.net_state_Hhr(state)
         return feat_state
     #end
     
