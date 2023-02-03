@@ -310,20 +310,20 @@ class ModelObs_MM(nn.Module):
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
         self.buoys_coords = buoys_coords
         timesteps       = shape_data[1]
-        in_channels     = timesteps * 2
+        in_channels     = timesteps
         
         self.net_state = nn.Sequential(
-            nn.Conv2d(timesteps, in_channels, kernel_size = (5,5)),
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(in_channels, timesteps, kernel_size = (3,3)),
+            nn.Conv2d(64, 64, kernel_size = (3,3)),
             nn.AvgPool2d((5,5)),
             FlattenSpatialDim(),
             nn.Linear(25,11)
         )
         
         self.net_data = nn.Sequential(
-            nn.Conv1d(timesteps, timesteps, kernel_size = 3),
+            nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1)
         )
     #end
