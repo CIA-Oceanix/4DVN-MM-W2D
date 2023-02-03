@@ -288,7 +288,7 @@ class Experiment:
         if torch.cuda.is_available():
             profiler_kwargs.update({'gpus'        : gpus})
             profiler_kwargs.update({'accelerator' : 'ddp'})
-            profiler_kwargs.update({'pluging'     : 'ddp_sharded'})
+            profiler_kwargs.update({'plugin'      : 'ddp_sharded'})
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
