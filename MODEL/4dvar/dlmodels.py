@@ -671,7 +671,7 @@ class LitModel_OSSE1(LitModel_Base):
         self.start_time = start_time
         
         # Dynamical prior and mask for land/sea locations
-        self.Phi = nn.DataParallel(Phi)
+        self.Phi = Phi
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         
@@ -757,8 +757,8 @@ class LitModel_OSSE1(LitModel_Base):
         )
         
         # Set to data parallel
-        self.observation_model = nn.DataParallel(self.observation_model)
-        self.model = nn.DataParallel(self.model)
+        # self.observation_model = nn.DataParallel(self.observation_model)
+        # self.model = nn.DataParallel(self.model)
         
     #end
     
