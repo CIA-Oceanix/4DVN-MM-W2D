@@ -287,9 +287,9 @@ class Experiment:
         
         if torch.cuda.is_available():
             profiler_kwargs.update({'gpus'        : gpus})
-            # profiler_kwargs.update({'accelerator' : 'ddp'})
-            # profiler_kwargs.update({'plugins'     : 'ddp_sharded'})
-            # profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
+            profiler_kwargs.update({'accelerator' : 'ddp'})
+            profiler_kwargs.update({'plugins'     : 'ddp_sharded'})
+            profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
         ## Callbacks : model checkpoint and early stopping
