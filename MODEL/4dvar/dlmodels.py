@@ -165,6 +165,35 @@ class ConvNet(nn.Module):
     #end
 #end
 
+
+class ConvAutoEncoder(nn.Module):
+    def __init__(self, shape_data, config_params):
+        super(ConvAutoEncoder, self).__init__()
+        
+        in_channels = shape_data[1] * 3
+        
+        self.encoder = nn.Sequential(
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5), padding = 2),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(64, 128, kernel_size = (3,3), padding = 1),
+            nn.AvgPool2d((2,2))
+        )
+        
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size = (2,2), stride = 2),
+            nn.LeakyReLU(0.1),
+            nn.ConvTranspose2d(64, in_channels, kernel_size = (3,3), padding = 1)
+        )
+    #end
+    
+    def forward(self, data):
+        
+        code = self.encoder(data)
+        reco = self.decoder(code)
+        return reco
+    #end
+#end
+
 class UNet(nn.Module):
     
     def __init__(self, shape_data, config_params):
@@ -518,7 +547,7 @@ class ModelObs_MM1d(nn.Module):
 def model_selection(shape_data, config_params):
     
     if config_params.PRIOR == 'SN':
-        return ConvNet(shape_data, config_params)
+        return ConvAutoEncoder(shape_data, config_params)
     elif config_params.PRIOR == 'RN':
         return ResNet(shape_data, config_params)
     elif config_params.PRIOR == 'UN':
