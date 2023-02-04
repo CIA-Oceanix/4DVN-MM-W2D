@@ -547,7 +547,7 @@ class ModelObs_MM1d(nn.Module):
 def model_selection(shape_data, config_params):
     
     if config_params.PRIOR == 'SN':
-        return ConvAutoEncoder(shape_data, config_params)
+        return ConvNet(shape_data, config_params)
     elif config_params.PRIOR == 'RN':
         return ResNet(shape_data, config_params)
     elif config_params.PRIOR == 'UN':
@@ -631,9 +631,6 @@ class LitModel_Base(pl.LightningModule):
         time_now = datetime.datetime.now()
         elapsed_time = (time_now - start_time).seconds / 60
         est_time = elapsed_time * (self.train_epochs / (self.current_epoch + 1) - 1)
-        # est_time_min = int(est_time)
-        # est_time_sec = (6/10) * (est_time - est_time_min)
-        # estim_time = est_time_min + est_time_sec
         
         return est_time
     #end
