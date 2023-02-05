@@ -771,19 +771,19 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
-            # Case time series plus obs HR, multi-modal term of 1d features
+            # Case time series plus obs HR, trainable obs term of 1d features
             self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 3)    
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
-            # Case obs HR, multi-modal term of 2D features
+            # Case obs HR, trainable obs term of 2D features
             self.observation_model = ModelObs_MM2d(shape_data, dim_obs = 2)
             
         elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
-            # Case only time series, multi-modal term for in-situ data
+            # Case only time series, trainable obs term for in-situ data
             self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, dim_obs = 2)
         
         else:
-            # Case default. No multi-modal term at all
+            # Case default. No trainable obs term at all
             self.observation_model = ModelObs_SM(shape_data, dim_obs = 1)
         #end
         
@@ -1186,3 +1186,4 @@ class LitModel_OSSE1_2(LitModel_Base):
         pass
     #end
 #end
+

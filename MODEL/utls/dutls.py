@@ -283,3 +283,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         return DataLoader(self.test_dataset, batch_size = self.batch_size)
     #end
 #end
+
+
+
+
