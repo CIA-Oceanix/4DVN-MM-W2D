@@ -150,8 +150,8 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            CBlock(ts_length, 64, 5, 2),
-            nn.Conv2d(64, ts_length, (5,5),
+            CBlock(ts_length, 32, 5, 2),
+            nn.Conv2d(32, ts_length, (5,5),
                       padding = 'same',
                       padding_mode = 'reflect',
                       bias = True)
@@ -730,7 +730,6 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Hyper-parameters, learning and workflow
         self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE
-        self.hparams.mr_kernel_size         = config_params.MR_KERNELSIZE
         self.hparams.inversion              = config_params.INVERSION
         self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
         self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
