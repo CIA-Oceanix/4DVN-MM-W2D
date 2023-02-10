@@ -226,7 +226,7 @@ class PathManager:
         
         dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_NS', 'extent_EW'))
         dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent_NS', 'extent_EW'))
-        dataset.createVariable('mask', np.float32, ('one', 'extent', 'extent'))
+        dataset.createVariable('mask', np.float32, ('one', 'extent_NS', 'extent_EW'))
         dataset.close()
         print('Dataset.nc initialized and closed ...')
     #end
