@@ -12,16 +12,17 @@ load_dotenv(os.path.join(os.getcwd(), 'config.env'))
 PATH_DATA = os.getenv('PATH_DATA')
 
 parser = argparse.ArgumentParser()
+parser.add_argument('-dinit',      type = int, required = True)
+parser.add_argument('-minit',      type = int, required = True)
+parser.add_argument('-yinit',      type = int, required = True)
+parser.add_argument('-dend',       type = int, required = True)
+parser.add_argument('-mend',       type = int, required = True)
+parser.add_argument('-yend',       type = int, required = True)
+parser.add_argument('-name',       type = str, default = 'wds')
 parser.add_argument('-create',     type = int, default = 1)
 parser.add_argument('-fetch',      type = int, default = 1)
-parser.add_argument('-dscomplete', type = int, default = 0)
+parser.add_argument('-dscomplete', type = int, default = 1)
 parser.add_argument('-crop',       type = int, default = 0)
-parser.add_argument('-dinit',      type = int)
-parser.add_argument('-minit',      type = int)
-parser.add_argument('-yinit',      type = int)
-parser.add_argument('-dend',       type = int)
-parser.add_argument('-mend',       type = int)
-parser.add_argument('-yend',       type = int)
 args = parser.parse_args()
 
 if args.create > 1:
@@ -38,6 +39,12 @@ else:
     _CROP_IMG = args.crop
 #end
 
+DATASET_NAME = args.name
+
+print()
+print(DATASET_NAME)
+print()
+
 
 def distance_km_from_lat_lon(lat1, lat2, lon1, lon2):
     ''' Matches with https://www.nhc.noaa.gov/gccalc.shtml '''
@@ -51,18 +58,22 @@ def distance_km_from_lat_lon(lat1, lat2, lon1, lon2):
     return d
 #end
 
-def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, day_start, month_start, year_start):
-    
-    if os.path.exists(os.path.join(PATH_DATA, ds_name)):
-        os.remove(os.path.join(PATH_DATA, ds_name))
+def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, 
+			  day_start, month_start, year_start,
+			  day_end, month_end, year_end):
+   
+    filename = f'{ds_name}_{day_start:02d}-{month_start:02d}-{year_start}_{day_end:02d}-{month_end:02d}-{year_end}.nc'
+    if os.path.exists(os.path.join(PATH_DATA, filename)):
+        os.remove(os.path.join(PATH_DATA, filename))
         print('Old Dataset removed ...')
     #end
     
     print('Creating new netCDF4 Dataset ...')
-    nc_dataset = nc.Dataset(os.path.join(PATH_DATA, '{}.nc'.format(ds_name)), mode = 'w', format = 'NETCDF4_CLASSIC')
+    nc_dataset = nc.Dataset(os.path.join(PATH_DATA, f'{filename}'), mode = 'w', format = 'NETCDF4_CLASSIC')
     nc_dataset.createDimension('south-north', lat.shape[0])
     nc_dataset.createDimension('west-east', lon.shape[1])
     nc_dataset.createDimension('time', time.__len__())
+    nc_dataset.createDimension('wind_components', 2)
     
     nc_lat = nc_dataset.createVariable('lat', np.float32, ('south-north', 'west-east'))
     nc_lat.units = 'degree_north'
@@ -74,9 +85,9 @@ def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, day_start
     nc_mask.units = 'm'
     nc_mask.long_name = 'Mask_land_sea'
     nc_time = nc_dataset.createVariable('time', np.float64, ('time',))
-    nc_time.units = f'hours_since_{day_start:02d}/{month_start:02d}/{year_start}'
+    nc_time.units = f'hours_since_{day_start:02d}-{month_start:02d}-{year_start}_to{day_end:02d}-{month_end:02d}-{year_end:02d}_dd-mm-yyyy'
     nc_time.long_name = 'hours'
-    nc_wind = nc_dataset.createVariable('wind', np.float32, ('time', 'south-north', 'west-east'))
+    nc_wind = nc_dataset.createVariable('wind', np.float32, ('time', 'south-north', 'west-east', 'wind_components'))
     nc_wind.units = 'm s-1'
     nc_wind.long_name = 'model_wind'
     nc_windices = nc_dataset.createVariable('indices', np.int32, ('time',))
@@ -87,7 +98,9 @@ def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, day_start
     nc_lon[:,:] = lon
     nc_time[:] = time
     nc_mask[:,:] = mask
-    nc_wind[:,:,:] = wind
+    nc_wind[:,:,:,0] = wind[:,:,:,0]
+    nc_wind[:,:,:,1] = wind[:,:,:,1]
+    # nc_wind_v[:,:,:] = wind[:,:,:,1]
     nc_windices = indices
     
     print('Dataset save. Closing ...')
@@ -128,7 +141,7 @@ date_start = pd.to_datetime(f'{year_start}-{month_start}-{day_start} 00:00:00', 
 timedelta = pd.Timedelta(date_end - date_start)
 print(timedelta)
 delta_days = timedelta.days
-delta_hours = np.int32(timedelta / np.timedelta64(1, 'h'))
+delta_hours = np.int32(timedelta / np.timedelta64(1, 'h')) + 1 # + 1 because it comprises the last day
 print('Hours since {} to {} : {}'.format(date_start, date_end, delta_hours+1))
 
 time_range = pd.date_range(start = date_start, end = date_end, freq = 'h').tz_localize('UTC')
@@ -143,7 +156,7 @@ XLONG_MIN  = 0
 XLONG_MAX  = 323
 XLONG_STEP = 1
 TIME_MIN   = 0
-TIME_MAX   = delta_hours + 1
+TIME_MAX   = delta_hours
 TIME_STEP  = 1
 CROP_IMG   = _CROP_IMG
 
@@ -200,24 +213,28 @@ lat_max = lat.max()
 
 if np.bool_(DS_CREATE):
     
+    wind = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1, 2))
+
     for i in tqdm(range(delta_hours)):
         
         _u10 = dataset['U10'][i,:,:].data
         _v10 = dataset['V10'][i,:,:].data
         
-        w = np.sqrt((_u10**2 + _v10**2))
-        with open(os.path.join(PATH_DATA, 'w{}.npy'.format(i)), 'wb') as f:
-            np.save(f, w, allow_pickle = True)
-        f.close()
+        wind[i,:,:,0] = _u10
+        wind[i,:,:,1] = _v10
     #end
+    
+    with open(os.path.join(PATH_DATA, f'wind_array_{day_start:02d}{month_start:02d}{year_start}_{day_end:02d}{month_end:02d}{year_end}.npy'), 'wb') as f:
+        np.save(f, wind, allow_pickle = True)
+    f.close()
     
     print('***FILES SAVED SUCCESS***')
 #end
 
 if np.bool_(DS_FETCH):
     
-    wind = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1))
-    filename = f'patch_modw_{day_start:02d}{month_start:02d}{year_start}-{day_end:02d}{month_end:02d}{year_end}.npy'
+    wind = np.zeros((TIME_MAX, XLONG_MAX - XLONG_MIN + 1, XLAT_MAX - XLAT_MIN + 1, 2))
+    filename = f'wind_array_{day_start:02d}{month_start:02d}{year_start}_{day_end:02d}{month_end:02d}{year_end}.npy'
     
     if DS_COMPLETE:
         
@@ -294,4 +311,7 @@ print(f'Width  : (average)  [°]  {diff_deg_lat.mean():.2f} ± {diff_deg_lat.std
 print(f'Height : (computed) [km] {height/lon.shape[0]:.2f} ; (average) [km] {diff_km_lon.mean():.2f} ± {diff_km_lon.std():.2f}')
 print(f'Heigth : (average)  [°]  {diff_deg_lon.mean():.2f} ± {diff_deg_lon.std():.2f}')
 
-save_netCDF4_dataset(lat, lon, time_range, mask_sea, wind, indices, 'wds', day_start, month_start, year_start)
+save_netCDF4_dataset(lat, lon, time_range, mask_sea, wind, indices, DATASET_NAME,
+                     day_start, month_start, year_start, day_end, month_end, year_end)
+
+
