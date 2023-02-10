@@ -524,7 +524,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         var_cost, var_cost_grad = self.var_cost(x_k, obs, mask)
         
         if normgrad == 0. :
-            normgrad_= torch.sqrt( torch.mean( var_cost_grad**2 + 0.))
+            normgrad_= torch.sqrt(torch.mean(var_cost_grad**2 + 0.))
         else:
             normgrad_= normgrad
         #end
@@ -542,12 +542,9 @@ class Solver_Grad_4DVarNN(nn.Module):
         if self.model_H.dim_obs == 1:
             data_fidelty = self.model_H(x, yobs, mask)
         elif self.model_H.dim_obs > 1:
-            x_complete = x[:,:24,:,:]; x_situ = x[:,24:48,:,:]
-            y_complete = yobs[:,:24,:,:]; y_situ = yobs[:,24:48,:,:]
-            mask_complete = mask[:,:24,:,:]; mask_situ = mask[:,24:48,:,:]
-            data_fidelty = self.model_H([x_complete, x_situ],
-                                        [y_complete, y_situ],
-                                        [mask_complete, mask_situ])
+            x_lr = x[:,:24,:,:];    x_hr = x[:,24:48,:,:]
+            y_lr = yobs[:,:24,:,:]; y_hr = yobs[:,24:48,:,:]
+            data_fidelty = self.model_H([x_lr, x_hr], [y_lr, y_hr], mask)
         #end
         
         regularization = x - self.Phi(x)

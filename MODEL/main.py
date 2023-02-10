@@ -17,7 +17,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 # from pytorch_lightning.loggers import CSVLogger
 
 from pathmng import PathManager
-from dlmodels import LitModel_OSSE1, model_selection
+from dlmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents, model_selection
 from dutls import W2DSimuDataModule
 
 if torch.cuda.is_available():
@@ -273,7 +273,22 @@ class Experiment:
         
         ## Instantiate dynamical prior and lit model
         Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-        lit_model = LitModel_OSSE1(Phi, shape_data, land_buoy_coords, self.cparams, real_run, start_time = start_time).to(DEVICE)
+        
+        if self.cparams.WIND_MODULUS:
+            lit_model = LitModel_OSSE1_WindModulus(Phi,
+                                                      shape_data,
+                                                      land_buoy_coords,
+                                                      self.cparams,
+                                                      real_run,
+                                                      start_time = start_time).to(DEVICE)
+        else:
+            lit_model = LitModel_OSSE1_WindComponents(Phi, 
+                                                      shape_data, 
+                                                      land_buoy_coords, 
+                                                      self.cparams, 
+                                                      real_run, 
+                                                      start_time = start_time).to(DEVICE)
+        #end
         
         ## Get checkpoint, if needed
         path_ckpt = self.path_manager.get_path('ckpt')

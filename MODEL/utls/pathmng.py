@@ -176,7 +176,7 @@ class PathManager:
         self.nrun = None
         
         self.remove_checkpoints()
-        self.initialize_netCDF4_dataset(cparams.REGION_EXTENT_PX, cparams.RUNS)
+        self.initialize_netCDF4_dataset(cparams.REGION_EXTENT_PX, cparams.RUNS, cparams.WIND_MODULUS)
     #end
     
     def get_model_name(self):
@@ -203,22 +203,29 @@ class PathManager:
         #end
     #end
     
-    def initialize_netCDF4_dataset(self, region_extent, runs):
+    def initialize_netCDF4_dataset(self, region_extent, runs, wind_modulus):
         
         if os.path.exists(os.path.join(self.path_modeloutput, 'reconstructions.nc')):
             os.remove(os.path.join(self.path_modeloutput, 'reconstructions.nc'))
             print('Old dataset.nc removed ...')
         #end
         
+        if wind_modulus:
+            extent_EW = 1 * region_extent
+        else:
+            extent_EW = 2 * region_extent
+        #end
+        
         dataset = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'w', format = 'NETCDF4_CLASSIC')
-        dataset.createDimension('extent', region_extent)
+        dataset.createDimension('extent_NS', region_extent)
+        dataset.createDimension('extent_EW', extent_EW)
         dataset.createDimension('time', 24)
         dataset.createDimension('one', 1)
         dataset.createDimension('run', runs)
         dataset.createDimension('batch', None)
         
-        dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent', 'extent'))
-        dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent', 'extent'))
+        dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_NS', 'extent_EW'))
+        dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent_NS', 'extent_EW'))
         dataset.createVariable('mask', np.float32, ('one', 'extent', 'extent'))
         dataset.close()
         print('Dataset.nc initialized and closed ...')

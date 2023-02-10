@@ -17,15 +17,12 @@ else:
 #end
 
 
-class W2DSimuDataset(Dataset):
+class W2DSimuDataset_WindModulus(Dataset):
     
     def __init__(self, data, normalize):
         
-        # normalization parameters, used to normalize and denormalize data
-        self.pparams = dict()
-        
         # normalize
-        wind2D = self.normalize_imgwise(data, 'wind_2D_hr')
+        wind2D = self.normalize_imgwise(data)
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
@@ -33,16 +30,14 @@ class W2DSimuDataset(Dataset):
     #end
     
     def __len__(self):
-        
         return self.numitems
     #end
     
     def __getitem__(self, idx):
-        
         return self.wind2D[idx]
     #end
     
-    def normalize_imgwise(self, data, name):
+    def normalize_imgwise(self, data):
         
         normparams = {
             'min'  : np.zeros(data.shape[0]),
@@ -67,25 +62,74 @@ class W2DSimuDataset(Dataset):
         return data
     #end
     
-    def normalize(self, data, name):
-        
-        dmax = data.max()
-        dmin = data.min()
-        self.pparams.update({name : {'max' : dmax, 'min' : dmin}})
-        
-        return (data - dmin) / (dmax - dmin)
+    def to_tensor(self):
+        self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
     #end
     
-    def denormalize(self, data, name):
+    def get_normparams(self):
+        return self.normparams
+    #end
+#end
+
+
+class W2DSimuDataset_WindComponents(Dataset):
+    
+    def __init__(self, data, normalize):
         
-        dmin = self.pparams[name]['min']
-        dmax = self.pparams[name]['max']
+        wind2D = self.normalize_imgwise_uv(data)
+        self.wind2D = wind2D
         
-        return dmin + (dmax - dmin) * data
+        self.numitems = self.wind2D.__len__()
+        self.to_tensor()
+    #end
+    
+    def __len__(self):
+        return self.numitems
+    #end
+    
+    def __getitem__(self, idx):
+        return (self.wind2D[idx,:,:,:,0], self.wind2D[idx,:,:,:,1])
+    #end
+    
+    def normalize_imgwise_uv(self, data):
+        
+        u, v = data[:,:,:,:,0], data[:,:,:,:,1]
+        
+        normparams = {
+            'min'  : np.zeros((data.shape[0], 2)),
+            'max'  : np.zeros((data.shape[0], 2)),
+            'mean' : np.zeros(2),
+            'std'  : np.zeros(2)
+        }
+        
+        for t in range(data.shape[0]):
+            normparams['min'][t,0] = u[t].min()
+            normparams['min'][t,1] = v[t].min()
+            normparams['max'][t,0] = u[t].max()
+            normparams['max'][t,1] = v[t].max()
+            u[t] = (u[t] - u[t].min()) / (u[t].max() - u[t].min())
+            v[t] = (v[t] - v[t].min()) / (v[t].max() - v[t].min())
+        #end
+        
+        u_mean = u.mean()
+        v_mean = v.mean()
+        u_std  = u.std()
+        v_std  = v.std()
+        
+        normparams['mean'][0] = u_mean
+        normparams['mean'][1] = v_mean
+        normparams['std'][0]  = u_std
+        normparams['std'][1]  = v_std
+        
+        u = (u - u_mean) / u_std
+        v = (v - v_mean) / v_std
+        
+        self.normparams = normparams
+        data = np.stack((u, v), axis = -1)
+        return data
     #end
     
     def to_tensor(self):
-        
         self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
     #end
     
@@ -111,6 +155,12 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.normalize     = normalize
         self.data_name     = cparams.DATASET_NAME
         self.shapeData     = None
+        self.wind_modulus  = cparams.WIND_MODULUS
+        if cparams.WIND_MODULUS:
+            self.Dataset_class = W2DSimuDataset_WindModulus
+        else:
+            self.Dataset_class = W2DSimuDataset_WindComponents
+        #end
         
         self.setup()
     #end
@@ -138,14 +188,14 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         # NetCDF4 dataset
         ds_wind2D = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name), 'r')
-        wind2D = np.array(ds_wind2D['wind']); wind2D[-1] = wind2D[-2]
+        wind2D = np.array(ds_wind2D['wind']); #wind2D[-1] = wind2D[-2]
         mask_land = np.array(ds_wind2D['mask_land'])
         region_lat = np.array(ds_wind2D['lat'])
         region_lon = np.array(ds_wind2D['lon'])
         ds_wind2D.close()
         
         if self.region_case == 'coast-MA':
-            wind2D = wind2D[:,-self.region_extent:, -self.region_extent:]
+            wind2D = wind2D[:,-self.region_extent:, -self.region_extent:,:]
             mask_land = mask_land[-self.region_extent:, -self.region_extent:]
             region_lat = region_lat[-self.region_extent:, -self.region_extent:]
             region_lon = region_lon[-self.region_extent:, -self.region_extent:]
@@ -153,7 +203,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
             raise ValueError('Not implemented yet')
         #end
         
-        shape = wind2D.shape[-2:]
+        shape = wind2D.shape[1:3]
         self.shapeData = (self.batch_size, self.timesteps, *tuple(shape))
         
         n_test  = np.int32(24 * self.test_days)
@@ -161,13 +211,19 @@ class W2DSimuDataModule(pl.LightningDataModule):
         n_val   = np.int32(24 * self.val_days)
         n_train = np.int32(n_train - n_val)
         
-        train_set = wind2D[:n_train, :, :]
-        val_set   = wind2D[n_train : n_train + n_val, :, :]
-        test_set  = wind2D[n_train + n_val : n_train + n_val + n_test, :, :]
+        train_set = wind2D[:n_train, :,:,:]
+        val_set   = wind2D[n_train : n_train + n_val, :,:,:]
+        test_set  = wind2D[n_train + n_val : n_train + n_val + n_test, :,:,:]
         
         train_set = self.extract_time_series(train_set, 36, n_train // 24)
         val_set   = self.extract_time_series(val_set, 36, n_val // 24)
         test_set  = self.extract_time_series(test_set, 36, self.test_days)
+        
+        if self.wind_modulus:
+            train_set = np.sqrt(train_set[:,:,:,:,0]**2 + train_set[:,:,:,:,1]**2)
+            val_set   = np.sqrt(val_set[:,:,:,:,0]**2 + val_set[:,:,:,:,1]**2)
+            test_set  = np.sqrt(test_set[:,:,:,:,0]**2 + test_set[:,:,:,:,1]**2)
+        #end
         
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)
@@ -176,43 +232,32 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         self.mask_land = mask_land
         self.buoy_positions = self.get_buoy_locations(region_lat, region_lon)
-        self.train_dataset  = W2DSimuDataset(train_set, normalize = self.normalize)
-        self.val_dataset    = W2DSimuDataset(val_set,   normalize = self.normalize)
-        self.test_dataset   = W2DSimuDataset(test_set,  normalize = self.normalize)
+        self.train_dataset  = self.Dataset_class(train_set, normalize = self.normalize)
+        self.val_dataset    = self.Dataset_class(val_set,   normalize = self.normalize)
+        self.test_dataset   = self.Dataset_class(test_set,  normalize = self.normalize)
         self.save_nparams()
     #end
     
     def extract_time_series(self, wind_data, ts_length, num_subseries, random_extract = False):
-        
+                
         if random_extract:
-            new_wind = np.zeros((num_subseries, ts_length, *wind_data.shape[-2:]))
+            new_wind = np.zeros((num_subseries, ts_length, *wind_data.shape[-3:]))
             for i in range(num_subseries):
                 idx_series_start = np.random.randint(0, wind_data.shape[0] - ts_length)
-                new_series = wind_data[idx_series_start : idx_series_start + ts_length, :,:]
-                new_wind[i,:,:] = new_series
+                new_series = wind_data[idx_series_start : idx_series_start + ts_length, :,:,:]
+                new_wind[i,:,:,:] = new_series
             #end
         else:
-            new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-2:]))
+            new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-3:]))
             for t in range(num_subseries - 2):
                 t_true = 18 + 24 * t
-                new_wind[t,:,:,:] = wind_data[t_true : t_true + ts_length,:,:]
+                new_wind[t,:,:,:] = wind_data[t_true : t_true + ts_length,:,:,:]
             #end
         #end
         
         return new_wind
     #end
-    
-    def extract_time_series_test(self, wind_data, ts_length, test_days):
         
-        new_wind = np.zeros((test_days - 2, ts_length, *wind_data.shape[-2:]))
-        for t in range(test_days - 2):
-            t_true = 18 + 24 * t
-            new_wind[t, :,:,:] = wind_data[t_true : t_true + ts_length,:,:]
-        #end
-        
-        return new_wind
-    #end
-    
     def get_buoy_locations(self, lat, lon):
         
         def coord_to_index(lat, lon, bcoords):

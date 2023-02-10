@@ -312,32 +312,37 @@ class ModelObs_base(nn.Module):
 class ModelObs_SM(nn.Module):
     ''' Observation model '''
     
-    def __init__(self, shape_data, dim_obs):
+    def __init__(self, shape_data, wind_modulus, dim_obs):
         super(ModelObs_SM, self).__init__()
         
         # NOTE : chennels == time series length
         self.shape_data = shape_data
         self.dim_obs = dim_obs
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        self.wind_modulus = wind_modulus
     #end
     
     def forward(self, x, y_obs, mask):
         
-        obs_term = (x - y_obs).mul(mask)
-        return obs_term
+        if self.wind_modulus:
+            obs_term = (x - y_obs).mul(mask)
+            return obs_term
+        else:
+            pass
         #end
     #end
 #end
 
 
 class ModelObs_MM(nn.Module):
-    def __init__(self, shape_data, buoys_coords, dim_obs = 3):
+    def __init__(self, shape_data, buoys_coords, wind_modulus, dim_obs):
         super(ModelObs_MM, self).__init__()
         
         self.dim_obs    = dim_obs
         self.shape_data = shape_data
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
         self.buoys_coords = buoys_coords
+        self.wind_modulus = wind_modulus
         timesteps       = shape_data[1]
         in_channels     = timesteps
         
@@ -407,34 +412,81 @@ class ModelObs_MM(nn.Module):
     
     def forward(self, x, y_obs, mask):
         
-        # || x - y ||²
-        dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+        if self.wind_modulus:
+            # || x - y ||²
+            dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+            
+            # || h_situ(x) - g_situ(y_situ) ||²
+            y_situ = y_obs[1][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+            x_situ = x[0] + x[1]
+            
+            feat_state_situ = self.extract_feat_state_Hsitu(x_situ)
+            feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
+            dy_situ         = (feat_state_situ - feat_data_situ)
+            
+            # || g_hr(x) - h_hr(y_hr) ||²
+            y_spatial = y_obs[1].mul(mask[1])
+            feat_state_spatial = self.extract_feat_state_Hhr(x[1])
+            feat_data_spatial  = self.extract_feat_data_Hhr(y_spatial)
+            dy_spatial         = (feat_state_spatial - feat_data_spatial)
+            
+            return [dy_complete, dy_situ, dy_spatial]
         
-        # || h_situ(x) - g_situ(y_situ) ||²
-        y_situ = y_obs[1][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        
-        feat_state_situ = self.extract_feat_state_Hsitu(x[1])
-        feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
-        dy_situ         = (feat_state_situ - feat_data_situ)
-        
-        # || g_hr(x) - h_hr(y_hr) ||²
-        y_spatial = y_obs[1].mul(mask[1])
-        feat_state_spatial = self.extract_feat_state_Hhr(x[1])
-        feat_data_spatial  = self.extract_feat_data_Hhr(y_spatial)
-        dy_spatial         = (feat_state_spatial - feat_data_spatial)
-        
-        return [dy_complete, dy_situ, dy_spatial]
+        else:
+            
+            data_dim = self.shape_data[-2:]
+            
+            # || x - y ||² (two components, low-resolution)
+            mask_lr = mask[0]
+            
+            y_lr_u = y_obs[0][:,:,:, :data_dim[1]]
+            y_lr_v = y_obs[0][:,:,:, -data_dim[1]:]
+            x_lr_u = x[0][:,:,:, :data_dim[1]]
+            x_lr_v = x[0][:,:,:, -data_dim[1]:]
+            
+            dy_lr_u = (x_lr_u - y_lr_u).mul(mask_lr)
+            dy_lr_v = (x_lr_v - y_lr_v).mul(mask_lr)
+            
+            # || g(x) - h(y) ||²
+            
+            ## Spatial
+            ## Here we need the wind modulus of y and x
+            ## x (high-reso) = x (low-reso) + anomaly du
+            mask_hr = mask[1]
+            
+            x_hr_u = x_lr_u + x[1][:,:,:, :data_dim[1]]
+            x_hr_v = x_lr_v + x[1][:,:,:, -data_dim[1]:]
+            y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
+            y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
+            
+            x_hr_spatial = (x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt()
+            y_hr_spatial = (y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr)
+            
+            feat_state_spatial = self.extract_feat_state_Hhr(x_hr_spatial)
+            feat_data_spatial  = self.extract_feat_data_Hhr(y_hr_spatial)
+            dy_hr_spatial      = (feat_state_spatial - feat_data_spatial)
+            
+            ## Situ
+            ## Here we isolate the in-situ time series from the hr fields
+            y_situ = y_hr_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+            feat_state_situ = self.extract_feat_state_Hsitu(x_hr_spatial)
+            feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
+            dy_hr_situ      = (feat_state_situ - feat_data_situ)
+            
+            return [dy_lr_u, dy_lr_v, dy_hr_spatial, dy_hr_situ]
+        #end
     #end
 #end
 
 
 class ModelObs_MM2d(nn.Module):
-    def __init__(self, shape_data, dim_obs = 2):
+    def __init__(self, shape_data, wind_modulus, dim_obs):
         super(ModelObs_MM2d, self).__init__()
         
         self.dim_obs = dim_obs
         self.shape_data = shape_data
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        self.wind_modulus = wind_modulus
         timesteps = shape_data[1]
         
         self.net_state = nn.Sequential(
@@ -474,28 +526,69 @@ class ModelObs_MM2d(nn.Module):
     
     def forward(self, x, y_obs, mask):
         
-        # || x - y ||²
-        dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+        if self.wind_modulus:
+            # || x - y ||²
+            dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+            
+            # || h(x) - g(y) ||²
+            x_spatial = x[0] + x[1]
+            feat_data = self.extract_feat_data(y_obs[1].mul(mask[1]))
+            feat_state = self.extract_feat_state(x_spatial)
+            
+            dy_spatial = (feat_state - feat_data)
+            
+            return [dy_complete, dy_spatial]
         
-        # || h(x) - g(y) ||²
-        feat_data = self.extract_feat_data(y_obs[1].mul(mask[1]))
-        feat_state = self.extract_feat_state(x[1])
-        
-        dy_spatial = (feat_state - feat_data)
-        
-        return [dy_complete, dy_spatial]
+        else:
+            
+            data_dim = self.shape_data[-2:]
+            
+            # || x - y ||² (two components, low-resolution)
+            
+            mask_lr = mask[0]
+            
+            y_lr_u = y_obs[0][:,:,:, :data_dim[1]]
+            y_lr_v = y_obs[0][:,:,:, -data_dim[1]:]
+            x_lr_u = x[0][:,:,:, :data_dim[1]]
+            x_lr_v = x[0][:,:,:, -data_dim[1]:]
+            
+            dy_lr_u = (x_lr_u - y_lr_u).mul(mask_lr)
+            dy_lr_v = (x_lr_v - y_lr_v).mul(mask_lr)
+            
+            # || g(x) - h(y) ||²
+            
+            ## Spatial
+            ## Here we need the wind modulus of y and x
+            ## x (high-reso) = x (low-reso) + anomaly du
+            mask_hr = mask[1]
+            
+            x_hr_u = x_lr_u + x[1][:,:,:, :data_dim[1]]
+            x_hr_v = x_lr_v + x[1][:,:,:, -data_dim[1]:]
+            y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
+            y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
+            
+            x_hr_spatial = (x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt()
+            y_hr_spatial = (y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr)
+            
+            feat_state_spatial = self.extract_feat_state_Hhr(x_hr_spatial)
+            feat_data_spatial  = self.extract_feat_data_Hhr(y_hr_spatial)
+            dy_hr_spatial      = (feat_state_spatial - feat_data_spatial)
+            
+            return [dy_lr_u, dy_lr_v, dy_hr_spatial]
+        #end
     #end
 #end
 
 
 class ModelObs_MM1d(nn.Module):
-    def __init__(self, shape_data, buoys_coords, dim_obs = 2):
+    def __init__(self, shape_data, buoys_coords, wind_modulus, dim_obs):
         super(ModelObs_MM1d, self).__init__()
         
         self.dim_obs = dim_obs
         self.shape_data = shape_data
         self.buoys_coords = buoys_coords
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
+        self.wind_modulus = wind_modulus
         timesteps = shape_data[1]
         in_channels = timesteps
         
@@ -525,17 +618,59 @@ class ModelObs_MM1d(nn.Module):
     
     def forward(self, x, y_obs, mask):
         
-        dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+        if self.wind_modulus:
+            dy_complete = (x[0] - y_obs[0]).mul(mask[0])
+            
+            y_situ = y_obs[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+            x_hr_spatial = x[0] + x[1]
+            
+            feat_state = self.extract_feat_state(x_hr_spatial)
+            feat_data = self.extract_feat_data(y_situ)
+            
+            dy_situ = (feat_state - feat_data)
+            
+            return [dy_complete, dy_situ]
         
-        y_situ = y_obs[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        x_hr_spatial = x[1]
-        
-        feat_state = self.extract_feat_state(x_hr_spatial)
-        feat_data = self.extract_feat_data(y_situ)
-        
-        dy_situ = (feat_state - feat_data)
-        
-        return [dy_complete, dy_situ]
+        else:
+            
+            data_dim = self.shape_data[-2:]
+            
+            # || x - y ||² (two components, low-resolution)
+            
+            mask_lr = mask[0]
+            
+            y_lr_u = y_obs[0][:,:,:, :data_dim[1]]
+            y_lr_v = y_obs[0][:,:,:, -data_dim[1]:]
+            x_lr_u = x[0][:,:,:, :data_dim[1]]
+            x_lr_v = x[0][:,:,:, -data_dim[1]:]
+            
+            dy_lr_u = (x_lr_u - y_lr_u).mul(mask_lr)
+            dy_lr_v = (x_lr_v - y_lr_v).mul(mask_lr)
+            
+            # || g(x) - h(y) ||²
+            
+            ## Spatial
+            ## Here we need the wind modulus of y and x
+            ## x (high-reso) = x (low-reso) + anomaly du
+            mask_hr = mask[1]
+            
+            x_hr_u = x_lr_u + x[1][:,:,:, :data_dim[1]]
+            x_hr_v = x_lr_v + x[1][:,:,:, -data_dim[1]:]
+            y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
+            y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
+            
+            x_hr_spatial = (x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt()
+            y_hr_spatial = (y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr)
+            
+            ## Situ
+            ## Here we isolate the in-situ time series from the hr fields
+            y_situ = y_hr_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+            feat_state_situ = self.extract_feat_state_Hsitu(x_hr_spatial)
+            feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
+            dy_hr_situ      = (feat_state_situ - feat_data_situ)
+            
+            return [dy_lr_u, dy_lr_v, dy_hr_situ]
+        #end
     #end
 #end
 
@@ -576,7 +711,7 @@ class LitModel_Base(pl.LightningModule):
         self.__test_losses       = list()
         self.__test_batches_size = list()
         self.__samples_to_save   = list()
-        self.__var_cost_values   = list()
+        self.__var_cost_values   = list()        
     #end
     
     def has_nans(self):
@@ -710,144 +845,6 @@ class LitModel_Base(pl.LightningModule):
         self.save_test_loss(test_loss, batch.shape[0])
         return metrics, outs
     #end
-#end
-
-
-class LitModel_OSSE1(LitModel_Base):
-    
-    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
-        super(LitModel_OSSE1, self).__init__(config_params)
-        
-        self.start_time = start_time
-        
-        # Dynamical prior and mask for land/sea locations
-        self.Phi = Phi
-        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
-        self.buoy_position = land_buoy_coordinates[1]
-        
-        # Loss function — parameters optimization
-        self.loss_fn = NormLoss()
-        
-        # Hyper-parameters, learning and workflow
-        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE
-        self.hparams.inversion              = config_params.INVERSION
-        self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
-        self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
-        self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
-        self.hparams.mm_obsmodel            = config_params.MM_OBSMODEL
-        self.hparams.lr_sampl_delay         = config_params.LR_SAMP_DELAY
-        self.hparams.lr_intensity           = config_params.LR_INTENSITY
-        self.hparams.patch_extent           = config_params.PATCH_EXTENT
-        self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
-        self.hparams.reg_coeff              = config_params.REG_COEFF
-        self.hparams.grad_coeff             = config_params.GRAD_COEFF
-        self.hparams.weight_hres            = config_params.WEIGHT_HRES
-        self.hparams.weight_lres            = config_params.WEIGHT_LRES
-        self.hparams.mod_h_lr               = config_params.MODEL_H_LR
-        self.hparams.mod_h_wd               = config_params.MODEL_H_WD
-        self.hparams.mgrad_lr               = config_params.SOLVER_LR
-        self.hparams.mgrad_wd               = config_params.SOLVER_WD
-        self.hparams.prior_lr               = config_params.PHI_LR
-        self.hparams.prior_wd               = config_params.PHI_WD
-        self.hparams.learn_varcost_params   = config_params.LEARN_VC_PARAMS
-        self.hparams.varcost_lr             = config_params.VARCOST_LR
-        self.hparams.varcost_wd             = config_params.VARCOST_WD
-        self.hparams.dim_grad_solver        = config_params.DIM_LSTM
-        self.hparams.dropout                = config_params.SOL_DROPOUT
-        self.hparams.n_solver_iter          = config_params.NSOL_ITER
-        self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
-        self.automatic_optimization         = True
-        self.has_any_nan                    = False
-        self.run                            = run
-        self.train_epochs                   = config_params.EPOCHS
-        
-        # Initialize gradient solver (LSTM)
-        batch_size, ts_length, height, width = shape_data
-        mgrad_shapedata = [ts_length * 3, height, width]
-        model_shapedata = [batch_size, ts_length, height, width]
-        alpha_obs = config_params.ALPHA_OBS
-        alpha_reg = config_params.ALPHA_REG
-        
-        # Choice of observation model
-        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
-            # Case time series plus obs HR, trainable obs term of 1d features
-            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, dim_obs = 3)    
-            
-        elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
-            # Case obs HR, trainable obs term of 2D features
-            self.observation_model = ModelObs_MM2d(shape_data, dim_obs = 2)
-            
-        elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
-            # Case only time series, trainable obs term for in-situ data
-            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, dim_obs = 2)
-        
-        else:
-            # Case default. No trainable obs term at all
-            self.observation_model = ModelObs_SM(shape_data, dim_obs = 1)
-        #end
-        
-        # Instantiation of the gradient solver
-        self.model = NN_4DVar.Solver_Grad_4DVarNN(
-            self.Phi,                                                       # Prior
-            self.observation_model,                                         # Observation model
-            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
-                mgrad_shapedata,                                              # m_Grad : Shape data
-                False,                                                        # m_Grad : Periodic BCs
-                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
-                self.hparams.dropout,                                         # m_Grad : Dropout
-            ),
-            NormLoss(),                                                     # Norm Observation
-            NormLoss(),                                                     # Norm Prior
-            model_shapedata,                                                # Shape data
-            self.hparams.n_solver_iter,                                     # Solver iterations
-            alphaObs = alpha_obs,                                           # alpha observations
-            alphaReg = alpha_reg,                                           # alpha regularization
-            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
-        )
-        
-    #end
-    
-    def configure_optimizers(self):
-        
-        params = [
-            {'params'       : self.model.model_Grad.parameters(),
-             'lr'           : self.hparams.mgrad_lr,
-             'weight_decay' : self.hparams.mgrad_wd},
-            {'params'       : self.model.Phi.parameters(),
-             'lr'           : self.hparams.prior_lr,
-             'weight_decay' : self.hparams.prior_wd},
-            {'params'       : self.model.model_VarCost.parameters(),
-             'lr'           : self.hparams.varcost_lr,
-             'weight_decay' : self.hparams.varcost_wd}
-        ]
-        if self.hparams.mm_obsmodel:
-            print('Multi-modal obs model')
-            params.append(
-                {'params'       : self.observation_model.parameters(),
-                 'lr'           : self.hparams.mod_h_lr,
-                 'weight_decay' : self.hparams.mod_h_wd}
-            )
-        else:
-            print('Single-modal obs model')
-        #end
-        
-        optimizers = torch.optim.Adam(params)
-        return optimizers
-    #end
-    
-    def forward(self, batch, batch_idx, phase = 'train'):
-        
-        state_init = None
-        for n in range(self.hparams.n_fourdvar_iter):
-            
-            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
-            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
-                state_init = outs.detach()
-            #end
-        #end
-        
-        return loss, outs
-    #end
     
     def avgpool2d_keepsize(self, data):
         
@@ -940,15 +937,22 @@ class LitModel_OSSE1(LitModel_Base):
         
         # High-reso dx1 : get according to spatial sampling regime.
         # This gives time series of local observations in specified points
+        # ONLY IF THERE IS NO TRAINABLE OBS MODEL! 
+        # Because if there is, the time series of in-situ observations, 
+        # are isolated thanks to the buoys positions
         # High-reso dx2 : all zeroes
-        mask_hr_dx1 = self.get_HR_obspoints_mask(data_shape, mode = hr_obs_point)
+        if not self.hparams.mm_obsmodel:
+            mask_hr_dx1 = self.get_HR_obspoints_mask(data_shape, mode = hr_obs_point)
+        else:
+            mask_hr_dx1 = torch.zeros(data_shape)
+        #end
         mask_hr_dx2 = torch.zeros(data_shape)
-                
+        
         mask_lr = get_resolution_mask(lr_sfreq, mask_lr, 'lr')
         mask_hr_dx1 = get_resolution_mask(hr_sfreq, mask_hr_dx1, 'hr')
         
         mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
-        return mask
+        return mask, mask_lr, mask_hr_dx1, mask_hr_dx2
     #end
     
     def get_data_lr_delay(self, data_lr, timesteps = 24, timewindow_start = 6,
@@ -1031,7 +1035,148 @@ class LitModel_OSSE1(LitModel_Base):
         
         return baseline
     #end
+#end
+
+
+class LitModel_OSSE1_WindModulus(LitModel_Base):
     
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
+        super(LitModel_OSSE1_WindModulus, self).__init__(config_params)
+        
+        self.start_time = start_time
+        
+        # Dynamical prior and mask for land/sea locations
+        self.Phi = Phi
+        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
+        self.buoy_position = land_buoy_coordinates[1]
+        
+        # Loss function — parameters optimization
+        self.loss_fn = NormLoss()
+        
+        # cparams
+        # Hyper-parameters, learning and workflow
+        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE
+        self.hparams.inversion              = config_params.INVERSION
+        self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
+        self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
+        self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
+        self.hparams.mm_obsmodel            = config_params.MM_OBSMODEL
+        self.hparams.lr_sampl_delay         = config_params.LR_SAMP_DELAY
+        self.hparams.lr_intensity           = config_params.LR_INTENSITY
+        self.hparams.patch_extent           = config_params.PATCH_EXTENT
+        self.hparams.wind_modulus           = config_params.WIND_MODULUS
+        self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
+        self.hparams.reg_coeff              = config_params.REG_COEFF
+        self.hparams.grad_coeff             = config_params.GRAD_COEFF
+        self.hparams.weight_hres            = config_params.WEIGHT_HRES
+        self.hparams.weight_lres            = config_params.WEIGHT_LRES
+        self.hparams.mod_h_lr               = config_params.MODEL_H_LR
+        self.hparams.mod_h_wd               = config_params.MODEL_H_WD
+        self.hparams.mgrad_lr               = config_params.SOLVER_LR
+        self.hparams.mgrad_wd               = config_params.SOLVER_WD
+        self.hparams.prior_lr               = config_params.PHI_LR
+        self.hparams.prior_wd               = config_params.PHI_WD
+        self.hparams.learn_varcost_params   = config_params.LEARN_VC_PARAMS
+        self.hparams.varcost_lr             = config_params.VARCOST_LR
+        self.hparams.varcost_wd             = config_params.VARCOST_WD
+        self.hparams.dim_grad_solver        = config_params.DIM_LSTM
+        self.hparams.dropout                = config_params.SOL_DROPOUT
+        self.hparams.n_solver_iter          = config_params.NSOL_ITER
+        self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
+        self.train_epochs                   = config_params.EPOCHS
+        
+        # Case-specific cparams
+        self.run = run
+        self.automatic_optimization = True
+        self.has_any_nan = False
+        
+        # Initialize gradient solver (LSTM)
+        batch_size, ts_length, height, width = shape_data
+        mgrad_shapedata = [ts_length * 3, height, width]
+        model_shapedata = [batch_size, ts_length, height, width]
+        alpha_obs = config_params.ALPHA_OBS
+        alpha_reg = config_params.ALPHA_REG
+        
+        # Choice of observation model
+        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
+            # Case time series plus obs HR, trainable obs term of 1d features
+            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 3)    
+            
+        elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
+            # Case obs HR, trainable obs term of 2D features
+            self.observation_model = ModelObs_MM2d(shape_data, wind_modulus = True, dim_obs = 2)
+            
+        elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
+            # Case only time series, trainable obs term for in-situ data
+            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 2)
+        
+        else:
+            # Case default. No trainable obs term at all
+            self.observation_model = ModelObs_SM(shape_data, wind_modulus = True, dim_obs = 1)
+        #end
+        
+        # Instantiation of the gradient solver
+        self.model = NN_4DVar.Solver_Grad_4DVarNN(
+            self.Phi,                                                       # Prior
+            self.observation_model,                                         # Observation model
+            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
+                mgrad_shapedata,                                              # m_Grad : Shape data
+                False,                                                        # m_Grad : Periodic BCs
+                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
+                self.hparams.dropout,                                         # m_Grad : Dropout
+            ),
+            NormLoss(),                                                     # Norm Observation
+            NormLoss(),                                                     # Norm Prior
+            model_shapedata,                                                # Shape data
+            self.hparams.n_solver_iter,                                     # Solver iterations
+            alphaObs = alpha_obs,                                           # alpha observations
+            alphaReg = alpha_reg,                                           # alpha regularization
+            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
+        )
+    #end
+    
+    def configure_optimizers(self):
+        
+        params = [
+            {'params'       : self.model.model_Grad.parameters(),
+             'lr'           : self.hparams.mgrad_lr,
+             'weight_decay' : self.hparams.mgrad_wd},
+            {'params'       : self.model.Phi.parameters(),
+             'lr'           : self.hparams.prior_lr,
+             'weight_decay' : self.hparams.prior_wd},
+            {'params'       : self.model.model_VarCost.parameters(),
+             'lr'           : self.hparams.varcost_lr,
+             'weight_decay' : self.hparams.varcost_wd}
+        ]
+        if self.hparams.mm_obsmodel:
+            print('Multi-modal obs model')
+            params.append(
+                {'params'       : self.observation_model.parameters(),
+                 'lr'           : self.hparams.mod_h_lr,
+                 'weight_decay' : self.hparams.mod_h_wd}
+            )
+        else:
+            print('Single-modal obs model')
+        #end
+        
+        optimizers = torch.optim.Adam(params)
+        return optimizers
+    #end
+    
+    def forward(self, batch, batch_idx, phase = 'train'):
+        
+        state_init = None
+        for n in range(self.hparams.n_fourdvar_iter):
+            
+            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
+            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
+                state_init = outs.detach()
+            #end
+        #end
+        
+        return loss, outs
+    #end
+        
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         data_hr = data.clone()
@@ -1067,21 +1212,34 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Get and manipulate the data as desider
         data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
+        
+        # TIP : 2nd 3rd components are not anomalies, but high-resolution fields?
         input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         
         # Prepare input state initialized
         if init_state is None:
+            # Here it makes sense to initialize with anomalies the 2nd and 3rd items;
+            # but are NOT observed generally?
             input_state = torch.cat((data_lr_input, data_an, data_an), dim = 1)
         else:
             input_state = init_state
         #end
         
         # Mask data
-        mask = self.get_osse_mask(data_hr.shape, 
+        mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(data_hr.shape, 
                                   self.hparams.lr_mask_sfreq, 
                                   self.hparams.hr_mask_sfreq, 
                                   self.hparams.hr_mask_mode)
         
+        """
+        NOTA: ha senso inizializzare lo stato con anomalie? E ha senso calcolare le 
+        anomalie come differenza tra HR (satellite) e LR (NWP)?
+        Per le posizioni, non è un problema, visto che sia y che quindi x sono
+        inizializzate secondo il pattern di sparsità di y_lr e y_hr. Quindi apposto,
+        ma ci sarebbe da assicurarsi che il fatto che inizializziamo x con 
+        anomalie sia una cosa applicabile anche in setting reali.
+        Soprattutto perché non è garantito che ci sia accordo temporale tra y_lr e y_hr!!!
+        """
         input_state = input_state * mask
         input_data  = input_data * mask
         
@@ -1105,7 +1263,9 @@ class LitModel_OSSE1(LitModel_Base):
                 
             elif self.hparams.inversion == 'gs':
                 
-                outputs, _,_,_ = self.model(input_state, input_data, mask)
+                mask_4DVarNet = [mask_lr, mask_hr_dx1]
+                
+                outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
@@ -1122,7 +1282,7 @@ class LitModel_OSSE1(LitModel_Base):
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
-            self.save_samples({'data' : data_hr.detach().cpu(), 
+            self.save_samples({'data' : data_hr.detach().cpu(),
                                'reco' : reco_hr.detach().cpu()})
             
             if self.hparams.inversion == 'gs':
@@ -1167,31 +1327,299 @@ class LitModel_OSSE1(LitModel_Base):
                      'reco_mean'    : _log_reco_hr_mean,
                      'grad_reco'    : _log_grad_reco_loss,
                      'grad_data'    : _log_grad_data_loss,
-                      'reg_loss'     : _log_reg_loss
+                     'reg_loss'     : _log_reg_loss
                      }), outputs
     #end
 #end
 
 
-class LitModel_OSSE1_1(LitModel_OSSE1):
+class LitModel_OSSE1_WindComponents(LitModel_Base):
     
     def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
-        super(LitModel_OSSE1_1, self).__init__(Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)
+        super(LitModel_OSSE1_WindComponents, self).__init__(config_params)
         
-        print()
+        self.start_time = start_time
+        
+        # Dynamical prior and mask for land/sea locations
+        self.Phi = Phi
+        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
+        self.buoy_position = land_buoy_coordinates[1]
+        
+        # Loss function — parameters optimization
+        self.loss_fn = NormLoss()
+        
+        # cparams
+        # Hyper-parameters, learning and workflow
+        self.hparams.lr_kernel_size         = config_params.LR_KERNELSIZE
+        self.hparams.inversion              = config_params.INVERSION
+        self.hparams.hr_mask_mode           = config_params.HR_MASK_MODE
+        self.hparams.hr_mask_sfreq          = config_params.HR_MASK_SFREQ
+        self.hparams.lr_mask_sfreq          = config_params.LR_MASK_SFREQ
+        self.hparams.mm_obsmodel            = config_params.MM_OBSMODEL
+        self.hparams.lr_sampl_delay         = config_params.LR_SAMP_DELAY
+        self.hparams.lr_intensity           = config_params.LR_INTENSITY
+        self.hparams.patch_extent           = config_params.PATCH_EXTENT
+        self.hparams.wind_modulus           = config_params.WIND_MODULUS
+        self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
+        self.hparams.reg_coeff              = config_params.REG_COEFF
+        self.hparams.grad_coeff             = config_params.GRAD_COEFF
+        self.hparams.weight_hres            = config_params.WEIGHT_HRES
+        self.hparams.weight_lres            = config_params.WEIGHT_LRES
+        self.hparams.mod_h_lr               = config_params.MODEL_H_LR
+        self.hparams.mod_h_wd               = config_params.MODEL_H_WD
+        self.hparams.mgrad_lr               = config_params.SOLVER_LR
+        self.hparams.mgrad_wd               = config_params.SOLVER_WD
+        self.hparams.prior_lr               = config_params.PHI_LR
+        self.hparams.prior_wd               = config_params.PHI_WD
+        self.hparams.learn_varcost_params   = config_params.LEARN_VC_PARAMS
+        self.hparams.varcost_lr             = config_params.VARCOST_LR
+        self.hparams.varcost_wd             = config_params.VARCOST_WD
+        self.hparams.dim_grad_solver        = config_params.DIM_LSTM
+        self.hparams.dropout                = config_params.SOL_DROPOUT
+        self.hparams.n_solver_iter          = config_params.NSOL_ITER
+        self.hparams.n_fourdvar_iter        = config_params.N_4DV_ITER
+        self.train_epochs                   = config_params.EPOCHS
+        
+        # Case-specific cparams
+        self.run = run
+        self.automatic_optimization = True
+        self.has_any_nan = False
+        self.shape_data = shape_data
+        
+        # Initialize gradient solver (LSTM)
+        batch_size, ts_length, height, width = shape_data
+        mgrad_shapedata = [ts_length * 3, height, width]
+        model_shapedata = [batch_size, ts_length, height, width]
+        alpha_obs = config_params.ALPHA_OBS
+        alpha_reg = config_params.ALPHA_REG
+        
+        # Choice of observation model
+        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
+            # Case time series plus obs HR, trainable obs term of 1d features
+            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 4)
+            
+        elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
+            # Case obs HR, trainable obs term of 2D features
+            self.observation_model = ModelObs_MM2d(shape_data, wind_modulus = False, dim_obs = 3)
+            
+        elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
+            # Case only time series, trainable obs term for in-situ data
+            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 3)
+        
+        else:
+            # Case default. No trainable obs term at all
+            self.observation_model = ModelObs_SM(shape_data, wind_modulus = False, dim_obs = 1)
+        #end
+        
+        # Instantiation of the gradient solver
+        self.model = NN_4DVar.Solver_Grad_4DVarNN(
+            self.Phi,                                                       # Prior
+            self.observation_model,                                         # Observation model
+            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
+                mgrad_shapedata,                                              # m_Grad : Shape data
+                False,                                                        # m_Grad : Periodic BCs
+                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
+                self.hparams.dropout,                                         # m_Grad : Dropout
+            ),
+            NormLoss(),                                                     # Norm Observation
+            NormLoss(),                                                     # Norm Prior
+            model_shapedata,                                                # Shape data
+            self.hparams.n_solver_iter,                                     # Solver iterations
+            alphaObs = alpha_obs,                                           # alpha observations
+            alphaReg = alpha_reg,                                           # alpha regularization
+            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
+        )
+    #end
+    
+    def forward(self, batch, batch_idx, phase = 'train'):
+        
+        state_init = None
+        for n in range(self.hparams.n_fourdvar_iter):
+            
+            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
+            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
+                state_init = outs.detach()
+            #end
+        #end
+        
+        return loss, outs
+    #end
+    
+    def configure_optimizers(self):
+        
+        params = [
+            {'params'       : self.model.model_Grad.parameters(),
+             'lr'           : self.hparams.mgrad_lr,
+             'weight_decay' : self.hparams.mgrad_wd},
+            {'params'       : self.model.Phi.parameters(),
+             'lr'           : self.hparams.prior_lr,
+             'weight_decay' : self.hparams.prior_wd},
+            {'params'       : self.model.model_VarCost.parameters(),
+             'lr'           : self.hparams.varcost_lr,
+             'weight_decay' : self.hparams.varcost_wd}
+        ]
+        if self.hparams.mm_obsmodel:
+            print('Multi-modal obs model')
+            params.append(
+                {'params'       : self.observation_model.parameters(),
+                 'lr'           : self.hparams.mod_h_lr,
+                 'weight_decay' : self.hparams.mod_h_wd}
+            )
+        else:
+            print('Single-modal obs model')
+        #end
+        
+        optimizers = torch.optim.Adam(params)
+        return optimizers
+    #end
+    
+    def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
+        
+        # Import the components
+        data_hr_u, data_hr_v = batch[0], batch[1]
+        
+        # Downsample to obtain low-resolution
+        data_lr_u = self.avgpool2d_keepsize(data_hr_u)
+        data_lr_v = self.avgpool2d_keepsize(data_hr_v)
+        
+        # Obtain the wind speed modulus as high-resolution observation
+        data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
+        
+        # Obtain the anomalies
+        data_an_u = data_hr_u - data_lr_u
+        data_an_v = data_hr_v - data_lr_v
+        
+        # Concatenate the two components
+        data_lr = torch.cat([data_lr_u, data_lr_v], dim = -1)
+        data_an = torch.cat([data_an_u, data_an_v], dim = -1)
+        
+        # Delay mode
+        if self.hparams.lr_sampl_delay:
+            data_lr_input = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
+        elif self.hparams.lr_intensity:
+            data_lr_input = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
+        else:
+            data_lr_input = data_lr.clone()
+        #end
+        
+        # Isolate the 24 central timesteps
+        data_lr_input = data_lr_input[:, timewindow_start : timewindow_end, :,:]
+        data_hr       = data_hr[:, timewindow_start : timewindow_end, :,:]
+        data_lr       = data_lr[:, timewindow_start : timewindow_end, :,:]
+        data_an       = data_an[:, timewindow_start : timewindow_end, :,:]
+        
+        # Temporal interpolation
+        data_lr_input_u = data_lr_input[:,:,:,:self.shape_data[-1]]
+        data_lr_input_v = data_lr_input[:,:,:,self.shape_data[-1]:]
+        data_lr_input_u = self.get_baseline(data_lr_input_u, timesteps)
+        data_lr_input_v = self.get_baseline(data_lr_input_v, timesteps)
+        data_lr_input = torch.cat([data_lr_input_u, data_lr_input_v], dim = -1)
+        
+        return data_hr, data_lr, data_lr_input, data_an
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        print()
+        # Prepare batch
+        data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
+        data_hr_u = data_hr[:,:,:, :self.shape_data[-1]]
+        data_hr_v = data_hr[:,:,:, -self.shape_data[-1]:]
+        data_lr_u = data_lr[:,:,:, :self.shape_data[-1]]
+        data_lr_v = data_lr[:,:,:, -self.shape_data[-1]]
+        
+        # Prepare low-resolution data
+        input_data = torch.cat([data_lr_input, data_hr, data_hr], dim = 1)
+        
+        # Prepare input state initialized
+        if init_state is None:
+            input_state = torch.cat((data_lr_input, torch.zeros(data_lr_input.shape), torch.zeros(data_lr_input.shape)), dim = 1)
+        else:
+            input_state = init_state
+        #end
+        
+        # Mask data
+        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(self.shape_data, 
+                                  self.hparams.lr_mask_sfreq, 
+                                  self.hparams.hr_mask_sfreq, 
+                                  self.hparams.hr_mask_mode)
+        mask = torch.cat([mask, mask], dim = -1)
+        
+        input_state = input_state * mask
+        input_data  = input_data * mask
+        
+        # Inverse problem solution
+        with torch.set_grad_enabled(True):
+            input_state = torch.autograd.Variable(input_state, requires_grad = True)
+            
+            if self.hparams.inversion == 'fp':
+                
+                outputs = self.Phi(input_data)
+                reco_lr = data_lr_input.clone()
+                reco_an = outputs[:,48:,:,:]
+                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                
+            elif self.hparams.inversion == 'gs':
+                
+                mask_4DVarNet = [mask_lr, mask_hr_dx1]
+                
+                outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
+                reco_lr = outputs[:,:24,:,:]
+                reco_an = outputs[:,48:,:,:]
+                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                
+            elif self.hparams.inversion == 'bl':
+                
+                outputs = self.Phi(input_data)
+                reco_lr = data_lr_input.clone()
+                reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
+            #end
+        #end
+        
+        # Loss
+        ## Split the output state in (u,v) components
+        reco_hr_u = reco_hr[:,:,:, :self.shape_data[-1]]
+        reco_hr_v = reco_hr[:,:,:, -self.shape_data[-1]:]
+        reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
+        reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
+        
+        ## Reconstruction loss
+        loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
+                  self.loss_fn((reco_hr_v - data_hr_v), mask = None)
+        loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) +\
+                  self.loss_fn((reco_lr_v - data_lr_v), mask = None)
+                  
+        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
+        
+        ## Loss on gradients
+        grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
+        grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
+        grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
+        grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
+        grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
+        grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
+        grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
+        grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
+        
+        loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
+        loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
+        loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
+        
+        ## Regularization term
+        if not self.hparams.inversion == 'bl':
+            
+            regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+            loss += regularization * self.hparams.reg_coeff
+        #end
+        
+        return dict({'loss' : loss}), outputs
     #end
-#end        
+#end
 
 
-class LitModel_OSSE1_2(LitModel_Base):
+class LitModel_OSSE2_Distribution(LitModel_Base):
     
     def __init__(self, cparams):
-        super(LitModel_OSSE1_2, self).__init__(cparams)
+        super(LitModel_OSSE2_Distribution, self).__init__(cparams)
         
     #end
     
