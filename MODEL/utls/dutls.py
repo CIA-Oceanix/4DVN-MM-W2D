@@ -10,6 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 if torch.cuda.is_available():
     DEVICE  = torch.device('cuda')
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
     WORKERS = 32
 else:
     DEVICE  = torch.device('cpu')
@@ -186,6 +187,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def setup(self, stage = None):
         
+        print('\nImporting dataset ...')
+        
         # NetCDF4 dataset
         ds_wind2D = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name), 'r')
         wind2D = np.array(ds_wind2D['wind']); #wind2D[-1] = wind2D[-2]
@@ -203,6 +206,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
             raise ValueError('Not implemented yet')
         #end
         
+        print('Dataset imported. Extracting train/test/val sets ...')
         shape = wind2D.shape[1:3]
         self.shapeData = (self.batch_size, self.timesteps, *tuple(shape))
         
@@ -228,7 +232,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)
         print('Test  dataset shape : ', test_set.shape)
-        print()
+        print('\nInstantiating torch Datasets ...')
         
         self.mask_land = mask_land
         self.buoy_positions = self.get_buoy_locations(region_lat, region_lon)

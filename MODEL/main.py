@@ -10,7 +10,6 @@ import json
 import argparse
 from collections import namedtuple
 import torch
-from torch import nn
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -23,11 +22,9 @@ from dutls import W2DSimuDataModule
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    gpus = -1
     print('Program runs using device : {}\n'.format(DEVICE))
 else:
     DEVICE = torch.device('cpu')
-    gpus = 0
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
 # torch.autograd.set_detect_anomaly(True)
@@ -301,7 +298,7 @@ class Experiment:
                            'log_every_n_steps'       : 1}
         
         if torch.cuda.is_available():
-            profiler_kwargs.update({'gpus'        : gpus})
+            profiler_kwargs.update({'gpus'        : self.cparams.GPUS})
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         

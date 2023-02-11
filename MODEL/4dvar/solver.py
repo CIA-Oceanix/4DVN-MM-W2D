@@ -10,7 +10,13 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+if torch.cuda.is_available():
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    DEVICE = torch.device('cuda')
+else:
+    DEVICE = torch.device('cpu')
+#end
 
 
 class CorrelateNoise(torch.nn.Module):
