@@ -435,6 +435,10 @@ class ModelObs_MM(nn.Module):
         else:
             print('----------------------------------------------------------')
             print('OBS MODEL')
+            print(torch.Tensor([p.mean() for p in self.net_state_Hhr.parameters()]).mean())
+            print(torch.Tensor([p.mean() for p in self.net_state_Hsitu.parameters()]).mean())
+            print(torch.Tensor([p.mean() for p in self.net_data_Hhr.parameters()]).mean())
+            print(torch.Tensor([p.mean() for p in self.net_data_Hsitu.parameters()]).mean())
             data_dim = self.shape_data[-2:]
             
             # || x - y ||² (two components, low-resolution)
@@ -474,7 +478,10 @@ class ModelObs_MM(nn.Module):
             feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
             dy_hr_situ      = (feat_state_situ - feat_data_situ)
             
-            print(dy_lr_u.mean(), dy_lr_v.mean(), dy_hr_spatial.mean(), dy_hr_situ.mean())
+            print(dy_lr_u.mean())
+            print(dy_lr_v.mean())
+            print(dy_hr_spatial.mean())
+            print(dy_hr_situ.mean())
             print('----------------------------------------------------------')
             return [dy_lr_u, dy_lr_v, dy_hr_spatial, dy_hr_situ]
         #end
