@@ -1595,6 +1595,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                   self.loss_fn((reco_lr_v - data_lr_v), mask = None)
                   
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
+        print(loss)
         
         ## Loss on gradients
         grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
@@ -1609,6 +1610,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
         loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
         loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
+        print(loss_grad_u, loss_grad_v)
         
         ## Regularization term
         if not self.hparams.inversion == 'bl':
@@ -1616,6 +1618,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
+        print(regularization)
         
         return dict({'loss' : loss}), outputs
     #end
