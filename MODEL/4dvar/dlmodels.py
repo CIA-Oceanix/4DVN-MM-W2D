@@ -1392,7 +1392,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Case-specific cparams
         self.run = run
-        self.automatic_optimization = True
+        self.automatic_optimization = False
         self.has_any_nan = False
         self.shape_data = shape_data
         
