@@ -1392,7 +1392,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Case-specific cparams
         self.run = run
-        self.automatic_optimization = False
+        self.automatic_optimization = True
         self.has_any_nan = False
         self.shape_data = shape_data
         
@@ -1484,10 +1484,11 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     
     def on_train_batch_end(self, outputs, batch, batch_idx, dataloader_idx):
         
-        print('ON TRAIN BATCH START')
+        print('ON TRAIN BATCH END')
         print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
         print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
         print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
+        print('LOSS : ', outputs[0])
         print()
     #end
     
