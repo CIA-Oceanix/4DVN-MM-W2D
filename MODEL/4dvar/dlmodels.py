@@ -328,7 +328,8 @@ class ModelObs_SM(nn.Module):
             obs_term = (x - y_obs).mul(mask)
             return obs_term
         else:
-            pass
+            obs_term = (x - y_obs).mul(mask)
+            return obs_term
         #end
     #end
 #end
@@ -1273,7 +1274,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
             elif self.hparams.inversion == 'gs':
                 
-                mask_4DVarNet = [mask_lr, mask_hr_dx1]
+                mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
                 
                 outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
                 reco_lr = outputs[:,:24,:,:]
@@ -1626,7 +1627,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
             elif self.hparams.inversion == 'gs':
                 
-                mask_4DVarNet = [mask_lr, mask_hr_dx1]
+                mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
                 
                 print(input_data.mean(), input_state.mean())
                 outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
