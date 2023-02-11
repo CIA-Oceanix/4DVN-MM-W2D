@@ -1544,6 +1544,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                                   self.hparams.hr_mask_mode)
         mask = torch.cat([mask, mask], dim = -1)
         
+        print(input_state.shape, input_data.shape, mask.shape)
         input_state = input_state * mask
         input_data  = input_data * mask
         
