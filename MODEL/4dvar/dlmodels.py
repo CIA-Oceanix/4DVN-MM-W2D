@@ -433,7 +433,8 @@ class ModelObs_MM(nn.Module):
             return [dy_complete, dy_situ, dy_spatial]
         
         else:
-            
+            print('----------------------------------------------------------')
+            print('OBS MODEL')
             data_dim = self.shape_data[-2:]
             
             # || x - y ||² (two components, low-resolution)
@@ -473,6 +474,8 @@ class ModelObs_MM(nn.Module):
             feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
             dy_hr_situ      = (feat_state_situ - feat_data_situ)
             
+            print(dy_lr_u.mean(), dy_lr_v.mean(), dy_hr_spatial.mean(), dy_hr_situ.mean())
+            print('----------------------------------------------------------')
             return [dy_lr_u, dy_lr_v, dy_hr_spatial, dy_hr_situ]
         #end
     #end
@@ -1568,7 +1571,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 print(outputs.mean())
-                                
+                
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.Phi(input_data)
