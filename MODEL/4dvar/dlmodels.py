@@ -1482,6 +1482,11 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         print()
     #end
     
+    def on_train_batch_start(self, batch, batch_idx, dataloader_idx):
+        
+        print('START BATCH ', batch_idx)
+    #end
+    
     def on_train_batch_end(self, outputs, batch, batch_idx, dataloader_idx):
         
         print('ON TRAIN BATCH END')
