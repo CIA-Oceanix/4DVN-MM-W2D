@@ -431,6 +431,9 @@ class ModelObs_MM(nn.Module):
             feat_data_spatial  = self.extract_feat_data_Hhr(y_spatial)
             dy_spatial         = (feat_state_spatial - feat_data_spatial)
             
+            print(dy_complete.mean())
+            print(dy_spatial.mean())
+            print(dy_situ.mean())
             return [dy_complete, dy_situ, dy_spatial]
             
         else:
@@ -445,13 +448,13 @@ class ModelObs_MM(nn.Module):
             # || x - y ||² (two components, low-resolution)
             mask_lr = mask[0]
             
-            y_lr_u = y_obs[0][:,:,:, :data_dim[1]]
-            y_lr_v = y_obs[0][:,:,:, -data_dim[1]:]
-            x_lr_u = x[0][:,:,:, :data_dim[1]]
-            x_lr_v = x[0][:,:,:, -data_dim[1]:]
+            y_lr_u = torch.autograd.Variable(y_obs[0][:,:,:, :data_dim[1]])
+            y_lr_v = torch.autograd.Variable(y_obs[0][:,:,:, -data_dim[1]:])
+            x_lr_u = torch.autograd.Variable(x[0][:,:,:, :data_dim[1]])
+            x_lr_v = torch.autograd.Variable(x[0][:,:,:, -data_dim[1]:])
             
-            dy_lr_u = (x_lr_u - y_lr_u).mul(mask_lr)
-            dy_lr_v = (x_lr_v - y_lr_v).mul(mask_lr)
+            dy_lr_u = (x[0][:,:,:, :data_dim[1]] - y_obs[0][:,:,:, :data_dim[1]]).mul(mask[0])
+            dy_lr_v = (x[0][:,:,:, -data_dim[1]:] - y_obs[0][:,:,:, -data_dim[1]:]).mul(mask[0])
             
             # || g(x) - h(y) ||²
             
@@ -460,13 +463,13 @@ class ModelObs_MM(nn.Module):
             ## x (high-reso) = x (low-reso) + anomaly du
             mask_hr = mask[1]
             
-            x_hr_u = x_lr_u + x[1][:,:,:, :data_dim[1]]
-            x_hr_v = x_lr_v + x[1][:,:,:, -data_dim[1]:]
+            x_hr_u = x[0][:,:,:, :data_dim[1]] + x[1][:,:,:, :data_dim[1]]
+            x_hr_v = x[0][:,:,:, -data_dim[1]:] + x[1][:,:,:, -data_dim[1]:]
             y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
             y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
             
-            x_hr_spatial = (x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt()
-            y_hr_spatial = (y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr)
+            x_hr_spatial = torch.autograd.Variable((x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt())
+            y_hr_spatial = torch.autograd.Variable((y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr))
             
             feat_state_spatial = self.extract_feat_state_Hhr(x_hr_spatial)
             feat_data_spatial  = self.extract_feat_data_Hhr(y_hr_spatial)
@@ -478,6 +481,8 @@ class ModelObs_MM(nn.Module):
             feat_state_situ = self.extract_feat_state_Hsitu(x_hr_spatial)
             feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
             dy_hr_situ      = (feat_state_situ - feat_data_situ)
+            
+            # x[1] = torch.cat([x_hr_u, x_hr_v], dim = -1)
             
             print(dy_lr_u.mean())
             print(dy_lr_v.mean())
@@ -673,11 +678,13 @@ class ModelObs_MM1d(nn.Module):
             x_hr_spatial = (x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt()
             y_hr_spatial = (y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr)
             
+            x[1] = torch.cat([x_hr_u, x_hr_v], dim = -1)
+            
             ## Situ
             ## Here we isolate the in-situ time series from the hr fields
             y_situ = y_hr_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-            feat_state_situ = self.extract_feat_state_Hsitu(x_hr_spatial)
-            feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
+            feat_state_situ = self.extract_feat_state(x_hr_spatial)
+            feat_data_situ  = self.extract_feat_data(y_situ)
             dy_hr_situ      = (feat_state_situ - feat_data_situ)
             
             return [dy_lr_u, dy_lr_v, dy_hr_situ]
