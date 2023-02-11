@@ -1461,6 +1461,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
         print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
         print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
+        print()
     #end
     
     def configure_optimizers(self):
@@ -1564,6 +1565,12 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         input_state = input_state * mask
         input_data  = input_data * mask
+        
+        print('BEFORE MODEL.FORWARD')
+        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
+        print()
         
         # Inverse problem solution
         with torch.set_grad_enabled(True):
