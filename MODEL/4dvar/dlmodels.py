@@ -797,13 +797,13 @@ class LitModel_Base(pl.LightningModule):
         
         self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
         self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
-        self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-        self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-        self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-        self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
         
         return loss
     #end
@@ -1582,14 +1582,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
         
-        print('reco_hr_u shape: ', reco_hr_u.shape)
-        print('reco_hr_v_shape: ', reco_hr_v.shape)
-        print('data_hr_v_shape: ', data_hr_v.shape)
-        print('data_hr_v_shape: ', data_hr_v.shape)
-        print('reco_lr_u shape: ', reco_lr_u.shape)
-        print('reco_lr_v_shape: ', reco_lr_v.shape)
-        print('data_lr_u_shape: ', data_lr_u.shape)
-        print('data_lr_v_shape: ', data_lr_v.shape)
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
