@@ -1547,8 +1547,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        print('check nans :', torch.any(input_state.isnan()), torch.any(input_data.isnan()))
-        
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
@@ -1564,16 +1562,13 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
                 mask_4DVarNet = [mask_lr, mask_hr_dx1]
                 
+                print(input_data.mean(), input_state.mean())
                 outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
-                
-                print('nans in reco')
                 print(outputs.mean())
-                print(torch.any(reco_hr.isnan()))
-                print(torch.any(reco_lr.isnan()))
-                
+                                
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.Phi(input_data)
@@ -1588,16 +1583,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_hr_v = reco_hr[:,:,:, -self.shape_data[-1]:]
         reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
-        
-        print(reco_hr_u.mean())
-        print(reco_hr_v.mean())
-        print(reco_lr_u.mean())
-        print(reco_lr_v.mean())
-        print(data_hr_u.mean())
-        print(data_hr_v.mean())
-        print(data_lr_u.mean())
-        print(data_lr_v.mean())
-        
+                
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
@@ -1605,7 +1591,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                   self.loss_fn((reco_lr_v - data_lr_v), mask = None)
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        print(loss_lr, loss_hr)
         
         ## Loss on gradients
         grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
@@ -1620,7 +1605,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
         loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
         loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
-        print(loss_grad_u, loss_grad_v)
         
         ## Regularization term
         if not self.hparams.inversion == 'bl':
@@ -1628,7 +1612,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
-        print(regularization)
         
         return dict({'loss' : loss}), outputs
     #end
