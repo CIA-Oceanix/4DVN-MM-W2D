@@ -1488,7 +1488,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
         print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
         print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
-        print('LOSS : ', outputs[0])
+        print('LOSS : ', outputs['loss'])
         print()
     #end
     
