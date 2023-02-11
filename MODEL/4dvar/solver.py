@@ -516,7 +516,6 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         for _iter in range(self.n_grad):
             
-            print('4DVARNET ITER : ', _iter)
             x_k_plus_1, hidden, cell, normgrad_, vvar_cost = self.solver_step(x_k, obs, mask, hidden, cell, normgrad_)
             x_k = torch.mul(x_k_plus_1,1.)
             var_cost_values_tmp[_iter] = vvar_cost
@@ -559,7 +558,6 @@ class Solver_Grad_4DVarNN(nn.Module):
         var_cost = self.model_VarCost(data_fidelty, regularization)
         var_cost_grad = torch.autograd.grad(var_cost, x, create_graph = True)[0]
         
-        print('var cost grad : ', var_cost_grad.mean())
         return var_cost, var_cost_grad
     #end
 #end

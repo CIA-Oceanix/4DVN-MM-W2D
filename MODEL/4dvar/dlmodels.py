@@ -1448,56 +1448,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         return loss, outs
     #end
     
-    def on_after_backward(self):
-        
-        print('ON AFTER BACKWARD')
-        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
-        print()
-    #end
-    
-    def on_train_end(self):
-        
-        print('ON TRAIN END')
-        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
-        print()
-    #end
-    
-    def on_train_epoch_start(self):
-        
-        print('ON TRAIN EPOCH START')
-        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
-        print()
-    #end
-    
-    def on_train_batch_start(self, batch, batch_idx, dataloader_idx):
-        
-        print('START BATCH ', batch_idx)
-    #end
-    
-    def on_train_batch_end(self, outputs, batch, batch_idx, dataloader_idx):
-        
-        print('ON TRAIN BATCH END')
-        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
-        print('LOSS : ', outputs['loss'])
-        print()
-    #end
-    
-    def on_before_zero_grad(self, optimizer):
-        
-        print('ON BEFORE ZERO GRAD')
-        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
-        print()
-    
     def configure_optimizers(self):
         
         params = [
@@ -1634,7 +1584,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_hr_v = reco_hr[:,:,:, -self.shape_data[-1]:]
         reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
-                
+        
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
