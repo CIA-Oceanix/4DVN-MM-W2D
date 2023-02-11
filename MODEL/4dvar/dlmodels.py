@@ -1588,7 +1588,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_lr_v = data_lr[:,:,:, -self.shape_data[-1]:]
         
         # Prepare low-resolution data
-        input_data = torch.cat([data_lr_input, data_hr, data_hr], dim = 1)
+        input_data = torch.cat([data_lr_input, data_an, data_an], dim = 1)
         
         # Prepare input state initialized
         if init_state is None:
