@@ -1570,6 +1570,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
                 print('nans in reco')
+                print(outputs.mean())
                 print(torch.any(reco_hr.isnan()))
                 print(torch.any(reco_lr.isnan()))
                 
