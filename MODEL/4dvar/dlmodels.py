@@ -1544,9 +1544,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                                   self.hparams.hr_mask_mode)
         mask = torch.cat([mask, mask], dim = -1)
         
-        print(input_state.shape, input_data.shape, mask.shape)
         input_state = input_state * mask
         input_data  = input_data * mask
+        
+        print('check nans :', torch.any(input_state.isnan(), torch.any(input_data.isnan())))
         
         # Inverse problem solution
         with torch.set_grad_enabled(True):
@@ -1567,6 +1568,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                
+                print('nans in reco')
+                print(torch.any(reco_hr.isnan()))
+                print(torch.any(reco_lr.isnan()))
                 
             elif self.hparams.inversion == 'bl':
                 
