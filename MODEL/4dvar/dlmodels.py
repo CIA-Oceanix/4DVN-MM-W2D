@@ -1538,7 +1538,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         #end
         
         # Mask data
-        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(self.shape_data, 
+        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_hr_u.shape, 
                                   self.hparams.lr_mask_sfreq, 
                                   self.hparams.hr_mask_sfreq, 
                                   self.hparams.hr_mask_mode)
