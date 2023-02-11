@@ -1587,7 +1587,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Prepare input state initialized
         if init_state is None:
-            input_state = torch.cat((data_lr_input, torch.zeros(data_lr_input.shape), torch.zeros(data_lr_input.shape)), dim = 1)
+            input_state = torch.cat((data_lr_input, data_lr_input, data_lr_input), dim = 1)
         else:
             input_state = init_state
         #end
