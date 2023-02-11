@@ -1482,7 +1482,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         print()
     #end
     
-    def on_train_batch_start(self):
+    def on_train_batch_end(self, outputs, batch, batch_idx, dataloader_idx):
         
         print('ON TRAIN BATCH START')
         print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
