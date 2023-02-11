@@ -1492,6 +1492,14 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         print()
     #end
     
+    def on_before_zero_grad(self, optimizer):
+        
+        print('ON BEFORE ZERO GRAD')
+        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
+        print()
+    
     def configure_optimizers(self):
         
         params = [
@@ -1637,12 +1645,17 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
         
+        print('COMPUTE LOSS')
+        print(reco_hr.mean())
+        print(reco_lr.meanr())
+        
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
         loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) +\
                   self.loss_fn((reco_lr_v - data_lr_v), mask = None)
         
+        print('Loss_hr, loss_lr : ', loss_hr, loss_lr)
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
         ## Loss on gradients
@@ -1657,6 +1670,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
         loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
+        
+        print('loss_grad_v, loss_grad_v : ', loss_grad_u, loss_grad_v)
         loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
         
         ## Regularization term
@@ -1665,6 +1680,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
+        print('Reg: ', regularization)
+        print('Loss: ', loss)
         
         return dict({'loss' : loss}), outputs
     #end
