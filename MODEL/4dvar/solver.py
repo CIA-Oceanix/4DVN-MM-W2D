@@ -558,6 +558,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         var_cost = self.model_VarCost(data_fidelty, regularization)
         var_cost_grad = torch.autograd.grad(var_cost, x, create_graph = True)[0]
         
+        print('var cost grad : ', var_cost_grad.mean())
         return var_cost, var_cost_grad
     #end
 #end
