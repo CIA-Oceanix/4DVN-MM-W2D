@@ -1525,7 +1525,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_hr_u = data_hr[:,:,:, :self.shape_data[-1]]
         data_hr_v = data_hr[:,:,:, -self.shape_data[-1]:]
         data_lr_u = data_lr[:,:,:, :self.shape_data[-1]]
-        data_lr_v = data_lr[:,:,:, -self.shape_data[-1]]
+        data_lr_v = data_lr[:,:,:, -self.shape_data[-1]:]
         
         # Prepare low-resolution data
         input_data = torch.cat([data_lr_input, data_hr, data_hr], dim = 1)
@@ -1588,7 +1588,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         print('data_hr_v_shape: ', data_hr_v.shape)
         print('reco_lr_u shape: ', reco_lr_u.shape)
         print('reco_lr_v_shape: ', reco_lr_v.shape)
-        print('data_lr_v_shape: ', data_lr_v.shape)
+        print('data_lr_u_shape: ', data_lr_u.shape)
         print('data_lr_v_shape: ', data_lr_v.shape)
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
