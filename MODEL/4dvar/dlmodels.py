@@ -1647,7 +1647,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         print('COMPUTE LOSS')
         print(reco_hr.mean())
-        print(reco_lr.meanr())
+        print(reco_lr.mean())
         
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
