@@ -1482,6 +1482,15 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         print()
     #end
     
+    def on_train_batch_start(self):
+        
+        print('ON TRAIN BATCH START')
+        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
+        print()
+    #end
+    
     def configure_optimizers(self):
         
         params = [
