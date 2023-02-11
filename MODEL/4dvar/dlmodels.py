@@ -431,18 +431,10 @@ class ModelObs_MM(nn.Module):
             feat_data_spatial  = self.extract_feat_data_Hhr(y_spatial)
             dy_spatial         = (feat_state_spatial - feat_data_spatial)
             
-            print(dy_complete.mean())
-            print(dy_spatial.mean())
-            print(dy_situ.mean())
             return [dy_complete, dy_situ, dy_spatial]
             
         else:
-            print('----------------------------------------------------------')
-            print('OBS MODEL')
-            print(torch.Tensor([p.mean() for p in self.net_state_Hhr.parameters()]).mean())
-            print(torch.Tensor([p.mean() for p in self.net_state_Hsitu.parameters()]).mean())
-            print(torch.Tensor([p.mean() for p in self.net_data_Hhr.parameters()]).mean())
-            print(torch.Tensor([p.mean() for p in self.net_data_Hsitu.parameters()]).mean())
+            
             data_dim = self.shape_data[-2:]
             
             # || x - y ||² (two components, low-resolution)
@@ -482,13 +474,6 @@ class ModelObs_MM(nn.Module):
             feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
             dy_hr_situ      = (feat_state_situ - feat_data_situ)
             
-            # x[1] = torch.cat([x_hr_u, x_hr_v], dim = -1)
-            
-            print(dy_lr_u.mean())
-            print(dy_lr_v.mean())
-            print(dy_hr_spatial.mean())
-            print(dy_hr_situ.mean())
-            print('----------------------------------------------------------')
             return [dy_lr_u, dy_lr_v, dy_hr_spatial, dy_hr_situ]
         #end
     #end
@@ -1615,12 +1600,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        print('BEFORE MODEL.FORWARD')
-        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
-        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
-        print()
-        
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
@@ -1636,12 +1615,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
                 mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
                 
-                print(input_data.mean(), input_state.mean())
                 outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
-                print(outputs.mean())
                 
             elif self.hparams.inversion == 'bl':
                 
@@ -1657,18 +1634,13 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_hr_v = reco_hr[:,:,:, -self.shape_data[-1]:]
         reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
-        
-        print('COMPUTE LOSS')
-        print(reco_hr.mean())
-        print(reco_lr.mean())
-        
+                
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
         loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) +\
                   self.loss_fn((reco_lr_v - data_lr_v), mask = None)
         
-        print('Loss_hr, loss_lr : ', loss_hr, loss_lr)
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
         ## Loss on gradients
@@ -1684,7 +1656,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
         loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
         
-        print('loss_grad_v, loss_grad_v : ', loss_grad_u, loss_grad_v)
         loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
         
         ## Regularization term
@@ -1693,8 +1664,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
-        print('Reg: ', regularization)
-        print('Loss: ', loss)
         
         return dict({'loss' : loss}), outputs
     #end
