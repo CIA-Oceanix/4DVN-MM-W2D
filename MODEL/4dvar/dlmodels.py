@@ -1588,12 +1588,21 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
         
+        print(reco_hr_u.mean())
+        print(reco_hr_v.mean())
+        print(reco_lr_u.mean())
+        print(reco_lr_v.mean())
+        print(data_hr_u.mean())
+        print(data_hr_v.mean())
+        print(data_lr_u.mean())
+        print(data_lr_v.mean())
+        
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
         loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) +\
                   self.loss_fn((reco_lr_v - data_lr_v), mask = None)
-                  
+        
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         print(loss_lr, loss_hr)
         
