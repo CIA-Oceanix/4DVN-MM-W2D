@@ -298,9 +298,8 @@ class Experiment:
                            'log_every_n_steps'       : 1}
         
         if torch.cuda.is_available():
-            profiler_kwargs.update({'accelerator' : 'gpu'})
+            profiler_kwargs.update({'accelerator' : 'ddp'})
             profiler_kwargs.update({'devices'     : self.cparams.GPUS})
-            profiler_kwargs.update({'strategy'    : 'ddp'})
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
