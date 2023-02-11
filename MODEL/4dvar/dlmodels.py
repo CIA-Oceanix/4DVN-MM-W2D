@@ -1547,7 +1547,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        print('check nans :', torch.any(input_state.isnan(), torch.any(input_data.isnan())))
+        print('check nans :', torch.any(input_state.isnan()), torch.any(input_data.isnan()))
         
         # Inverse problem solution
         with torch.set_grad_enabled(True):
