@@ -431,7 +431,7 @@ class ModelObs_MM(nn.Module):
             dy_spatial         = (feat_state_spatial - feat_data_spatial)
             
             return [dy_complete, dy_situ, dy_spatial]
-        
+            
         else:
             print('----------------------------------------------------------')
             print('OBS MODEL')
@@ -1455,6 +1455,14 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         return loss, outs
     #end
     
+    def on_after_backward(self):
+        
+        print('ON AFTER BACKWARD')
+        print(torch.Tensor([p.mean() for p in self.model.model_H.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.Phi.parameters()]).mean())
+        print(torch.Tensor([p.mean() for p in self.model.model_VarCost.parameters()]).mean())
+    #end
+    
     def configure_optimizers(self):
         
         params = [
@@ -1593,7 +1601,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_hr_v = reco_hr[:,:,:, -self.shape_data[-1]:]
         reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
-                
+        
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
