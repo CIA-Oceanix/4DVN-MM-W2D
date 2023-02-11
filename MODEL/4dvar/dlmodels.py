@@ -1595,7 +1595,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                   self.loss_fn((reco_lr_v - data_lr_v), mask = None)
                   
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        print(loss)
+        print(loss_lr, loss_hr)
         
         ## Loss on gradients
         grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
