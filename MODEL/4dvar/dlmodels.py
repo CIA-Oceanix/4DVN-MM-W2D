@@ -437,14 +437,7 @@ class ModelObs_MM(nn.Module):
             
             data_dim = self.shape_data[-2:]
             
-            # || x - y ||² (two components, low-resolution)
-            mask_lr = mask[0]
-            
-            y_lr_u = torch.autograd.Variable(y_obs[0][:,:,:, :data_dim[1]])
-            y_lr_v = torch.autograd.Variable(y_obs[0][:,:,:, -data_dim[1]:])
-            x_lr_u = torch.autograd.Variable(x[0][:,:,:, :data_dim[1]])
-            x_lr_v = torch.autograd.Variable(x[0][:,:,:, -data_dim[1]:])
-            
+            # || x - y ||² (two components, low-resolution)            
             dy_lr_u = (x[0][:,:,:, :data_dim[1]] - y_obs[0][:,:,:, :data_dim[1]]).mul(mask[0])
             dy_lr_v = (x[0][:,:,:, -data_dim[1]:] - y_obs[0][:,:,:, -data_dim[1]:]).mul(mask[0])
             
@@ -544,17 +537,9 @@ class ModelObs_MM2d(nn.Module):
             
             data_dim = self.shape_data[-2:]
             
-            # || x - y ||² (two components, low-resolution)
-            
-            mask_lr = mask[0]
-            
-            y_lr_u = y_obs[0][:,:,:, :data_dim[1]]
-            y_lr_v = y_obs[0][:,:,:, -data_dim[1]:]
-            x_lr_u = x[0][:,:,:, :data_dim[1]]
-            x_lr_v = x[0][:,:,:, -data_dim[1]:]
-            
-            dy_lr_u = (x_lr_u - y_lr_u).mul(mask_lr)
-            dy_lr_v = (x_lr_v - y_lr_v).mul(mask_lr)
+            # || x - y ||² (two components, low-resolution)           
+            dy_lr_u = (x[0][:,:,:, :data_dim[1]] - y_obs[0][:,:,:, :data_dim[1]]).mul(mask[0])
+            dy_lr_v = (x[0][:,:,:, -data_dim[1]:] - y_obs[0][:,:,:, -data_dim[1]:]).mul(mask[0])
             
             # || g(x) - h(y) ||²
             
@@ -563,16 +548,16 @@ class ModelObs_MM2d(nn.Module):
             ## x (high-reso) = x (low-reso) + anomaly du
             mask_hr = mask[1]
             
-            x_hr_u = x_lr_u + x[1][:,:,:, :data_dim[1]]
-            x_hr_v = x_lr_v + x[1][:,:,:, -data_dim[1]:]
+            x_hr_u = x[0][:,:,:, :data_dim[1]] + x[1][:,:,:, :data_dim[1]]
+            x_hr_v = x[0][:,:,:, -data_dim[1]:] + x[1][:,:,:, -data_dim[1]:]
             y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
             y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
             
-            x_hr_spatial = (x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt()
-            y_hr_spatial = (y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr)
+            x_hr_spatial = torch.autograd.Variable((x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt())
+            y_hr_spatial = torch.autograd.Variable((y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr))
             
-            feat_state_spatial = self.extract_feat_state_Hhr(x_hr_spatial)
-            feat_data_spatial  = self.extract_feat_data_Hhr(y_hr_spatial)
+            feat_state_spatial = self.extract_feat_state(x_hr_spatial)
+            feat_data_spatial  = self.extract_feat_data(y_hr_spatial)
             dy_hr_spatial      = (feat_state_spatial - feat_data_spatial)
             
             return [dy_lr_u, dy_lr_v, dy_hr_spatial]
@@ -1581,6 +1566,16 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()
                 reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
+            #end
+        #end
+        
+        # Save reconstructions
+        if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
+            self.save_samples({'data' : data_hr.detach().cpu(),
+                               'reco' : reco_hr.detach().cpu()})
+            
+            if self.hparams.inversion == 'gs':
+                self.save_var_cost_values(self.model.var_cost_values)
             #end
         #end
         

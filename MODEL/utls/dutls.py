@@ -229,6 +229,10 @@ class W2DSimuDataModule(pl.LightningDataModule):
             test_set  = np.sqrt(test_set[:,:,:,:,0]**2 + test_set[:,:,:,:,1]**2)
         #end
         
+        train_set = train_set[:5]
+        test_set = test_set[:3]
+        val_set = val_set[:3]
+        
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)
         print('Test  dataset shape : ', test_set.shape)
