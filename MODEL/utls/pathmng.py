@@ -105,7 +105,12 @@ def get_model_name(cparams, versioning = False):
     #end
     
     if cparams.INVERSION == 'bl':
-        model_name = f'{cparams.VNAME}-baseline-sflr{lr_sampling_freq_tag}-{cparams.PRIOR}'
+        if cparams.WIND_MODULUS:
+            addendum = ''
+        else:
+            addendum = '-uv'
+        #end
+        model_name = f'{cparams.VNAME}{addendum}-baseline-sflr{lr_sampling_freq_tag}-{cparams.PRIOR}'
     else:
         model_name += f'-{inversion}-{exp_osse_1_specs}-{cparams.PRIOR}'
     #end

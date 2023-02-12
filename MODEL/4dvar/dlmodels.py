@@ -1504,7 +1504,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Temporal interpolation
         data_lr_input_u = data_lr_input[:,:,:,:self.shape_data[-1]]
-        data_lr_input_v = data_lr_input[:,:,:,self.shape_data[-1]:]
+        data_lr_input_v = data_lr_input[:,:,:,-self.shape_data[-1]:]
         data_lr_input_u = self.get_baseline(data_lr_input_u, timesteps)
         data_lr_input_v = self.get_baseline(data_lr_input_v, timesteps)
         data_lr_input = torch.cat([data_lr_input_u, data_lr_input_v], dim = -1)
@@ -1589,7 +1589,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         ## Reconstruction loss
         loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
                   self.loss_fn((reco_hr_v - data_hr_v), mask = None)
-        loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) +\
+        loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
                   self.loss_fn((reco_lr_v - data_lr_v), mask = None)
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
