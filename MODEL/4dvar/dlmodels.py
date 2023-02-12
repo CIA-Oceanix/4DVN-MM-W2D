@@ -845,7 +845,13 @@ class LitModel_Base(pl.LightningModule):
             self.log('test_loss', test_loss.item())
         #end
         
-        self.save_test_loss(test_loss, batch.shape[0])
+        if self.hparams.wind_modulus:
+            batch_size = batch.shape[0]
+        else:
+            batch_size = batch[0].shape[0]
+        #end
+        
+        self.save_test_loss(test_loss, batch_size)
         return metrics, outs
     #end
     
