@@ -15,6 +15,10 @@ def get_model_name(cparams, versioning = False):
     # format : 4DVN-W2D-<mask_HR>[-ckpt-gs_n_itref]-<inversion>-<lr_hr_sfreqs / "REFRUN">-<prior>
     model_name = f'{cparams.VNAME}'
     
+    if not cparams.WIND_MODULUS:
+        model_name += '-uv'
+    #end
+    
     hr_mask_mode = cparams.HR_MASK_MODE
     if hr_mask_mode.__class__ is list:
         mode = hr_mask_mode[0]
