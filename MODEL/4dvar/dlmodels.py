@@ -1564,9 +1564,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.Phi(input_data)
-                print(outputs.mean())
+                print(outputs[:,48:,:,:].mean())
                 reco_lr = data_lr_input.clone()
-                reco_hr = reco_lr + outputs
+                reco_hr = reco_lr + outputs[:,48:,:,:]
             #end
         #end
         
