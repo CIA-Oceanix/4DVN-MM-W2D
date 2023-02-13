@@ -1566,7 +1566,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 # outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()
                 outputs = torch.autograd.Variable(torch.zeros(reco_lr.shape))
-                reco_hr = reco_lr + outputs
+                reco_hr = reco_lr # + outputs
             #end
         #end
         
