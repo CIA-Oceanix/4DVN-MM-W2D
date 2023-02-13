@@ -23,7 +23,7 @@ class W2DSimuDataset_WindModulus(Dataset):
     def __init__(self, data, normalize):
         
         # normalize
-        wind2D = self.normalize_imgwise(data)
+        wind2D = self.normalize(data)
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
@@ -36,6 +36,24 @@ class W2DSimuDataset_WindModulus(Dataset):
     
     def __getitem__(self, idx):
         return self.wind2D[idx]
+    #end
+    
+    def normalize(self, data):
+        
+        normparams = dict()
+        
+        # data_min = data.min(); normparams.update({'min' : data_min})
+        # data_max = data.max(); normparams.update({'max' : data_max})
+        
+        # data = (data - data_min) / (data_max - data_min)
+        
+        data_mean = data.mean() ; normparams.update({'mean' : data_mean})
+        data_std  = data.std()  ; normparams.update({'std' : data_std})
+        
+        data = (data - data_mean) / data_std
+        
+        self.normparams = normparams
+        return data
     #end
     
     def normalize_imgwise(self, data):
@@ -82,7 +100,7 @@ class W2DSimuDataset_WindComponents(Dataset):
     
     def __init__(self, data, normalize):
         
-        wind2D = self.normalize_imgwise_uv(data)
+        wind2D = self.normalize(data)
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
@@ -97,19 +115,43 @@ class W2DSimuDataset_WindComponents(Dataset):
         return (self.wind2D[idx,:,:,:,0], self.wind2D[idx,:,:,:,1])
     #end
     
+    def normalize(self, data):
+        
+        normparams = dict()
+        
+        # data_u_max = data[:,:,:,:,0].max(); normparams.update({'max_u' : data_u_max})
+        # data_u_min = data[:,:,:,:,0].min(); normparams.update({'min_u' : data_u_min})
+        # data_v_max = data[:,:,:,:,1].max(); normparams.update({'max_v' : data_v_max})
+        # data_v_min = data[:,:,:,:,1].min(); normparams.update({'min_v' : data_v_min})
+        
+        # data[:,:,:,:,0] = (data[:,:,:,:,0] - data_u_min) / (data_u_max - data_u_min)
+        # data[:,:,:,:,1] = (data[:,:,:,:,1] - data_v_min) / (data_v_max - data_v_min)
+        
+        data_mean_u = data[:,:,:,:,0].mean() ; normparams.update({'mean_u' : data_mean_u})
+        data_mean_v = data[:,:,:,:,1].mean() ; normparams.update({'mean_v' : data_mean_v})
+        data_std_u  = data[:,:,:,:,0].std()  ; normparams.update({'std_u' : data_std_u})
+        data_std_v  = data[:,:,:,:,1].std()  ; normparams.update({'std_u' : data_std_v})
+        
+        data[:,:,:,:,0] = (data[:,:,:,:,0] - data_mean_u) / data_std_u
+        data[:,:,:,:,1] = (data[:,:,:,:,1] - data_mean_v) / data_std_v
+        
+        self.normparams = normparams
+        return data
+    #end
+    
     def normalize_imgwise_uv(self, data):
         
         num_series, series_length, *img_size, components = data.shape
         data = data.reshape(num_series * series_length, *img_size, components)
-        u, v = data[:,:,:,0], data[:,:,:,1]
+        # u, v = data_[:,:,:,0], data_[:,:,:,1]
         
-        if u.shape != v.shape:
-            raise RuntimeError('The two wind components must have same shape. Got {} for u and {} for v'.format(u.shape, v.shape))
-        #end
+        # if u.shape != v.shape:
+        #     raise RuntimeError('The two wind components must have same shape. Got {} for u and {} for v'.format(u.shape, v.shape))
+        # #end
         
         normparams = list()
         
-        for w_cmp in [u, v]:
+        for i in range(2):
         
             normparams_cmp = {
                 'min'  : np.zeros(data.shape[0]),
@@ -119,18 +161,20 @@ class W2DSimuDataset_WindComponents(Dataset):
             }
             
             for t in range(data.shape[0]):
-                normparams_cmp['min'][t] = w_cmp[t].min()
-                normparams_cmp['max'][t] = w_cmp[t].max()
-                w_cmp[t] = (w_cmp[t] - w_cmp[t].min()) / (w_cmp[t].max() - w_cmp[t].min())
+                normparams_cmp['min'][t] = data[t,:,:,i].min()
+                normparams_cmp['max'][t] = data[t,:,:,i].max()
+                num = (data[t,:,:,i] - data[t,:,:,i].min())
+                den = (data[t,:,:,i].max() - data[t,:,:,i].min())
+                data[t,:,:,i] = num / den
             #end
             
-            w_cmp_mean = w_cmp.mean()
-            w_cmp_std  = w_cmp.std()
+            w_cmp_mean = data[:,:,:,i].mean()
+            w_cmp_std  = data[:,:,:,i].std()
             
             normparams_cmp['mean'] = w_cmp_mean
             normparams_cmp['std'] = w_cmp_std
             
-            w_cmp = (w_cmp - w_cmp_mean) / w_cmp_std
+            data[:,:,:,i] = (data[:,:,:,i] - w_cmp_mean) / w_cmp_std
             
             normparams.append(normparams_cmp)
             
@@ -138,7 +182,7 @@ class W2DSimuDataset_WindComponents(Dataset):
         
         self.normparams = normparams
         
-        data = np.stack((u, v), axis = -1)
+        # data_ = np.stack((u, v), axis = -1)
         data = data.reshape(num_series, series_length, *img_size, components)
         return data
     #end
