@@ -312,7 +312,13 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def save_nparams(self):
         
-        with open(os.path.join(self.path_data, f'{self.data_name}-normparams-test.pkl'), 'wb') as f:
+        if self.wind_modulus:
+            addendum = '-wm'
+        else:
+            addendum = '-uv'
+        #end
+        
+        with open(os.path.join(self.path_data, 'winds_24h', f'normparams-test{addendum}.pkl'), 'wb') as f:
             pickle.dump(self.test_dataset.get_normparams(), f)
         f.close()
     #end
