@@ -136,6 +136,9 @@ class W2DSimuDataset_WindComponents(Dataset):
         data[:,:,:,:,1] = (data[:,:,:,:,1] - data_mean_v) / data_std_v
         
         self.normparams = normparams
+        
+        print()
+        print(data.max(), data.min())
         return data
     #end
     
