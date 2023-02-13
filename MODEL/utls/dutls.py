@@ -99,39 +99,47 @@ class W2DSimuDataset_WindComponents(Dataset):
     
     def normalize_imgwise_uv(self, data):
         
-        u, v = data[:,:,:,:,0], data[:,:,:,:,1]
+        num_series, series_length, *img_size, components = data.shape
+        data = data.reshape(num_series * series_length, *img_size, components)
+        u, v = data[:,:,:,0], data[:,:,:,1]
         
-        normparams = {
-            'min'  : np.zeros((data.shape[0], 2)),
-            'max'  : np.zeros((data.shape[0], 2)),
-            'mean' : np.zeros(2),
-            'std'  : np.zeros(2)
-        }
-        
-        for t in range(data.shape[0]):
-            normparams['min'][t,0] = u[t].min()
-            normparams['min'][t,1] = v[t].min()
-            normparams['max'][t,0] = u[t].max()
-            normparams['max'][t,1] = v[t].max()
-            u[t] = (u[t] - u[t].min()) / (u[t].max() - u[t].min())
-            v[t] = (v[t] - v[t].min()) / (v[t].max() - v[t].min())
+        if u.shape != v.shape:
+            raise RuntimeError('The two wind components must have same shape. Got {} for u and {} for v'.format(u.shape, v.shape))
         #end
         
-        u_mean = u.mean()
-        v_mean = v.mean()
-        u_std  = u.std()
-        v_std  = v.std()
+        normparams = list()
         
-        normparams['mean'][0] = u_mean
-        normparams['mean'][1] = v_mean
-        normparams['std'][0]  = u_std
-        normparams['std'][1]  = v_std
+        for w_cmp in [u, v]:
         
-        u = (u - u_mean) / u_std
-        v = (v - v_mean) / v_std
+            normparams_cmp = {
+                'min'  : np.zeros(data.shape[0]),
+                'max'  : np.zeros(data.shape[0]),
+                'mean' : 0.,
+                'std'  : 0.
+            }
+            
+            for t in range(data.shape[0]):
+                normparams_cmp['min'][t] = w_cmp[t].min()
+                normparams_cmp['max'][t] = w_cmp[t].max()
+                w_cmp[t] = (w_cmp[t] - w_cmp[t].min()) / (w_cmp[t].max() - w_cmp[t].min())
+            #end
+            
+            w_cmp_mean = w_cmp.mean()
+            w_cmp_std  = w_cmp.std()
+            
+            normparams_cmp['mean'] = w_cmp_mean
+            normparams_cmp['std'] = w_cmp_std
+            
+            w_cmp = (w_cmp - w_cmp_mean) / w_cmp_std
+            
+            normparams.append(normparams_cmp)
+            
+        #end
         
         self.normparams = normparams
+        
         data = np.stack((u, v), axis = -1)
+        data = data.reshape(num_series, series_length, *img_size, components)
         return data
     #end
     
