@@ -40,6 +40,9 @@ class W2DSimuDataset_WindModulus(Dataset):
     
     def normalize_imgwise(self, data):
         
+        num_series, series_length, *img_size = data.shape
+        data = data.reshape(num_series * series_length, *img_size)
+        
         normparams = {
             'min'  : np.zeros(data.shape[0]),
             'max'  : np.zeros(data.shape[0]),
@@ -58,6 +61,8 @@ class W2DSimuDataset_WindModulus(Dataset):
         normparams['mean'] = img_mean
         normparams['std']  = img_std
         data = (data - img_mean) / img_std
+        
+        data = data.reshape(num_series, series_length, *img_size)
         
         self.normparams = normparams
         return data
