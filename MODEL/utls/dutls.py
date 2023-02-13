@@ -137,8 +137,6 @@ class W2DSimuDataset_WindComponents(Dataset):
         
         self.normparams = normparams
         
-        print()
-        print(data.max(), data.min())
         return data
     #end
     

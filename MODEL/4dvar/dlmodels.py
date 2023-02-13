@@ -1563,9 +1563,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
             elif self.hparams.inversion == 'bl':
                 
-                outputs = self.Phi(input_data)
+                # outputs = self.Phi(input_data)
                 reco_lr = data_lr_input.clone()
-                reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
+                outputs = torch.zeros(reco_lr)
+                reco_hr = reco_lr + outputs
             #end
         #end
         
