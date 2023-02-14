@@ -130,7 +130,7 @@ class W2DSimuDataset_WindComponents(Dataset):
         data_mean_u = data[:,:,:,:,0].mean() ; normparams.update({'mean_u' : data_mean_u})
         data_mean_v = data[:,:,:,:,1].mean() ; normparams.update({'mean_v' : data_mean_v})
         data_std_u  = data[:,:,:,:,0].std()  ; normparams.update({'std_u' : data_std_u})
-        data_std_v  = data[:,:,:,:,1].std()  ; normparams.update({'std_u' : data_std_v})
+        data_std_v  = data[:,:,:,:,1].std()  ; normparams.update({'std_v' : data_std_v})
         
         data[:,:,:,:,0] = (data[:,:,:,:,0] - data_mean_u) / data_std_u
         data[:,:,:,:,1] = (data[:,:,:,:,1] - data_mean_v) / data_std_v
