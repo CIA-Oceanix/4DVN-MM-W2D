@@ -1041,7 +1041,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         # Dynamical prior and mask for land/sea locations
         self.Phi = Phi
-        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
+        self.mask_land = torch.Tensor(land_buoy_coordinates[0]).type(torch.float32) # cast to float32
         self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
