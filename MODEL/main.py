@@ -300,7 +300,7 @@ class Experiment:
         if torch.cuda.is_available():
             profiler_kwargs.update({'accelerator' : 'gpu'})
             profiler_kwargs.update({'devices'     : self.cparams.GPUS})
-            # profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
+            profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
         ## Callbacks : model checkpoint and early stopping
