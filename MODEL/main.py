@@ -263,9 +263,11 @@ class Experiment:
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
         train_loader = torch.utils.data.DataLoader(w2d_dm.train_dataset, 
-                                                   batch_size = self.cparams.BATCH_SIZE)
+                                                   batch_size = self.cparams.BATCH_SIZE,
+                                                   generator = torch.Generator(device = DEVICE))
         val_loader = torch.utils.data.DataLoader(w2d_dm.val_dataset,
-                                                 batch_size = self.cparams.BATCH_SIZE)
+                                                 batch_size = self.cparams.BATCH_SIZE,
+                                                 generator = torch.Generator(device = DEVICE))
         
         # MODELS : initialize and configure
         ## Obtain shape data
