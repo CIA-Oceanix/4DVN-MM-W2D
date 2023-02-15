@@ -907,11 +907,7 @@ class LitModel_Base(pl.LightningModule):
                     if wfreq == 'lr':
                         mask[:, freq, :,:] = 1.
                     elif wfreq == 'hr':
-                        mask_land = self.mask_land.to(mask.device)
-                        print('\n\n')
-                        print(mask_land.device, mask.device)
-                        print()
-                        mask [:, freq, :,:] = mask_land #self.mask_land
+                        mask [:, freq, :,:] = self.mask_land
                     #end
                     
                 elif freq.__class__ is int:
@@ -920,11 +916,7 @@ class LitModel_Base(pl.LightningModule):
                             if wfreq == 'lr':
                                 mask[:,t,:,:] = 1.
                             elif wfreq == 'hr':
-                                mask_land = self.mask_land.to(mask.device)
-                                print('\n\n')
-                                print(mask_land.device, mask.device)
-                                print()
-                                mask[:,t,:,:] = mask_land #self.mask_land
+                                mask[:,t,:,:] = self.mask_land
                             #end
                         #end
                     #end
@@ -1049,7 +1041,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         # Dynamical prior and mask for land/sea locations
         self.Phi = Phi
-        self.mask_land = torch.Tensor(land_buoy_coordinates[0]).type(torch.float32) # cast to float32
+        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
@@ -1178,10 +1170,10 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         return loss, outs
     #end
-    
+        
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
-        data_hr = data.clone().type(torch.float32)
+        data_hr = data.clone()
         
         # Downsample to obtain ERA5-like data
         data_lr = self.avgpool2d_keepsize(data_hr)
