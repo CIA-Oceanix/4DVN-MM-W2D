@@ -383,17 +383,17 @@ class W2DSimuDataModule(pl.LightningDataModule):
     
     def train_dataloader(self):
         
-        return DataLoader(self.train_dataset, batch_size = self.batch_size, generator = torch.Generator(device = DEVICE))
+        return DataLoader(self.train_dataset, batch_size = self.batch_size, generator = torch.Generator(device = 'cuda'))
     #end
     
     def val_dataloader(self):
         
-        return DataLoader(self.val_dataset, batch_size = self.batch_size, generator = torch.Generator(device = DEVICE))
+        return DataLoader(self.val_dataset, batch_size = self.batch_size, generator = torch.Generator(device = 'cuda'))
     #end
     
     def test_dataloader(self):
         
-        return DataLoader(self.test_dataset, batch_size = self.batch_size, generator = torch.Generator(device = DEVICE))
+        return DataLoader(self.test_dataset, batch_size = self.batch_size, generator = torch.Generator(device = 'cuda'))
     #end
 #end
 
