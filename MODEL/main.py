@@ -268,6 +268,9 @@ class Experiment:
         val_loader = torch.utils.data.DataLoader(w2d_dm.val_dataset,
                                                  batch_size = self.cparams.BATCH_SIZE,
                                                  generator = torch.Generator(device = DEVICE))
+        test_loader = torch.utils.data.DataLoader(w2d_dm.test_dataset,
+                                                  batch_size = self.cparams.BATCH_SIZE,
+                                                  generator = torch.Generator(device = DEVICE))
         
         # MODELS : initialize and configure
         ## Obtain shape data
@@ -364,7 +367,7 @@ class Experiment:
             ## Test
             lit_model = self.load_checkpoint(lit_model, 'TEST', run)
             lit_model.eval()
-            trainer.test(lit_model, datamodule = w2d_dm)
+            trainer.test(lit_model, test_loader)
             
             # save reports and reconstructions in the proper target directory
             self.path_manager.save_configfiles(self.cparams, 'config_params')
