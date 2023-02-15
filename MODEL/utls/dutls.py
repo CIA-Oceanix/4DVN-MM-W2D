@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 if torch.cuda.is_available():
     DEVICE  = torch.device('cuda')
-    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
     WORKERS = 32
 else:
     DEVICE  = torch.device('cpu')
@@ -27,7 +27,7 @@ class W2DSimuDataset_WindModulus(Dataset):
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
-        # self.to_tensor()
+        self.to_tensor()
     #end
     
     def __len__(self):
@@ -104,7 +104,7 @@ class W2DSimuDataset_WindComponents(Dataset):
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
-        # self.to_tensor()
+        self.to_tensor()
     #end
     
     def __len__(self):
