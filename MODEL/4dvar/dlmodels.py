@@ -1178,7 +1178,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         return loss, outs
     #end
-        
+    
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         data_hr = data.clone().type(torch.float32)

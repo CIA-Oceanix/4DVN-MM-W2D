@@ -382,10 +382,10 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def train_dataloader(self):
-        
+        print(self.trainer.on_gpu)
         return DataLoader(self.train_dataset, batch_size = self.batch_size, generator = torch.Generator(device = 'cuda'))
     #end
-    
+        
     def val_dataloader(self):
         
         return DataLoader(self.val_dataset, batch_size = self.batch_size, generator = torch.Generator(device = 'cuda'))
