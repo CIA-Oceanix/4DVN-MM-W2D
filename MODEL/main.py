@@ -269,7 +269,7 @@ class Experiment:
         land_buoy_coords = w2d_dm.get_land_and_buoy_positions()
         
         ## Instantiate dynamical prior and lit model
-        Phi = model_selection(shape_data, self.cparams).to(DEVICE)
+        Phi = model_selection(shape_data, self.cparams)#.to(DEVICE)
         
         if self.cparams.WIND_MODULUS:
             lit_model = LitModel_OSSE1_WindModulus(Phi,
@@ -277,14 +277,14 @@ class Experiment:
                                                       land_buoy_coords,
                                                       self.cparams,
                                                       real_run,
-                                                      start_time = start_time).to(DEVICE)
+                                                      start_time = start_time)#.to(DEVICE)
         else:
             lit_model = LitModel_OSSE1_WindComponents(Phi, 
                                                       shape_data, 
                                                       land_buoy_coords, 
                                                       self.cparams, 
                                                       real_run, 
-                                                      start_time = start_time).to(DEVICE)
+                                                      start_time = start_time)#.to(DEVICE)
         #end
         
         ## Get checkpoint, if needed
