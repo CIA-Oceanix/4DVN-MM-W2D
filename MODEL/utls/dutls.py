@@ -27,7 +27,7 @@ class W2DSimuDataset_WindModulus(Dataset):
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
-        self.to_tensor()
+        # self.to_tensor()
     #end
     
     def __len__(self):
@@ -104,7 +104,7 @@ class W2DSimuDataset_WindComponents(Dataset):
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
-        self.to_tensor()
+        # self.to_tensor()
     #end
     
     def __len__(self):
