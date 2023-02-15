@@ -1173,7 +1173,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
-        data_hr = data.clone()
+        data_hr = data.clone().type(torch.float32)
         
         # Downsample to obtain ERA5-like data
         data_lr = self.avgpool2d_keepsize(data_hr)
