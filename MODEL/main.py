@@ -264,13 +264,16 @@ class Experiment:
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
         train_loader = torch.utils.data.DataLoader(w2d_dm.train_dataset, 
                                                    batch_size = self.cparams.BATCH_SIZE,
-                                                   generator = torch.Generator(DEVICE))
+                                                   generator = torch.Generator(DEVICE),
+                                                   num_workers = 0)
         test_loader = torch.utils.data.DataLoader(w2d_dm.test_dataset,
                                                   batch_size = self.cparams.BATCH_SIZE,
-                                                  generator = torch.Generator(DEVICE))
+                                                  generator = torch.Generator(DEVICE),
+                                                  num_workers = 0)
         val_loader = torch.utils.data.DataLoader(w2d_dm.val_dataset,
                                                  batch_size = self.cparams.BATCH_SIZE,
-                                                 generator = torch.Generator(DEVICE))
+                                                 generator = torch.Generator(DEVICE),
+                                                 num_workers = 0)
         
         # MODELS : initialize and configure
         ## Obtain shape data
