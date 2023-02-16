@@ -300,7 +300,7 @@ class W2DSimuDataModule:
         self.train_dataset  = self.Dataset_class(train_set, normalize = self.normalize)
         self.val_dataset    = self.Dataset_class(val_set,   normalize = self.normalize)
         self.test_dataset   = self.Dataset_class(test_set,  normalize = self.normalize)
-        self.save_nparams()
+        # self.save_nparams()
     #end
     
     def extract_time_series(self, wind_data, ts_length, num_subseries, random_extract = False):
