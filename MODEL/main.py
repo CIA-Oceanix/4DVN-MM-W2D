@@ -350,7 +350,7 @@ class Experiment:
         
         # Train and test
         ## Train
-        trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
+        trainer.fit(lit_model, datamodule = w2d_dm)
         
         if lit_model.has_nans():
             
