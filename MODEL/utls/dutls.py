@@ -201,7 +201,7 @@ class W2DSimuDataset_WindComponents(Dataset):
 #end
 
 
-class W2DSimuDataModule:
+class W2DSimuDataModule(pl.LightningDataModule):
     
     def __init__(self, path_data, cparams, timesteps = 24, normalize = False):
         super(W2DSimuDataModule, self).__init__()
