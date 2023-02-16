@@ -27,7 +27,7 @@ class W2DSimuDataset_WindModulus(Dataset):
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
-        self.to_tensor()
+        # self.to_tensor()
     #end
     
     def __len__(self):
@@ -47,10 +47,12 @@ class W2DSimuDataset_WindModulus(Dataset):
         
         # data = (data - data_min) / (data_max - data_min)
         
-        data_mean = data.mean() ; normparams.update({'mean' : data_mean})
-        data_std  = data.std()  ; normparams.update({'std' : data_std})
-        
+        data_mean = data.mean()
+        data_std  = data.std()
         data = (data - data_mean) / data_std
+        
+        normparams.update({'mean' : data_mean})
+        normparams.update({'std' : data_std})
         
         self.normparams = normparams
         return data
@@ -76,9 +78,10 @@ class W2DSimuDataset_WindModulus(Dataset):
         
         img_mean = data.mean()
         img_std  = data.std()
+        data = (data - img_mean) / img_std
+        
         normparams['mean'] = img_mean
         normparams['std']  = img_std
-        data = (data - img_mean) / img_std
         
         data = data.reshape(num_series, series_length, *img_size)
         
