@@ -779,6 +779,7 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
+        batch = batch.to(DEVICE)
         metrics, out = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
         estimated_time = self.get_estimated_time()
