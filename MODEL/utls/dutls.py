@@ -24,7 +24,7 @@ class W2DSimuDataset_WindModulus(Dataset):
         
         # normalize
         wind2D = self.normalize(data)
-        self.wind2D = np.array(wind2D)
+        self.wind2D = np.array(wind2D, dtype = np.float32)
         
         self.numitems = np.int32(self.wind2D.__len__())
         # self.to_tensor()
