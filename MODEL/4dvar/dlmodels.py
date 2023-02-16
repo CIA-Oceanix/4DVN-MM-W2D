@@ -907,7 +907,8 @@ class LitModel_Base(pl.LightningModule):
                     if wfreq == 'lr':
                         mask[:, freq, :,:] = 1.
                     elif wfreq == 'hr':
-                        mask [:, freq, :,:] = self.mask_land
+                        mask_land = self.mask_land.to(mask.device)
+                        mask[:, freq, :,:] = mask_land #self.mask_land
                     #end
                     
                 elif freq.__class__ is int:
@@ -916,7 +917,8 @@ class LitModel_Base(pl.LightningModule):
                             if wfreq == 'lr':
                                 mask[:,t,:,:] = 1.
                             elif wfreq == 'hr':
-                                mask[:,t,:,:] = self.mask_land
+                                mask_land = self.mask_land.to(mask.device)
+                                mask[:,t,:,:] = mask_land #self.mask_land
                             #end
                         #end
                     #end
