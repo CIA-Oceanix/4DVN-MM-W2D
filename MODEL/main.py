@@ -380,7 +380,7 @@ class Experiment:
                                                 *lit_model.get_learning_curves(),
                                                 run)
             lit_model.remove_saved_outputs()
-            self.path_manager.save_litmodel_trainer(lit_model, trainer)
+            # self.path_manager.save_litmodel_trainer(lit_model, trainer)
             
             print('\nTraining and test successful')
             print('Returning ...')
