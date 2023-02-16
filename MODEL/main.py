@@ -341,7 +341,7 @@ class Experiment:
         trainer = pl.Trainer(
             **profiler_kwargs, 
             callbacks = [
-                model_checkpoint, 
+                # model_checkpoint, 
                 early_stopping,
                 # weight_save
             ]#,
