@@ -262,18 +262,18 @@ class Experiment:
         
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
-        train_loader = torch.utils.data.DataLoader(w2d_dm.train_dataset, 
-                                                   batch_size = self.cparams.BATCH_SIZE,
-                                                    generator = torch.Generator(DEVICE))
-                                                   # num_workers = 0)
-        test_loader = torch.utils.data.DataLoader(w2d_dm.test_dataset,
-                                                  batch_size = self.cparams.BATCH_SIZE,
-                                                    generator = torch.Generator(DEVICE))
-                                                  # num_workers = 0)
-        val_loader = torch.utils.data.DataLoader(w2d_dm.val_dataset,
-                                                 batch_size = self.cparams.BATCH_SIZE,
-                                                   generator = torch.Generator(DEVICE))
-                                                 # num_workers = 0)
+        # train_loader = torch.utils.data.DataLoader(w2d_dm.train_dataset, 
+        #                                            batch_size = self.cparams.BATCH_SIZE,
+        #                                             generator = torch.Generator(DEVICE))
+        #                                            # num_workers = 0)
+        # test_loader = torch.utils.data.DataLoader(w2d_dm.test_dataset,
+        #                                           batch_size = self.cparams.BATCH_SIZE,
+        #                                             generator = torch.Generator(DEVICE))
+        #                                           # num_workers = 0)
+        # val_loader = torch.utils.data.DataLoader(w2d_dm.val_dataset,
+        #                                          batch_size = self.cparams.BATCH_SIZE,
+        #                                            generator = torch.Generator(DEVICE))
+        #                                          # num_workers = 0)
         
         # MODELS : initialize and configure
         ## Obtain shape data
@@ -350,7 +350,7 @@ class Experiment:
         
         # Train and test
         ## Train
-        trainer.fit(lit_model, train_loader, val_loader)
+        trainer.fit(lit_model, datamodule = w2d_dm)
         
         if lit_model.has_nans():
             
@@ -370,7 +370,7 @@ class Experiment:
             ## Test
             lit_model = self.load_checkpoint(lit_model, 'TEST', run)
             lit_model.eval()
-            trainer.test(lit_model, test_loader)
+            trainer.test(lit_model, datamodule = w2d_dm)
             
             # save reports and reconstructions in the proper target directory
             self.path_manager.save_configfiles(self.cparams, 'config_params')
