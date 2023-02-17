@@ -1045,7 +1045,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.Phi = Phi
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
-        self.wdatamodule = wdatamodule
+        # self.wdatamodule = wdatamodule
         
         # Loss function — parameters optimization
         self.loss_fn = NormLoss()
@@ -1134,29 +1134,29 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     #end
     
     
-    def train_dataloader(self):
+    # def train_dataloader(self):
         
-        train_loader = torch.utils.data.DataLoader(self.wdatamodule.train_dataset,
-                                                   batch_size = self.hparams.batch_size,
-                                                    generator = torch.Generator(DEVICE))
-        return train_loader
-    #end
+    #     train_loader = torch.utils.data.DataLoader(self.wdatamodule.train_dataset,
+    #                                                batch_size = self.hparams.batch_size,
+    #                                                 generator = torch.Generator(DEVICE))
+    #     return train_loader
+    # #end
     
-    def val_dataloader(self):
+    # def val_dataloader(self):
         
-        val_loader = torch.utils.data.DataLoader(self.wdatamodule.val_dataset,
-                                                 batch_size = self.hparams.batch_size,
-                                                  generator = torch.Generator(DEVICE))
-        return val_loader
-    #end
+    #     val_loader = torch.utils.data.DataLoader(self.wdatamodule.val_dataset,
+    #                                              batch_size = self.hparams.batch_size,
+    #                                               generator = torch.Generator(DEVICE))
+    #     return val_loader
+    # #end
     
-    def test_dataloader(self):
+    # def test_dataloader(self):
         
-        test_loader = torch.utils.data.DataLoader(self.wdatamodule.test_dataset,
-                                                  batch_size = self.hparams.batch_size,
-                                                   generator = torch.Generator(DEVICE))
-        return test_loader
-    #end
+    #     test_loader = torch.utils.data.DataLoader(self.wdatamodule.test_dataset,
+    #                                               batch_size = self.hparams.batch_size,
+    #                                                generator = torch.Generator(DEVICE))
+    #     return test_loader
+    # #end
     
     
     def configure_optimizers(self):
