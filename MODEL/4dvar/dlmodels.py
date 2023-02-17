@@ -1137,24 +1137,24 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     def train_dataloader(self):
         
         train_loader = torch.utils.data.DataLoader(self.wdatamodule.train_dataset,
-                                                   batch_size = self.hparams.batch_size,)
-                                                   # generator = torch.Generator(DEVICE))
+                                                   batch_size = self.hparams.batch_size,
+                                                    generator = torch.Generator(DEVICE))
         return train_loader
     #end
     
     def val_dataloader(self):
         
         val_loader = torch.utils.data.DataLoader(self.wdatamodule.val_dataset,
-                                                 batch_size = self.hparams.batch_size,)
-                                                 # generator = torch.Generator(DEVICE))
+                                                 batch_size = self.hparams.batch_size,
+                                                  generator = torch.Generator(DEVICE))
         return val_loader
     #end
     
     def test_dataloader(self):
         
         test_loader = torch.utils.data.DataLoader(self.wdatamodule.test_dataset,
-                                                  batch_size = self.hparams.batch_size,)
-                                                  # generator = torch.Generator(DEVICE))
+                                                  batch_size = self.hparams.batch_size,
+                                                   generator = torch.Generator(DEVICE))
         return test_loader
     #end
     
