@@ -262,18 +262,6 @@ class Experiment:
         
         # DATAMODULE : initialize
         w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
-        # train_loader = torch.utils.data.DataLoader(w2d_dm.train_dataset, 
-        #                                             batch_size = self.cparams.BATCH_SIZE,
-        #                                             generator = torch.Generator(DEVICE))
-        #                                             # num_workers = 0)
-        # test_loader = torch.utils.data.DataLoader(w2d_dm.test_dataset,
-        #                                           batch_size = self.cparams.BATCH_SIZE,
-        #                                             generator = torch.Generator(DEVICE))
-        #                                           # num_workers = 0)
-        # val_loader = torch.utils.data.DataLoader(w2d_dm.val_dataset,
-        #                                           batch_size = self.cparams.BATCH_SIZE,
-        #                                             generator = torch.Generator(DEVICE))
-                                                  # num_workers = 0)
         
         # MODELS : initialize and configure
         ## Obtain shape data
@@ -287,7 +275,6 @@ class Experiment:
             lit_model = LitModel_OSSE1_WindModulus(Phi,
                                                       shape_data,
                                                       land_buoy_coords,
-                                                      w2d_dm,
                                                       self.cparams,
                                                       real_run,
                                                       start_time = start_time).to(DEVICE)
@@ -311,8 +298,8 @@ class Experiment:
                            'log_every_n_steps'       : 1}
         
         if torch.cuda.is_available():
-            profiler_kwargs.update({'accelerator' : 'ddp'})
-            profiler_kwargs.update({'gpus'        : self.cparams.GPUS})
+            profiler_kwargs.update({'accelerator' : 'gpu'})
+            profiler_kwargs.update({'devices'     : self.cparams.GPUS})
             profiler_kwargs.update({'precision'   : self.cparams.PRECISION})
         #end
         
@@ -351,8 +338,8 @@ class Experiment:
         
         # Train and test
         ## Train
-        trainer.fit(lit_model, datamodule = w2d_dm)
-        # trainer.fit(lit_model, lit_model.train_dataloader(), lit_model.val_dataloader())
+        # trainer.fit(lit_model, datamodule = w2d_dm)
+        trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
         
         if lit_model.has_nans():
             
