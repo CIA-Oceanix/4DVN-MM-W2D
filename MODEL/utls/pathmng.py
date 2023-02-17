@@ -28,7 +28,7 @@ def get_model_name(cparams, versioning = False):
         model_name = f'{model_name}-{cparams.HR_MASK_MODE}'
     #end
     
-    if cparams.MM_OBSMODEL:
+    if cparams.MM_OBSMODEL and cparams.INVERSION == 'gs':
         model_name += '-MM'
     #end
     
