@@ -1150,7 +1150,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         if self.hparams.mm_obsmodel:
             print('Multi-modal obs model')
             params.append(
-                {'params'       : self.observation_model.parameters(),
+                {'params'       : self.model.model_H.parameters(),
                  'lr'           : self.hparams.mod_h_lr,
                  'weight_decay' : self.hparams.mod_h_wd}
             )
@@ -1460,7 +1460,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         if self.hparams.mm_obsmodel:
             print('Multi-modal obs model')
             params.append(
-                {'params'       : self.observation_model.parameters(),
+                {'params'       : self.model.model_H.parameters(),
                  'lr'           : self.hparams.mod_h_lr,
                  'weight_decay' : self.hparams.mod_h_wd}
             )
