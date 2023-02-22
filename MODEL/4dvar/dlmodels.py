@@ -1311,7 +1311,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         ## Regularization
         if not self.hparams.inversion == 'bl':
             
-            regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+            regularization = self.loss_fn( (outputs - self.model.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
             
             _log_reg_loss = regularization
@@ -1617,7 +1617,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         ## Regularization term
         if not self.hparams.inversion == 'bl':
             
-            regularization = self.loss_fn( (outputs - self.Phi(outputs)), mask = None )
+            regularization = self.loss_fn( (outputs - self.model.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
         
