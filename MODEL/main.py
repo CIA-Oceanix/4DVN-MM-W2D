@@ -199,7 +199,7 @@ class Experiment:
         
         if stage == 'TEST':
             lit_model.eval()
-            lit_model.Phi.eval()
+            # lit_model.Phi.eval()
             lit_model.model.eval()
         #end
         
