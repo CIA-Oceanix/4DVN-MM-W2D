@@ -1042,7 +1042,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.start_time = start_time
         
         # Dynamical prior and mask for land/sea locations
-        self.Phi = Phi
+        # self.Phi = Phi
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         # self.wdatamodule = wdatamodule
@@ -1098,25 +1098,25 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, trainable obs term of 1d features
-            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 3)    
+            observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 3)    
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, trainable obs term of 2D features
-            self.observation_model = ModelObs_MM2d(shape_data, wind_modulus = True, dim_obs = 2)
+            observation_model = ModelObs_MM2d(shape_data, wind_modulus = True, dim_obs = 2)
             
         elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
             # Case only time series, trainable obs term for in-situ data
-            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 2)
+            observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 2)
         
         else:
             # Case default. No trainable obs term at all
-            self.observation_model = ModelObs_SM(shape_data, wind_modulus = True, dim_obs = 1)
+            observation_model = ModelObs_SM(shape_data, wind_modulus = True, dim_obs = 1)
         #end
         
         # Instantiation of the gradient solver
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
-            self.Phi,                                                       # Prior
-            self.observation_model,                                         # Observation model
+            Phi,                                                            # Prior
+            observation_model,                                              # Observation model
             NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
                 mgrad_shapedata,                                              # m_Grad : Shape data
                 False,                                                        # m_Grad : Periodic BCs
@@ -1132,31 +1132,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
         )
     #end
-    
-    
-    # def train_dataloader(self):
-        
-    #     train_loader = torch.utils.data.DataLoader(self.wdatamodule.train_dataset,
-    #                                                batch_size = self.hparams.batch_size,
-    #                                                 generator = torch.Generator(DEVICE))
-    #     return train_loader
-    # #end
-    
-    # def val_dataloader(self):
-        
-    #     val_loader = torch.utils.data.DataLoader(self.wdatamodule.val_dataset,
-    #                                              batch_size = self.hparams.batch_size,
-    #                                               generator = torch.Generator(DEVICE))
-    #     return val_loader
-    # #end
-    
-    # def test_dataloader(self):
-        
-    #     test_loader = torch.utils.data.DataLoader(self.wdatamodule.test_dataset,
-    #                                               batch_size = self.hparams.batch_size,
-    #                                                generator = torch.Generator(DEVICE))
-    #     return test_loader
-    # #end
     
     
     def configure_optimizers(self):
@@ -1280,7 +1255,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             
             if self.hparams.inversion == 'fp':
                 
-                outputs = self.Phi(input_data)
+                outputs = self.model.Phi(input_data)
                 reco_lr = data_lr_input.clone()   # NOTE : forse qui data_lr_input ???
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
@@ -1296,7 +1271,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
             elif self.hparams.inversion == 'bl':
                 
-                outputs = self.Phi(input_data)
+                outputs = self.model.Phi(input_data)
                 reco_lr = data_lr_input.clone()
                 reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
             #end
@@ -1365,7 +1340,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         self.start_time = start_time
         
         # Dynamical prior and mask for land/sea locations
-        self.Phi = Phi
+        # self.Phi = Phi
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         
@@ -1420,15 +1395,15 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, trainable obs term of 1d features
-            self.observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 4)
+            observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 4)
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, trainable obs term of 2D features
-            self.observation_model = ModelObs_MM2d(shape_data, wind_modulus = False, dim_obs = 3)
+            observation_model = ModelObs_MM2d(shape_data, wind_modulus = False, dim_obs = 3)
             
         elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
             # Case only time series, trainable obs term for in-situ data
-            self.observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 3)
+            observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 3)
         
         else:
             # Case default. No trainable obs term at all
@@ -1437,8 +1412,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Instantiation of the gradient solver
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
-            self.Phi,                                                       # Prior
-            self.observation_model,                                         # Observation model
+            Phi,                                                            # Prior
+            observation_model,                                              # Observation model
             NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
                 mgrad_shapedata,                                              # m_Grad : Shape data
                 False,                                                        # m_Grad : Periodic BCs
@@ -1577,7 +1552,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             
             if self.hparams.inversion == 'fp':
                 
-                outputs = self.Phi(input_data)
+                outputs = self.model.Phi(input_data)
                 reco_lr = data_lr_input.clone()
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
@@ -1593,7 +1568,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
             elif self.hparams.inversion == 'bl':
                 
-                outputs = self.Phi(input_data)
+                outputs = self.model.Phi(input_data)
                 reco_lr = data_lr_input.clone()
                 reco_hr = reco_lr + outputs[:,48:,:,:]
             #end

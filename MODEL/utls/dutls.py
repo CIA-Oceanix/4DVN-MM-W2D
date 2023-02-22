@@ -47,7 +47,7 @@ class W2DSimuDataset_WindModulus(Dataset):
         
         # data = (data - data_min) / (data_max - data_min)
         
-        data_mean = data.mean()
+        data_mean = data.mean() * 0
         data_std  = data.std()
         data = (data - data_mean) / data_std
         
@@ -130,16 +130,17 @@ class W2DSimuDataset_WindComponents(Dataset):
         # data[:,:,:,:,0] = (data[:,:,:,:,0] - data_u_min) / (data_u_max - data_u_min)
         # data[:,:,:,:,1] = (data[:,:,:,:,1] - data_v_min) / (data_v_max - data_v_min)
         
-        data_mean_u = data[:,:,:,:,0].mean() ; normparams.update({'mean_u' : data_mean_u})
-        data_mean_v = data[:,:,:,:,1].mean() ; normparams.update({'mean_v' : data_mean_v})
-        data_std_u  = data[:,:,:,:,0].std()  ; normparams.update({'std_u' : data_std_u})
-        data_std_v  = data[:,:,:,:,1].std()  ; normparams.update({'std_v' : data_std_v})
+        data_mean_u = data[:,:,:,:,0].mean() * 0 ; normparams.update({'mean_u' : data_mean_u})
+        data_mean_v = data[:,:,:,:,1].mean() * 0 ; normparams.update({'mean_v' : data_mean_v})
+        data_std_u  = data[:,:,:,:,0].std()      ; normparams.update({'std_u' : data_std_u})
+        data_std_v  = data[:,:,:,:,1].std()      ; normparams.update({'std_v' : data_std_v})
         
-        data[:,:,:,:,0] = (data[:,:,:,:,0] - data_mean_u) / data_std_u
-        data[:,:,:,:,1] = (data[:,:,:,:,1] - data_mean_v) / data_std_v
+        data_std = np.sqrt(data[:,:,:,:,0]**2 + data[:,:,:,:,1]**2).std()
+        
+        data[:,:,:,:,0] = (data[:,:,:,:,0] - data_mean_u) / data_std #data_std_u
+        data[:,:,:,:,1] = (data[:,:,:,:,1] - data_mean_v) / data_std #data_std_v
         
         self.normparams = normparams
-        
         return data
     #end
     
