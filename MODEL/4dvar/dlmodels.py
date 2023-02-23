@@ -1635,6 +1635,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
         
         ## Reconstruction loss
+        ## both mod and uv
         data_hr = torch.sqrt( torch.pow(data_hr_u, 2) + torch.pow(data_hr_v, 2) )
         data_lr = torch.sqrt( torch.pow(data_lr_u, 2) + torch.pow(data_lr_v, 2) )
         reco_hr = torch.sqrt( torch.pow(reco_hr_u, 2) + torch.pow(reco_hr_v, 2) )
@@ -1667,7 +1668,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
-        # both mod and uv
+        ## both mod and uv
         loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
         loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad_mod
