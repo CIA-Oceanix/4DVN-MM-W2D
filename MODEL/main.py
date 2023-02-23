@@ -29,54 +29,56 @@ else:
 #end
 # torch.autograd.set_detect_anomaly(True)
 
-class SaveWeights(Callback):
-    def __init__(self, path_ckpt):
-        super(Callback, self).__init__()
+class LoadCkpt(Callback):
+    def __init__(self, path_ckpt, model_name):
+        super(LoadCkpt, self).__init__()
         
         self.path_ckpt = path_ckpt
+        self.model_name = model_name
         self.last_epoch = None
     #end
     
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
-        
         pass
     #end
     
     def on_train_epoch_start(self, trainer, pl_module):
-        
-        self.epoch_start_params = os.path.join(self.path_ckpt, 'sane_model_params.ckpt')
-        torch.save(pl_module.state_dict(), self.epoch_start_params)
-        
-        self.epoch_start_optstate = os.path.join(self.path_ckpt, 'sane_optimizer_state.ckpt')
-        torch.save(trainer.optimizers[0].state_dict, self.epoch_start_optstate)
+        pass
     #end
     
+    def on_train_epoch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+        
+        nans = False
+        for params in pl_module.parameters():
+            if torch.any(torch.isnan(params)):
+                nans = True
+            #end
+        #end
+        
+        if nans:
+            # print('\nNAN FOUND IN PL MODEL')
+            # print('Loading ckpt ...')
+            checkpoint_name = os.path.join(self.path_ckpt, f'run{pl_module.run}-' + self.model_name + '-epoch=*.ckpt')
+            path_last_ckpt = glob.glob(checkpoint_name)[0]
+            model_state_dict = torch.load(path_last_ckpt)['state_dict']
+            pl_module.load_state_dict(model_state_dict)
+        #end
+        
+        nans = False
+        for params in pl_module.parameters():
+            if torch.any(torch.isnan(params)):
+                nans = True
+            #end
+        #end 
+        
+        if nans:
+            print('STILL NANS!!!')
+        #end
+    #end
+        
     def on_train_epoch_end(self, trainer, pl_module):
         self.last_epoch = pl_module.current_epoch
-        
-        has_nans = False
-        for param in pl_module.parameters():
-            if torch.any(param.isnan()):
-                has_nans = True
-            #end
-        #end
-        
-        if has_nans:
-            print('\nNans in model params')
-            print('Loading checkpoint model params and optimizer state ...')
-            
-            sane_model_params = torch.load(self.epoch_start_params)
-            pl_module.load_state_dict(sane_model_params)
-            
-            sane_opt_state = torch.load(self.epoch_start_optstate)
-            trainer.optimizers[0].state_dict = sane_opt_state
-            
-            for param in pl_module.parameters():
-                if torch.any(param.isnan()):
-                    print('Still nans')
-                #end
-            #end
-        #end
+        pass
     #end
     
     def get_last_epoch(self):
@@ -84,24 +86,10 @@ class SaveWeights(Callback):
     #end
     
     def on_after_backward(self, trainer, pl_module):
-        # After loss.backward() and before optimizer.step()
-        # Also "on_before_optimizer_step()" is available
-        # See pytorch_lightning docs in Callback API
-        
-        gradients = []
-        for param in pl_module.parameters():
-            try:
-                gradients.append(param.grad.mean())
-            except:
-                pass
-            #end
-        #end
-        _log_params_grad = torch.mean(torch.Tensor(gradients))
-        pl_module.log('param_grad', _log_params_grad, on_step = True, on_epoch = True, prog_bar = False)
+        pass
     #end
     
     def on_before_zero_grad(self, trainer, pl_module, optimizer):
-        
         pass
     #end
     
@@ -273,17 +261,21 @@ class Experiment:
         
         if self.cparams.WIND_MODULUS:
             lit_model = LitModel_OSSE1_WindModulus(Phi,
-                                                      shape_data,
-                                                      land_buoy_coords,
-                                                      self.cparams,
-                                                      real_run,
-                                                      start_time = start_time).to(DEVICE)
+                                                   shape_data,
+                                                   land_buoy_coords,
+                                                   self.cparams,
+                                                   real_run,
+                                                   self.path_manager.get_path('ckpt'),
+                                                   self.model_name,
+                                                   start_time = start_time).to(DEVICE)
         else:
             lit_model = LitModel_OSSE1_WindComponents(Phi, 
                                                       shape_data, 
                                                       land_buoy_coords, 
                                                       self.cparams, 
                                                       real_run, 
+                                                      self.path_manager.get_path('ckpt'),
+                                                      self.model_name,
                                                       start_time = start_time).to(DEVICE)
         #end
         
@@ -312,13 +304,13 @@ class Experiment:
             mode       = 'min'
         )
         
-        early_stopping = EarlyStopping(
-            monitor      = 'loss',
-            patience     = 50,
-            check_finite = True,
-        )
+        # early_stopping = EarlyStopping(
+        #     monitor      = 'loss',
+        #     patience     = 50,
+        #     check_finite = True,
+        # )
         
-        # weight_save = SaveWeights(path_ckpt)
+        # lckpt = LoadCkpt(path_ckpt, self.model_name)
         
         # logger = CSVLogger(
         #     save_dir = path_ckpt,
@@ -330,8 +322,8 @@ class Experiment:
             **profiler_kwargs, 
             callbacks = [
                 model_checkpoint, 
-                early_stopping,
-                # weight_save
+                # early_stopping,
+                # lckpt
             ]#,
             # logger = logger
         )

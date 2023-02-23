@@ -1,5 +1,7 @@
 import sys
 sys.path.append('../utls')
+import glob
+import os
 
 import datetime
 import numpy as np
@@ -691,9 +693,11 @@ def model_selection(shape_data, config_params):
 
 class LitModel_Base(pl.LightningModule):
     
-    def __init__(self, cparams):
+    def __init__(self, cparams, path_ckpt, model_name):
         super(LitModel_Base, self).__init__()
         
+        self.path_ckpt         = path_ckpt
+        self.model_name        = model_name
         self.__train_losses      = np.zeros(cparams.EPOCHS)
         self.__val_losses        = np.zeros(cparams.EPOCHS)
         self.__test_losses       = list()
@@ -779,19 +783,53 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        metrics, out = self.forward(batch, batch_idx, phase = 'train')
-        loss = metrics['loss']
-        estimated_time = self.get_estimated_time()
-        
-        self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-        self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
-        # self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+        while True:
+            
+            metrics, out = self.forward(batch, batch_idx, phase = 'train')
+            loss = metrics['loss']
+            estimated_time = self.get_estimated_time()
+            
+            self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
+            self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
+            # self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+            # self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
+            # self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+            # self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+            # self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
+            # self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
+            # self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
+            
+            nans = False
+            for params in self.parameters():
+                if torch.any(torch.isnan(params)):
+                    nans = True
+                #end
+            #end
+            
+            if nans:
+                # print('\nNAN FOUND IN PL MODEL')
+                # print('Loading ckpt ...')
+                checkpoint_name = os.path.join(self.path_ckpt, f'run{self.run}-' + self.model_name + '-epoch=*.ckpt')
+                path_last_ckpt = glob.glob(checkpoint_name)[0]
+                model_state_dict = torch.load(path_last_ckpt)['state_dict']
+                self.load_state_dict(model_state_dict)
+            #end
+            
+            nans = False
+            for params in self.parameters():
+                if torch.any(torch.isnan(params)):
+                    nans = True
+                #end
+            #end 
+            
+            if nans:
+                print('STILL NANS!!!')
+            #end
+            
+            if not nans:
+                break
+            #end
+        #end
         
         return loss
     #end
@@ -1036,8 +1074,8 @@ class LitModel_Base(pl.LightningModule):
 
 class LitModel_OSSE1_WindModulus(LitModel_Base):
     
-    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
-        super(LitModel_OSSE1_WindModulus, self).__init__(config_params)
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, path_ckpt, model_name, start_time = None):
+        super(LitModel_OSSE1_WindModulus, self).__init__(config_params, path_ckpt, model_name)
         
         self.start_time = start_time
         
@@ -1278,6 +1316,11 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         #end
         
         _log_reco_hr_mean = torch.mean(reco_hr)
+        
+        if self.current_epoch == 2 and self.run == 0 and batch_idx == 1:
+            print('Put evil nan which fucks up your model')
+            reco_hr[0,0,50,50] = torch.autograd.Variable(torch.Tensor([torch.nan]))
+        #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
@@ -1596,36 +1639,37 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_lr = torch.sqrt( torch.pow(data_lr_u, 2) + torch.pow(data_lr_v, 2) )
         reco_hr = torch.sqrt( torch.pow(reco_hr_u, 2) + torch.pow(reco_hr_v, 2) )
         reco_lr = torch.sqrt( torch.pow(reco_lr_u, 2) + torch.pow(reco_lr_v, 2) )
-        loss_hr = self.loss_fn((data_hr - reco_hr), mask = None)
-        loss_lr = self.loss_fn((data_lr - reco_lr), mask = None)
-        # loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
-        #           self.loss_fn((reco_hr_v - data_hr_v), mask = None)
-        # loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
-        #           self.loss_fn((reco_lr_v - data_lr_v), mask = None)
+        loss_hr_mod = self.loss_fn((data_hr - reco_hr), mask = None)
+        loss_lr_mod = self.loss_fn((data_lr - reco_lr), mask = None)
+        loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
+                  self.loss_fn((reco_hr_v - data_hr_v), mask = None)
+        loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
+                  self.loss_fn((reco_lr_v - data_lr_v), mask = None)
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
+        loss += (loss_lr_mod + loss_hr_mod)
         
         ## Loss on gradients
-        # grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
-        # grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
-        # grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
-        # grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
-        # grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
-        # grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
-        # grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
-        # grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
+        grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
+        grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
+        grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
+        grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
+        grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
+        grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
+        grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
+        grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
         
-        # loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
-        # loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
+        loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
+        loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
         
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
-        # loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
-        loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
-        loss += loss_grad * self.hparams.grad_coeff
+        loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
+        loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
+        loss += loss_grad_mod
         
         ## Regularization term
         if not self.hparams.inversion == 'bl':
