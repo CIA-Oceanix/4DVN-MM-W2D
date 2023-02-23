@@ -1592,32 +1592,46 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
         
         ## Reconstruction loss
-        loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
-                  self.loss_fn((reco_hr_v - data_hr_v), mask = None)
-        loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
-                  self.loss_fn((reco_lr_v - data_lr_v), mask = None)
+        data_hr = torch.sqrt( torch.pow(data_hr_u, 2) + torch.pow(data_hr_v, 2) )
+        data_lr = torch.sqrt( torch.pow(data_lr_u, 2) + torch.pow(data_lr_v, 2) )
+        reco_hr = torch.sqrt( torch.pow(reco_hr_u, 2) + torch.pow(reco_hr_v, 2) )
+        reco_lr = torch.sqrt( torch.pow(reco_lr_u, 2) + torch.pow(reco_lr_v, 2) )
+        loss_hr = self.loss_fn((data_hr - reco_hr), mask = None)
+        loss_lr = self.loss_fn((data_lr - reco_lr), mask = None)
+        # loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
+        #           self.loss_fn((reco_hr_v - data_hr_v), mask = None)
+        # loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
+        #           self.loss_fn((reco_lr_v - data_lr_v), mask = None)
         
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
         ## Loss on gradients
-        grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
-        grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
-        grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
-        grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
-        grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
-        grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
-        grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
-        grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
+        # grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
+        # grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
+        # grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
+        # grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
+        # grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
+        # grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
+        # grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
+        # grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
         
-        loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
-        loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
+        # loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
+        # loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
         
-        loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
+        grad_data = torch.gradient(data_hr, dim = (3,2))
+        grad_reco = torch.gradient(reco_hr, dim = (3,2))
+        grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
+        grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
+        
+        # loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
+        loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
+        loss += loss_grad * self.hparams.grad_coeff
         
         ## Regularization term
         if not self.hparams.inversion == 'bl':
             
-            regularization = self.loss_fn( (outputs - self.model.Phi(outputs)), mask = None )
+            # regularization = self.loss_fn( (outputs - self.model.Phi(outputs)), mask = None )
+            regularization = self.loss_fn((reco_hr - self.model.Phi(reco_hr)))
             loss += regularization * self.hparams.reg_coeff
         #end
         
