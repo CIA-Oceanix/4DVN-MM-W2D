@@ -265,8 +265,6 @@ class Experiment:
                                                    land_buoy_coords,
                                                    self.cparams,
                                                    real_run,
-                                                   self.path_manager.get_path('ckpt'),
-                                                   self.model_name,
                                                    start_time = start_time).to(DEVICE)
         else:
             lit_model = LitModel_OSSE1_WindComponents(Phi, 
@@ -274,8 +272,6 @@ class Experiment:
                                                       land_buoy_coords, 
                                                       self.cparams, 
                                                       real_run, 
-                                                      self.path_manager.get_path('ckpt'),
-                                                      self.model_name,
                                                       start_time = start_time).to(DEVICE)
         #end
         

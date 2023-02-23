@@ -693,11 +693,9 @@ def model_selection(shape_data, config_params):
 
 class LitModel_Base(pl.LightningModule):
     
-    def __init__(self, cparams, path_ckpt, model_name):
+    def __init__(self, cparams):
         super(LitModel_Base, self).__init__()
         
-        self.path_ckpt         = path_ckpt
-        self.model_name        = model_name
         self.__train_losses      = np.zeros(cparams.EPOCHS)
         self.__val_losses        = np.zeros(cparams.EPOCHS)
         self.__test_losses       = list()
@@ -1041,7 +1039,7 @@ class LitModel_Base(pl.LightningModule):
 class LitModel_OSSE1_WindModulus(LitModel_Base):
     
     def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, path_ckpt, model_name, start_time = None):
-        super(LitModel_OSSE1_WindModulus, self).__init__(config_params, path_ckpt, model_name)
+        super(LitModel_OSSE1_WindModulus, self).__init__(config_params)
         
         self.start_time = start_time
         
