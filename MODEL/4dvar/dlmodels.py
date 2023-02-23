@@ -783,53 +783,19 @@ class LitModel_Base(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         
-        while True:
-            
-            metrics, out = self.forward(batch, batch_idx, phase = 'train')
-            loss = metrics['loss']
-            estimated_time = self.get_estimated_time()
-            
-            self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-            self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
-            # self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-            # self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-            # self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-            # self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-            # self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-            # self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-            # self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
-            
-            nans = False
-            for params in self.parameters():
-                if torch.any(torch.isnan(params)):
-                    nans = True
-                #end
-            #end
-            
-            if nans:
-                # print('\nNAN FOUND IN PL MODEL')
-                # print('Loading ckpt ...')
-                checkpoint_name = os.path.join(self.path_ckpt, f'run{self.run}-' + self.model_name + '-epoch=*.ckpt')
-                path_last_ckpt = glob.glob(checkpoint_name)[0]
-                model_state_dict = torch.load(path_last_ckpt)['state_dict']
-                self.load_state_dict(model_state_dict)
-            #end
-            
-            nans = False
-            for params in self.parameters():
-                if torch.any(torch.isnan(params)):
-                    nans = True
-                #end
-            #end 
-            
-            if nans:
-                print('STILL NANS!!!')
-            #end
-            
-            if not nans:
-                break
-            #end
-        #end
+        metrics, out = self.forward(batch, batch_idx, phase = 'train')
+        loss = metrics['loss']
+        estimated_time = self.get_estimated_time()
+        
+        self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
+        self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
+        # self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
+        # self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
         
         return loss
     #end

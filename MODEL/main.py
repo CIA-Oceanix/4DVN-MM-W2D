@@ -304,11 +304,11 @@ class Experiment:
             mode       = 'min'
         )
         
-        # early_stopping = EarlyStopping(
-        #     monitor      = 'loss',
-        #     patience     = 50,
-        #     check_finite = True,
-        # )
+        early_stopping = EarlyStopping(
+            monitor      = 'loss',
+            patience     = 50,
+            check_finite = True,
+        )
         
         # lckpt = LoadCkpt(path_ckpt, self.model_name)
         
@@ -322,7 +322,7 @@ class Experiment:
             **profiler_kwargs, 
             callbacks = [
                 model_checkpoint, 
-                # early_stopping,
+                early_stopping,
                 # lckpt
             ]#,
             # logger = logger
