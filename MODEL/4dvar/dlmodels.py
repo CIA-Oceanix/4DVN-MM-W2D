@@ -1038,7 +1038,7 @@ class LitModel_Base(pl.LightningModule):
 
 class LitModel_OSSE1_WindModulus(LitModel_Base):
     
-    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, path_ckpt, model_name, start_time = None):
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
         super(LitModel_OSSE1_WindModulus, self).__init__(config_params)
         
         self.start_time = start_time

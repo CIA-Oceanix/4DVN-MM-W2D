@@ -6,6 +6,7 @@ sys.path.append(os.path.join(os.getcwd(), '4dvar'))
 from dotenv import load_dotenv
 import datetime
 import glob
+import gc
 import json
 import argparse
 from collections import namedtuple
@@ -74,11 +75,6 @@ class LoadCkpt(Callback):
         if nans:
             print('STILL NANS!!!')
         #end
-    #end
-        
-    def on_train_epoch_end(self, trainer, pl_module):
-        self.last_epoch = pl_module.current_epoch
-        pass
     #end
     
     def get_last_epoch(self):
@@ -161,6 +157,21 @@ class Experiment:
         #end
         
     #end
+    
+    def print_exp_details(self):
+        # Print experiment details
+        print('##############################################################')
+        print('Experiment\n')
+        print('Model name                 : {}'.format(self.model_name))
+        print('Prior                      : {}'.format(self.cparams.PRIOR))
+        print('Inversion                  : {}'.format(self.cparams.INVERSION))
+        print('Trainable varcost params   : {}'.format(self.cparams.LEARN_VC_PARAMS))
+        print('Masking mode               : {}'.format(self.cparams.HR_MASK_MODE))
+        print('Path source                : {}'.format(self.path_checkpoint_source))
+        print('Model source               : {}'.format(self.name_source_model))
+        print('Path target                : {}'.format(self.path_checkpoint))
+        print('##############################################################')
+    #end
         
     def initialize_model_names_paths(self, path_manager):
         
@@ -200,20 +211,10 @@ class Experiment:
         self.initialize_model_names_paths(path_manager)
         
         self.path_manager = path_manager
-        self.path_checkpoint = path_manager.get_path('ckpt')
+        self.path_checkpoint = path_manager.get_path('ckpt')        
         
-        # Print experiment details
-        print('##############################################################')
-        print('Experiment\n')
-        print('Model name                 : {}'.format(self.model_name))
-        print('Prior                      : {}'.format(self.cparams.PRIOR))
-        print('Inversion                  : {}'.format(self.cparams.INVERSION))
-        print('Trainable varcost params   : {}'.format(self.cparams.LEARN_VC_PARAMS))
-        print('Masking mode               : {}'.format(self.cparams.HR_MASK_MODE))
-        print('Path source                : {}'.format(self.path_checkpoint_source))
-        print('Model source               : {}'.format(self.name_source_model))
-        print('Path target                : {}'.format(self.path_checkpoint))
-        print('##############################################################')
+        # DATAMODULE : initialize
+        self.w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
         
         if self.versioning:
             
@@ -248,13 +249,10 @@ class Experiment:
         start_time = datetime.datetime.now()
         print('\nRun start at {}\n'.format(start_time))
         
-        # DATAMODULE : initialize
-        w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
-        
         # MODELS : initialize and configure
         ## Obtain shape data
-        shape_data = w2d_dm.get_shapeData()
-        land_buoy_coords = w2d_dm.get_land_and_buoy_positions()
+        shape_data = self.w2d_dm.get_shapeData()
+        land_buoy_coords = self.w2d_dm.get_land_and_buoy_positions()
         
         ## Instantiate dynamical prior and lit model
         Phi = model_selection(shape_data, self.cparams).to(DEVICE)
@@ -327,7 +325,7 @@ class Experiment:
         # Train and test
         ## Train
         # trainer.fit(lit_model, datamodule = w2d_dm)
-        trainer.fit(lit_model, w2d_dm.train_dataloader(), w2d_dm.val_dataloader())
+        trainer.fit(lit_model, datamodule = self.w2d_dm)
         
         if lit_model.has_nans():
             
@@ -337,17 +335,14 @@ class Experiment:
             del lit_model
             del Phi
             del trainer
-            del w2d_dm
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            #end
+            gc.collect()
             
         else:
             
             ## Test
             lit_model = self.load_checkpoint(lit_model, 'TEST', run)
             lit_model.eval()
-            trainer.test(lit_model, datamodule = w2d_dm)
+            trainer.test(lit_model, datamodule = self.w2d_dm)
             
             # save reports and reconstructions in the proper target directory
             self.path_manager.save_configfiles(self.cparams, 'config_params')
