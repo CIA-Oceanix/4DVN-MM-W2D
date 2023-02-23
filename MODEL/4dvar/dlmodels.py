@@ -1667,6 +1667,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
+        # both mod and uv
         loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
         loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad_mod
