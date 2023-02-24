@@ -211,7 +211,10 @@ class Experiment:
         self.initialize_model_names_paths(path_manager)
         
         self.path_manager = path_manager
-        self.path_checkpoint = path_manager.get_path('ckpt')        
+        self.path_checkpoint = path_manager.get_path('ckpt')    
+        
+        # introduce
+        self.print_exp_details()
         
         # DATAMODULE : initialize
         self.w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
