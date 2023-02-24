@@ -154,9 +154,8 @@ class CBlock(nn.Sequential):
     def __init__(self, in_channels, out_channels, kernel_size, padding):
         super(CBlock, self).__init__(
             nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), 
-                      padding = padding,
-                      # padding = 'same',
-                      # padding_mode = 'reflect',
+                       padding = 'same',
+                       padding_mode = 'reflect',
                       bias = True),
             # nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1)
