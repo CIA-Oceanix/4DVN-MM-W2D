@@ -42,53 +42,22 @@ class W2DSimuDataset_WindModulus(Dataset):
         
         normparams = dict()
         
-        # data_min = data.min(); normparams.update({'min' : data_min})
-        # data_max = data.max(); normparams.update({'max' : data_max})
+        data_min = data.min(); normparams.update({'min' : data_min})
+        data_max = data.max(); normparams.update({'max' : data_max})
         
-        # data = (data - data_min) / (data_max - data_min)
+        data = (data - data_min) / (data_max - data_min)
         
-        data_mean = data.mean() * 0
-        data_std  = data.std()
-        data = (data - data_mean) / data_std
+        # data_mean = data.mean() * 0
+        # data_std  = data.std()
+        # data = (data - data_mean) / data_std
         
-        normparams.update({'mean' : data_mean})
-        normparams.update({'std' : data_std})
-        
-        self.normparams = normparams
-        return data
-    #end
-    
-    def normalize_imgwise(self, data):
-        
-        num_series, series_length, *img_size = data.shape
-        data = data.reshape(num_series * series_length, *img_size)
-        
-        normparams = {
-            'min'  : np.zeros(data.shape[0]),
-            'max'  : np.zeros(data.shape[0]),
-            'mean' : 0.,
-            'std'  : 0.
-        }
-        
-        for i in range(data.shape[0]):
-            normparams['min'][i] = data[i].min()
-            normparams['max'][i] = data[i].max()
-            data[i] = (data[i] - data[i].min()) / (data[i].max() - data[i].min())
-        #end
-        
-        img_mean = data.mean()
-        img_std  = data.std()
-        data = (data - img_mean) / img_std
-        
-        normparams['mean'] = img_mean
-        normparams['std']  = img_std
-        
-        data = data.reshape(num_series, series_length, *img_size)
+        # normparams.update({'mean' : data_mean})
+        # normparams.update({'std' : data_std})
         
         self.normparams = normparams
         return data
     #end
-    
+        
     def to_tensor(self):
         self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
     #end
@@ -122,73 +91,25 @@ class W2DSimuDataset_WindComponents(Dataset):
         
         normparams = dict()
         
-        # data_u_max = data[:,:,:,:,0].max(); normparams.update({'max_u' : data_u_max})
-        # data_u_min = data[:,:,:,:,0].min(); normparams.update({'min_u' : data_u_min})
-        # data_v_max = data[:,:,:,:,1].max(); normparams.update({'max_v' : data_v_max})
-        # data_v_min = data[:,:,:,:,1].min(); normparams.update({'min_v' : data_v_min})
+        data_u_max = data[:,:,:,:,0].max(); normparams.update({'max_u' : data_u_max})
+        data_u_min = data[:,:,:,:,0].min(); normparams.update({'min_u' : data_u_min})
+        data_v_max = data[:,:,:,:,1].max(); normparams.update({'max_v' : data_v_max})
+        data_v_min = data[:,:,:,:,1].min(); normparams.update({'min_v' : data_v_min})
         
-        # data[:,:,:,:,0] = (data[:,:,:,:,0] - data_u_min) / (data_u_max - data_u_min)
-        # data[:,:,:,:,1] = (data[:,:,:,:,1] - data_v_min) / (data_v_max - data_v_min)
+        data[:,:,:,:,0] = (data[:,:,:,:,0] - data_u_min) / (data_u_max - data_u_min)
+        data[:,:,:,:,1] = (data[:,:,:,:,1] - data_v_min) / (data_v_max - data_v_min)
         
-        data_mean_u = data[:,:,:,:,0].mean() * 0 ; normparams.update({'mean_u' : data_mean_u})
-        data_mean_v = data[:,:,:,:,1].mean() * 0 ; normparams.update({'mean_v' : data_mean_v})
-        data_std_u  = data[:,:,:,:,0].std()      ; normparams.update({'std_u' : data_std_u})
-        data_std_v  = data[:,:,:,:,1].std()      ; normparams.update({'std_v' : data_std_v})
+        # data_mean_u = data[:,:,:,:,0].mean() * 0 ; normparams.update({'mean_u' : data_mean_u})
+        # data_mean_v = data[:,:,:,:,1].mean() * 0 ; normparams.update({'mean_v' : data_mean_v})
+        # data_std_u  = data[:,:,:,:,0].std()      ; normparams.update({'std_u' : data_std_u})
+        # data_std_v  = data[:,:,:,:,1].std()      ; normparams.update({'std_v' : data_std_v})
         
-        data_std = np.sqrt(data[:,:,:,:,0]**2 + data[:,:,:,:,1]**2).std()
+        # data_std = np.sqrt(data[:,:,:,:,0]**2 + data[:,:,:,:,1]**2).std()
         
-        data[:,:,:,:,0] = (data[:,:,:,:,0] - data_mean_u) / data_std #data_std_u
-        data[:,:,:,:,1] = (data[:,:,:,:,1] - data_mean_v) / data_std #data_std_v
-        
-        self.normparams = normparams
-        return data
-    #end
-    
-    def normalize_imgwise_uv(self, data):
-        
-        num_series, series_length, *img_size, components = data.shape
-        data = data.reshape(num_series * series_length, *img_size, components)
-        # u, v = data_[:,:,:,0], data_[:,:,:,1]
-        
-        # if u.shape != v.shape:
-        #     raise RuntimeError('The two wind components must have same shape. Got {} for u and {} for v'.format(u.shape, v.shape))
-        # #end
-        
-        normparams = list()
-        
-        for i in range(2):
-        
-            normparams_cmp = {
-                'min'  : np.zeros(data.shape[0]),
-                'max'  : np.zeros(data.shape[0]),
-                'mean' : 0.,
-                'std'  : 0.
-            }
-            
-            for t in range(data.shape[0]):
-                normparams_cmp['min'][t] = data[t,:,:,i].min()
-                normparams_cmp['max'][t] = data[t,:,:,i].max()
-                num = (data[t,:,:,i] - data[t,:,:,i].min())
-                den = (data[t,:,:,i].max() - data[t,:,:,i].min())
-                data[t,:,:,i] = num / den
-            #end
-            
-            w_cmp_mean = data[:,:,:,i].mean()
-            w_cmp_std  = data[:,:,:,i].std()
-            
-            normparams_cmp['mean'] = w_cmp_mean
-            normparams_cmp['std'] = w_cmp_std
-            
-            data[:,:,:,i] = (data[:,:,:,i] - w_cmp_mean) / w_cmp_std
-            
-            normparams.append(normparams_cmp)
-            
-        #end
+        # data[:,:,:,:,0] = (data[:,:,:,:,0] - data_mean_u) / data_std #data_std_u
+        # data[:,:,:,:,1] = (data[:,:,:,:,1] - data_mean_v) / data_std #data_std_v
         
         self.normparams = normparams
-        
-        # data_ = np.stack((u, v), axis = -1)
-        data = data.reshape(num_series, series_length, *img_size, components)
         return data
     #end
     

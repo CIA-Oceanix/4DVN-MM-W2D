@@ -1,3 +1,4 @@
+
 import os
 import glob
 import datetime
@@ -8,10 +9,8 @@ import netCDF4 as nc
 import numpy as np
 
 
-
 def get_model_name(cparams, versioning = False):
     
-    # MODEL  NAME
     # format : 4DVN-W2D-<mask_HR>[-ckpt-gs_n_itref]-<inversion>-<lr_hr_sfreqs / "REFRUN">-<prior>
     model_name = f'{cparams.VNAME}'
     
@@ -126,6 +125,7 @@ class PathManager:
         #end
         
         #---------------------------------------------------------------------------------------------
+        # MODEL  NAME
         model_name, model_source = get_model_name(cparams, versioning)
         
         if model_source is not None:
@@ -299,27 +299,7 @@ class PathManager:
         # with open(os.path.join(self.path_litmodel_trainer, 'trainer.pkl'), 'wb') as f:
         #     pickle.dump(trainer, f)
         # #end
-        
-        path_models_statedicts = os.path.join(self.path_litmodel_trainer, 'models_statedicts')
-        if not os.path.exists(path_models_statedicts):
-            os.mkdir(path_models_statedicts)
-        #end
-        
-        with open(os.path.join(path_models_statedicts, 'Phi.pkl'), 'wb') as f:
-            torch.save(lit_model.Phi.state_dict(), f)
-        f.close()
-        
-        with open(os.path.join(path_models_statedicts, 'ObsModel.pkl'), 'wb') as f:
-            torch.save(lit_model.observation_model.state_dict(), f)
-        f.close()
-        
-        with open(os.path.join(path_models_statedicts, 'GradSolverLSTM.pkl'), 'wb') as f:
-            torch.save(lit_model.model.model_Grad.state_dict(), f)
-        f.close()
-        
-        with open(os.path.join(path_models_statedicts, 'VarCost.pkl'), 'wb') as f:
-            torch.save(lit_model.model.model_VarCost.state_dict(), f)
-        f.close()
+        pass
     #end
     
     def save_model_output(self, outputs, mask_land, cparams, train_losses, val_losses, run):

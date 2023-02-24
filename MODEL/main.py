@@ -17,7 +17,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 # from pytorch_lightning.loggers import CSVLogger
 
 from pathmng import PathManager
-from dlmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents, model_selection
+from litmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents
+from dlmodels import model_selection
 from dutls import W2DSimuDataModule
 
 if torch.cuda.is_available():
@@ -327,7 +328,6 @@ class Experiment:
         
         # Train and test
         ## Train
-        # trainer.fit(lit_model, datamodule = w2d_dm)
         trainer.fit(lit_model, datamodule = self.w2d_dm)
         
         if lit_model.has_nans():
