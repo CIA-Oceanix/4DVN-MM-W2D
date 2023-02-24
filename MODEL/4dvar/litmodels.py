@@ -592,11 +592,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         _log_reco_hr_mean = torch.mean(reco_hr)
         
-        if self.current_epoch == 2 and self.run == 0 and batch_idx == 1:
-            print('Put evil nan which fucks up your model')
-            reco_hr[0,0,50,50] = torch.autograd.Variable(torch.Tensor([torch.nan]))
-        #end
-        
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({'data' : data_hr.detach().cpu(),
