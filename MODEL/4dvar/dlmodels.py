@@ -62,6 +62,31 @@ class Squeeze(nn.Module):
 ##### DEEP LEARNING MODELS ####################################################
 ###############################################################################
 
+class MLP(nn.Module):
+    def __init__(self, cparams, shape_data):
+        super(MLP, self).__init__()
+        
+        batch_size, ts_length, dim_h, dim_w = shape_data
+        if not cparams.WIND_MODULUS:
+            dim_w *= 2
+        #end
+        self.net = nn.Sequential(
+            nn.Linear(dim_h * dim_w, 200),
+            nn.LeakyReLU(0.1),
+            nn.Linear(200, dim_h * dim_w)
+        )
+    #end
+    
+    def forward(self, data):
+        
+        batch_size, ts_length, dim_h, dim_w = data.shape
+        data_flat = data.reshape(batch_size, ts_length, dim_h * dim_w)
+        reco_flat = self.net(data_flat)
+        reco = reco_flat.reshape(batch_size, ts_length, dim_h, dim_w)
+        return reco
+    #end
+#end
+
 class dw_conv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, padding, stride, groups, bias):
         super(dw_conv2d, self).__init__()
@@ -675,6 +700,8 @@ def model_selection(shape_data, config_params):
         return UNet1(shape_data[1] * 3, shape_data[1] * 3)
     elif config_params.PRIOR == 'UN4':
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)
+    elif config_params.PRIOR == 'MLP':
+        return MLP(config_params, shape_data)
     else:
         raise NotImplementedError('No valid prior')
     #end
