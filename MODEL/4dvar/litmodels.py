@@ -737,8 +737,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
         
         # Obtain the anomalies
-        data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_u
-        data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_v
+        # data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_u
+        # data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_v
+        data_an_u = data_hr_u - data_lr_u
+        data_an_v = data_hr_v - data_lr_v
         
         # Concatenate the two components
         data_lr = torch.cat([data_lr_u, data_lr_v], dim = -1)
