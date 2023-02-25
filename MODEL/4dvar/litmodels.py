@@ -687,7 +687,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         else:
             # Case default. No trainable obs term at all
-            self.observation_model = ModelObs_SM(shape_data, wind_modulus = False, dim_obs = 1)
+            observation_model = ModelObs_SM(shape_data, wind_modulus = False, dim_obs = 1)
         #end
         
         # Instantiation of the gradient solver
@@ -737,10 +737,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
         
         # Obtain the anomalies
-        # data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_u
-        # data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_v
-        data_an_u = data_hr_u - data_lr_u
-        data_an_v = data_hr_v - data_lr_v
+        data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_u
+        data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_v
         
         # Concatenate the two components
         data_lr = torch.cat([data_lr_u, data_lr_v], dim = -1)
@@ -800,8 +798,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        print('data input has nans : ', torch.any(input_data.isnan()))
-        
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
@@ -829,8 +825,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_hr = reco_lr + outputs[:,48:,:,:]
             #end
         #end
-        
-        print('reco has nans : ', torch.any(reco_hr.isnan()))
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
