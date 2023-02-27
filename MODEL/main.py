@@ -157,6 +157,10 @@ class Experiment:
             raise ValueError('Multi-modal term with buoys requires not to set sampling frequency for HR. Set it to "null"')
         #end
         
+        if (self.cparams.INVERSION == 'fp' or self.cparams.INVERSION == 'bl') and self.cparams.MM_OBSMODEL:
+            raise ValueError('Trainable observation operator is to be used only with "gs" inversion')
+        #end
+        
     #end
     
     def print_exp_details(self):

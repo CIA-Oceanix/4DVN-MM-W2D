@@ -666,10 +666,10 @@ class ModelObs_MM1d(nn.Module):
             y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
             y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
             
-            x_hr_spatial = (x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt()
-            y_hr_spatial = (y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr)
+            x_hr_spatial = torch.autograd.Variable((x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt())
+            y_hr_spatial = torch.autograd.Variable((y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr))
             
-            x[1] = torch.cat([x_hr_u, x_hr_v], dim = -1)
+            # x[1] = torch.cat([x_hr_u, x_hr_v], dim = -1)
             
             ## Situ
             ## Here we isolate the in-situ time series from the hr fields

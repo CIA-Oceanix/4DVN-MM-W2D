@@ -172,13 +172,6 @@ class LitModel_Base(pl.LightningModule):
         
         self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
         self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
-        # self.log('data_mean',  metrics['data_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('state_mean', metrics['state_mean'],   on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('params',     metrics['model_params'], on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('reco_mean',  metrics['reco_mean'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('grad_reco',  metrics['grad_reco'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('grad_data',  metrics['grad_data'],    on_step = True, on_epoch = True, prog_bar = False)
-        # self.log('reg_loss',   metrics['reg_loss'],     on_step = True, on_epoch = True, prog_bar = False)
         
         return loss
     #end
@@ -227,7 +220,7 @@ class LitModel_Base(pl.LightningModule):
         return metrics, outs
     #end
     
-    def avgpool2d_keepsize(self, data):
+    def spatial_downsample_interpolate(self, data):
         
         img_size = data.shape[-2:]
         pooled = F.avg_pool2d(data, kernel_size = self.hparams.lr_kernel_size)
@@ -395,7 +388,7 @@ class LitModel_Base(pl.LightningModule):
         return data_lr
     #end
     
-    def get_baseline(self, data_lr_, timesteps = 24):
+    def interpolate_channelwise(self, data_lr_, timesteps = 24):
         
         img_shape = data_lr_.shape[-2:]
         timesteps = timesteps
@@ -441,6 +434,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.run = run
         self.automatic_optimization = True
         self.has_any_nan = False
+        self.shape_data = shape_data
         
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
@@ -500,51 +494,64 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         return loss, outs
     #end
+    
+    def get_baseline(self, data_lr, timesteps):
         
+        return self.interpolate_channelwise(data_lr, timesteps)
+    #end
+    
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         data_hr = data.clone()
         
         # Downsample to obtain ERA5-like data
-        data_lr = self.avgpool2d_keepsize(data_hr)
+        data_lr = self.spatial_downsample_interpolate(data_hr)
         
-        # Obtain anomaly
-        data_an = (data_hr - data_lr)
-        
-        # Delay mode
+        # Bias: random phase shift or amplitude remodulation
         if self.hparams.lr_sampl_delay:
-            data_lr_input = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
+            data_lr_obs = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
-            data_lr_input = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
+            data_lr_obs = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
         else:
-            data_lr_input = data_lr.clone()
+            data_lr_obs = data_lr.clone()
         #end
         
+        # Obtain anomaly
+        data_an = (data_hr - data_lr_obs)
+        
         # Isolate the 24 central timesteps
-        data_lr_input = data_lr_input[:, timewindow_start : timewindow_end, :,:]
-        data_hr       = data_hr[:, timewindow_start : timewindow_end, :,:]
-        data_lr       = data_lr[:, timewindow_start : timewindow_end, :,:]
-        data_an       = data_an[:, timewindow_start : timewindow_end, :,:]
+        data_lr     = data_lr[:, timewindow_start : timewindow_end, :,:]
+        data_lr_obs = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        data_hr     = data_hr[:, timewindow_start : timewindow_end, :,:]
+        data_an     = data_an[:, timewindow_start : timewindow_end, :,:]
         
         # Temporal interpolation
-        data_lr_input = self.get_baseline(data_lr_input, timesteps)
+        # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
         
-        return data_hr, data_lr, data_lr_input, data_an
+        return data_lr, data_lr_obs, data_hr, data_an
+    #end
+    
+    def get_input_data_state(self, data_lr, data_hr, data_an, init_state):
+        
+        # Prepare observations
+        input_data = torch.cat([data_lr, data_hr, data_hr], dim = 1)
+        
+        # Prepare state variable
+        if init_state is not None:
+            input_state = init_state
+        else:
+            input_state = torch.cat([data_lr, data_an, data_an], dim = 1)
+        #end
+        
+        return input_data, input_state
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        # Get and manipulate the data as desider
-        data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
+        # Get and manipulate the data as desidered
+        data_lr, data_lr_obs, data_hr, data_an = self.prepare_batch(data)
         
-        input_data = torch.cat((data_lr_input, data_an, data_an), dim = 1)
-        
-        # Prepare input state initialized
-        if init_state is None:
-            input_state = torch.cat((data_lr_input, data_an, data_an), dim = 1)
-        else:
-            input_state = init_state
-        #end
+        input_data, input_state = self.get_input_data_state(data_lr_obs, data_hr, data_an, init_state)
         
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(data_hr.shape, 
@@ -555,13 +562,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         input_state = input_state * mask
         input_data  = input_data * mask
         
-        # LOGGING — hopefully to be removed soon
-        _log_data_mean = torch.mean(input_data)
-        _log_state_mean = torch.mean(input_state)
-        _log_model_params = torch.mean(
-            torch.Tensor([ param.mean() for param in self.parameters() ])
-        )
-        
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
@@ -569,7 +569,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 
                 outputs = self.model.Phi(input_data)
-                reco_lr = data_lr_input.clone()   # NOTE : forse qui data_lr_input ???
+                # reco_lr = data_lr_obs.clone()
+                reco_lr = self.interpolate_channelwise(data_lr_obs)
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
@@ -585,12 +586,11 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.model.Phi(input_data)
-                reco_lr = data_lr_input.clone()
-                reco_hr = reco_lr + 0. * outputs[:,48:,:,:]
+                # reco_lr = data_lr_obs.clone()
+                reco_lr = self.interpolate_channelwise(data_lr_obs)
+                reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
             #end
         #end
-        
-        _log_reco_hr_mean = torch.mean(reco_hr)
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
@@ -614,10 +614,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
-        # LOG GRADIENTS. Then I'll remove all this joke of variables, promised
-        _log_grad_reco_loss = torch.mean(grad_reco)
-        _log_grad_data_loss = torch.mean(grad_data)
-        
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad * self.hparams.grad_coeff
         
@@ -626,21 +622,9 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             
             regularization = self.loss_fn( (outputs - self.model.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
-            
-            _log_reg_loss = regularization
-        else:
-            _log_reg_loss = torch.Tensor([0.])
         #end
         
-        return dict({'loss' : loss,
-                     'data_mean'    : _log_data_mean,
-                     'state_mean'   : _log_state_mean,
-                     'model_params' : _log_model_params,
-                     'reco_mean'    : _log_reco_hr_mean,
-                     'grad_reco'    : _log_grad_reco_loss,
-                     'grad_data'    : _log_grad_data_loss,
-                     'reg_loss'     : _log_reg_loss
-                     }), outputs
+        return dict({'loss' : loss}), outputs
     #end
 #end
 
@@ -724,14 +708,22 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         return loss, outs
     #end
     
+    def get_baseline_components(self):
+        
+        # Interpolate the low-resolution two components
+        # so to compare them subsequently to the reconstructions
+        # of (u,v) = modulus * (cos_theta, sen_theta)
+        pass
+    #end
+    
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         # Import the components
         data_hr_u, data_hr_v = batch[0], batch[1]
         
         # Downsample to obtain low-resolution
-        data_lr_u = self.avgpool2d_keepsize(data_hr_u)
-        data_lr_v = self.avgpool2d_keepsize(data_hr_v)
+        data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
+        data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
         
         # Obtain the wind speed modulus as high-resolution observation
         data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
@@ -772,7 +764,11 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Prepare batch
+        
+        ## To prepare the input data and input state
         data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
+        
+        ## Ground truths
         data_hr_u = data_hr[:,:,:, :self.shape_data[-1]]
         data_hr_v = data_hr[:,:,:, -self.shape_data[-1]:]
         data_lr_u = data_lr[:,:,:, :self.shape_data[-1]]
