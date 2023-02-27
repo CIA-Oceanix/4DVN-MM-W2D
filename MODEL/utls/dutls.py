@@ -222,7 +222,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def extract_time_series(self, wind_data, ts_length, num_subseries, random_extract = False):
-                
+        
         if random_extract:
             new_wind = np.zeros((num_subseries, ts_length, *wind_data.shape[-3:]))
             for i in range(num_subseries):
@@ -240,7 +240,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         return new_wind
     #end
-        
+    
     def get_buoy_locations(self, lat, lon):
         
         def coord_to_index(lat, lon, bcoords):
