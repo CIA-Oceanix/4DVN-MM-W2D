@@ -68,9 +68,9 @@ class W2DSimuDataset_WindModulus(Dataset):
 
 class W2DSimuDataset_WindComponents(Dataset):
     
-    def __init__(self, data, normalize):
+    def __init__(self, data, normalize, case_wmod):
         
-        wind2D = self.normalize(data)
+        wind2D = self.normalize(data, case_wmod)
         self.wind2D = wind2D
         
         self.numitems = self.wind2D.__len__()
@@ -85,13 +85,22 @@ class W2DSimuDataset_WindComponents(Dataset):
         return (self.wind2D[idx,:,:,:,0], self.wind2D[idx,:,:,:,1])
     #end
     
-    def normalize(self, data):
+    def normalize(self, data, case_wmod):
         
         normparams = dict()
         
         data_std  = np.sqrt(data[:,:,:,:,0]**2 + data[:,:,:,:,1]**2).std()
         data[:,:,:,:,0] = data[:,:,:,:,0] / data_std
         data[:,:,:,:,1] = data[:,:,:,:,1] / data_std
+        
+        if not case_wmod:
+            # Dirty trick to positivize the components distribution
+            # Rather sure it's illigal
+            # print('Dirty positivizing trick')
+            # data[:,:,:,:,0] += np.abs(data[:,:,:,:,0].min())
+            # data[:,:,:,:,1] += np.abs(data[:,:,:,:,1].min())
+            pass
+        #end
         
         normparams.update({'std'  : data_std})
         
@@ -126,12 +135,13 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.data_name     = cparams.DATASET_NAME
         self.shapeData     = None
         self.wind_modulus  = cparams.WIND_MODULUS
-        if cparams.WIND_MODULUS:
-            self.Dataset_class = W2DSimuDataset_WindModulus
-        else:
-            self.Dataset_class = W2DSimuDataset_WindComponents
-        #end
-        
+        # if cparams.WIND_MODULUS:
+        #     self.Dataset_class = W2DSimuDataset_WindModulus
+        # else:
+        #     self.Dataset_class = W2DSimuDataset_WindComponents
+        # #end
+        self.Dataset_class = W2DSimuDataset_WindComponents
+                
         self.setup()
     #end
     
@@ -192,11 +202,11 @@ class W2DSimuDataModule(pl.LightningDataModule):
         val_set   = self.extract_time_series(val_set, 36, n_val // 24)
         test_set  = self.extract_time_series(test_set, 36, self.test_days)
         
-        if self.wind_modulus:
-            train_set = np.sqrt(train_set[:,:,:,:,0]**2 + train_set[:,:,:,:,1]**2)
-            val_set   = np.sqrt(val_set[:,:,:,:,0]**2 + val_set[:,:,:,:,1]**2)
-            test_set  = np.sqrt(test_set[:,:,:,:,0]**2 + test_set[:,:,:,:,1]**2)
-        #end
+        # if self.wind_modulus:
+        #     train_set = np.sqrt(train_set[:,:,:,:,0]**2 + train_set[:,:,:,:,1]**2)
+        #     val_set   = np.sqrt(val_set[:,:,:,:,0]**2 + val_set[:,:,:,:,1]**2)
+        #     test_set  = np.sqrt(test_set[:,:,:,:,0]**2 + test_set[:,:,:,:,1]**2)
+        # #end
         
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)
@@ -205,9 +215,9 @@ class W2DSimuDataModule(pl.LightningDataModule):
         
         self.mask_land = mask_land
         self.buoy_positions = self.get_buoy_locations(region_lat, region_lon)
-        self.train_dataset  = self.Dataset_class(train_set, normalize = self.normalize)
-        self.val_dataset    = self.Dataset_class(val_set,   normalize = self.normalize)
-        self.test_dataset   = self.Dataset_class(test_set,  normalize = self.normalize)
+        self.train_dataset  = self.Dataset_class(train_set, self.normalize, self.wind_modulus)
+        self.val_dataset    = self.Dataset_class(val_set,   self.normalize, self.wind_modulus)
+        self.test_dataset   = self.Dataset_class(test_set,  self.normalize, self.wind_modulus)
         self.save_nparams()
     #end
     

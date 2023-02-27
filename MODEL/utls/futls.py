@@ -52,8 +52,8 @@ def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_
     #end
     mask_hr_dx2 = torch.zeros(shape_data)
     
-    mask_lr = get_resolution_mask(lr_sampling_freq, mask_lr, 'lr')
-    mask_hr_dx1 = get_resolution_mask(hr_sampling_freq, mask_hr_dx1, 'hr')
+    mask_lr = get_resolution_mask(lr_sampling_freq, mask_lr, mask_land, 'lr')
+    mask_hr_dx1 = get_resolution_mask(hr_sampling_freq, mask_hr_dx1, mask_land, 'hr')
     
     mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
     return mask, mask_lr, mask_hr_dx1, mask_hr_dx2
@@ -82,10 +82,10 @@ def get_mask_HR_observation_points(shape_data, mode, buoys_positions):
     return mask
 #end
 
-def downsample_and_interpolate_spatially(data, lr_downsampling_factor):
+def downsample_and_interpolate_spatially(data, lr_kernel_size):
     
     img_size = data.shape[-2:]
-    pooled = F.avg_pool2d(data, kernel_size = lr_downsampling_factor)
+    pooled = F.avg_pool2d(data, kernel_size = lr_kernel_size)
     pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic', align_corners = False)
     
     if not data.shape == pooled.shape:
@@ -95,13 +95,9 @@ def downsample_and_interpolate_spatially(data, lr_downsampling_factor):
     return pooled
 #end
 
-def get_delay_bias(data, lr_sampling_freq, timesteps = 24, timewindow_start = 6, delay_max = 5, delay_min = -4):
+def get_delay_bias(data, lr_sampling_freq, timesteps, timewindow_start, delay_max, delay_min):
     
-    batch_size       = data.shape[0]
-    timesteps        = timesteps
-    timewindow_start = timewindow_start
-    delay_max        = delay_max
-    delay_min        = delay_min
+    batch_size = data.shape[0]
     
     for m in range(batch_size):
         # constant delay for sample (for all timesteps)
@@ -129,7 +125,7 @@ def get_delay_bias(data, lr_sampling_freq, timesteps = 24, timewindow_start = 6,
     return data
 #end
 
-def get_remodulation_bias(data, lr_sampling_freq, timesteps = 24, timewindow_start = 6, intensity_min = 0.5, intensity_max = 1.5):
+def get_remodulation_bias(data, lr_sampling_freq, timesteps, timewindow_start, intensity_min, intensity_max):
     
     batch_size = data.shape[0]
     
@@ -150,7 +146,7 @@ def get_remodulation_bias(data, lr_sampling_freq, timesteps = 24, timewindow_sta
     return data
 #end
 
-def interpolate_along_channels(data, sampling_freq, timesteps = 24):
+def interpolate_along_channels(data, sampling_freq, timesteps):
     
     img_shape = data.shape[-2:]
     

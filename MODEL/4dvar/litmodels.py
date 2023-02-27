@@ -3,7 +3,6 @@ import sys
 sys.path.append('../utls')
 
 import torch
-import torch.nn.functional as F
 import pytorch_lightning as pl
 
 import numpy as np
@@ -12,6 +11,7 @@ import datetime
 from metrics import NormLoss
 from dlmodels import ModelObs_MM, ModelObs_MM1d, ModelObs_MM2d, ModelObs_SM
 import solver as NN_4DVar
+import futls as fs
 
 
 
@@ -170,8 +170,8 @@ class LitModel_Base(pl.LightningModule):
         loss = metrics['loss']
         estimated_time = self.get_estimated_time()
         
-        self.log('loss', loss,                          on_step = True, on_epoch = True, prog_bar = True)
-        self.log('time', estimated_time,                on_step = False, on_epoch = True, prog_bar = True)
+        self.log('loss', loss,           on_step = True, on_epoch = True, prog_bar = True)
+        self.log('time', estimated_time, on_step = False, on_epoch = True, prog_bar = True)
         
         return loss
     #end
@@ -210,11 +210,12 @@ class LitModel_Base(pl.LightningModule):
             self.log('test_loss', test_loss.item())
         #end
         
-        if self.hparams.wind_modulus:
-            batch_size = batch.shape[0]
-        else:
-            batch_size = batch[0].shape[0]
-        #end
+        # if self.hparams.wind_modulus:
+        #     batch_size = batch.shape[0]
+        # else:
+        #     batch_size = batch[0].shape[0]
+        # #end
+        batch_size = batch[0].shape[0]
         
         self.save_test_loss(test_loss, batch_size)
         return metrics, outs
@@ -222,194 +223,38 @@ class LitModel_Base(pl.LightningModule):
     
     def spatial_downsample_interpolate(self, data):
         
-        img_size = data.shape[-2:]
-        pooled = F.avg_pool2d(data, kernel_size = self.hparams.lr_kernel_size)
-        pooled  = F.interpolate(pooled, size = tuple(img_size), mode = 'bicubic', align_corners = False)
-        
-        if not data.shape == pooled.shape:
-            raise ValueError('Original and Pooled_keepsize data shapes mismatch')
-        #end
-        
+        pooled = fs.downsample_and_interpolate_spatially(data, self.hparams.lr_kernel_size)
         return pooled
-    #end
-    
-    def get_HR_obspoints_mask(self, data_shape, mode):
-        
-        if mode.__class__ is list:
-            mode = mode[0]
-        #end
-        
-        if mode == 'center':
-            
-            center_h, center_w = data_shape[-2] // 2, data_shape[-1] // 2
-            mask = torch.zeros(data_shape)
-            mask[:,:, center_h, center_w] = 1.
-            
-        elif mode == 'buoy' or mode == 'buoys':
-            
-            buoy_coords = self.buoy_position
-            mask = torch.zeros(data_shape)
-            mask[:,:, buoy_coords[:,0], buoy_coords[:,1]] = 1.
-            
-        elif mode == 'patch':
-            
-            delta_x = self.hparams.patch_extent
-            center_h, center_w = data_shape[-2] // 2, data_shape[-1] // 2
-            mask = torch.zeros(data_shape)
-            mask[:,:, center_h - delta_x : center_h + delta_x, 
-                 center_w - delta_x : center_w + delta_x] = 1.
-            
-        elif mode == 'zeroes':
-            
-            mask = torch.zeros(data_shape)
-            
-        elif mode == 'points':
-            
-            mask = torch.zeros(data_shape)
-            points_x = np.random.randint(0, data_shape[-2], 10)
-            points_y = np.random.randint(0, data_shape[-1], 10)
-            mask[:,:,points_x, points_y] = 1.
-        else:
-            raise ValueError('Mask mode not impletemented.')
-        #end
-        
-        return mask
     #end
     
     def get_osse_mask(self, data_shape, lr_sfreq, hr_sfreq, hr_obs_point):
         
-        def get_resolution_mask(freq, mask, wfreq):
-            
-            if freq is None:
-                return mask
-            else:
-                if freq.__class__ is list:
-                    if wfreq == 'lr':
-                        mask[:, freq, :,:] = 1.
-                    elif wfreq == 'hr':
-                        mask_land = self.mask_land.to(mask.device)
-                        mask[:, freq, :,:] = mask_land #self.mask_land
-                    #end
-                    
-                elif freq.__class__ is int:
-                    for t in range(mask.shape[1]):
-                        if t % freq == 0:
-                            if wfreq == 'lr':
-                                mask[:,t,:,:] = 1.
-                            elif wfreq == 'hr':
-                                mask_land = self.mask_land.to(mask.device)
-                                mask[:,t,:,:] = mask_land #self.mask_land
-                            #end
-                        #end
-                    #end
-                #end
-            #end
-            
-            return mask
-        #end
-        
-        # Low-reso pseudo-observations
-        mask_lr = torch.zeros(data_shape)
-        
-        # High-reso dx1 : get according to spatial sampling regime.
-        # This gives time series of local observations in specified points
-        # ONLY IF THERE IS NO TRAINABLE OBS MODEL! 
-        # Because if there is, the time series of in-situ observations, 
-        # are isolated thanks to the buoys positions
-        # High-reso dx2 : all zeroes
-        if not self.hparams.mm_obsmodel:
-            mask_hr_dx1 = self.get_HR_obspoints_mask(data_shape, mode = hr_obs_point)
-        else:
-            mask_hr_dx1 = torch.zeros(data_shape)
-        #end
-        mask_hr_dx2 = torch.zeros(data_shape)
-        
-        mask_lr = get_resolution_mask(lr_sfreq, mask_lr, 'lr')
-        mask_hr_dx1 = get_resolution_mask(hr_sfreq, mask_hr_dx1, 'hr')
-        
-        mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
+        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = fs.get_data_mask(data_shape, 
+                    self.mask_land, self.hparams.lr_mask_sfreq, self.hparams.hr_mask_sfreq, 
+                    self.hparams.hr_mask_mode, self.buoy_position, self.hparams.mm_obsmodel)
         return mask, mask_lr, mask_hr_dx1, mask_hr_dx2
     #end
     
     def get_data_lr_delay(self, data_lr, timesteps = 24, timewindow_start = 6,
                           delay_max = 5, delay_min = -4):
         
-        batch_size       = data_lr.shape[0]
-        timesteps        = timesteps
-        timewindow_start = timewindow_start
-        delay_max        = delay_max
-        delay_min        = delay_min
-        
-        for m in range(batch_size):
-            # constant delay for sample (for all timesteps)
-            
-            # with probability p ...
-            p = np.random.uniform(0,1)
-            if p > 0.25:
-                delay = np.random.randint(delay_min, delay_max)
-            else:
-                delay = 0
-            #end
-            
-            for t in range(timesteps):
-                t_true = t + timewindow_start
-                if t_true % self.hparams.lr_mask_sfreq == 0:
-                    try:
-                        data_lr[m,t_true,:,:] = data_lr[m,t_true + delay, :,:]
-                    except:
-                        pass
-                    #end
-                #end
-            #end
-        #end
-        
+        data_lr = fs.get_delay_bias(data_lr, self.hparams.lr_mask_sfreq, timesteps, 
+                                    timewindow_start, delay_max, delay_min)
         return data_lr
     #end
     
     def get_data_lr_alpha(self, data_lr, timesteps = 24, timewindow_start = 6,
                           intensity_min = 0.5, intensity_max = 1.5):
         
-        batch_size = data_lr.shape[0]
-        
-        for m in range(batch_size):
-            intensity = np.random.uniform(intensity_min, intensity_max)
-            for t in range(timesteps):
-                t_true = t + timewindow_start
-                if t_true % self.hparams.lr_mask_sfreq == 0:
-                    try:
-                        data_lr[m,t_true,:,:] = data_lr[:,t_true,:,:] * intensity
-                    except:
-                        pass
-                    #end
-                #end
-            #end
-        #end
-        
+        data_lr = fs.get_remodulation_bias(data_lr, self.hparams.lr_mask_dfreq, timesteps, 
+                                           timewindow_start, intensity_min, intensity_max)
         return data_lr
     #end
     
-    def interpolate_channelwise(self, data_lr_, timesteps = 24):
+    def interpolate_channelwise(self, data_lr, timesteps = 24):
         
-        img_shape = data_lr_.shape[-2:]
-        timesteps = timesteps
-        lr_sfreq  = self.hparams.lr_mask_sfreq
-        
-        # Isolate timesteps related to LR data
-        data_lr = torch.zeros((data_lr_.shape[0], timesteps // lr_sfreq + 1, *img_shape))
-        for t in range(timesteps):
-            if t % lr_sfreq == 0:
-                data_lr[:, t // lr_sfreq, :,:] = torch.Tensor(data_lr_[:,t,:,:])
-            #end
-        #end
-        data_lr[:,-1,:,:] = torch.Tensor(data_lr_[:,-1,:,:] )
-        
-        # Interpolate channel-wise (that is, timesteps)
-        baseline = F.interpolate(data_lr.permute(0,2,3,1), 
-                                 [img_shape[0], timesteps], 
-                                 mode = 'bicubic', align_corners = False)
-        baseline = baseline.permute(0,3,1,2)
-        
-        return baseline
+        data_interpolated = fs.interpolate_along_channels(data_lr, self.hparams.lr_mask_sfreq, timesteps)
+        return data_interpolated
     #end
 #end
 
@@ -422,7 +267,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.start_time = start_time
         
         # Dynamical prior and mask for land/sea locations
-        # self.Phi = Phi
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         # self.wdatamodule = wdatamodule
@@ -495,14 +339,16 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         return loss, outs
     #end
     
-    def get_baseline(self, data_lr, timesteps):
+    def get_baseline(self, data_lr):
         
-        return self.interpolate_channelwise(data_lr, timesteps)
+        return self.interpolate_channelwise(data_lr)
     #end
     
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
-        data_hr = data.clone()
+        # data_hr = data.clone()
+        data_hr_u, data_hr_v = data[0], data[1]
+        data_hr = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
         # Downsample to obtain ERA5-like data
         data_lr = self.spatial_downsample_interpolate(data_hr)
@@ -570,7 +416,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
                 outputs = self.model.Phi(input_data)
                 # reco_lr = data_lr_obs.clone()
-                reco_lr = self.interpolate_channelwise(data_lr_obs)
+                reco_lr = self.get_baseline(data_lr_obs)
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
@@ -587,7 +433,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
                 outputs = self.model.Phi(input_data)
                 # reco_lr = data_lr_obs.clone()
-                reco_lr = self.interpolate_channelwise(data_lr_obs)
+                reco_lr = self.get_baseline(data_lr_obs)
                 reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
             #end
         #end
@@ -708,57 +554,87 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         return loss, outs
     #end
     
-    def get_baseline_components(self):
+    def get_baseline_components(self, data_lr):
         
-        # Interpolate the low-resolution two components
-        # so to compare them subsequently to the reconstructions
-        # of (u,v) = modulus * (cos_theta, sen_theta)
-        pass
+        data_lr_u = data_lr[:,:,:, :self.shape_data[-1]]
+        data_lr_v = data_lr[:,:,:, -self.shape_data[-1]:]
+        data_interpolated_u = self.interpolate_channelwise(data_lr_u)
+        data_interpolated_v = self.interpolate_channelwise(data_lr_v)
+        data_lr = torch.cat([data_interpolated_u, data_interpolated_v], dim = -1)
+        return data_lr
+    #end
+    
+    def split_components(self, data):
+        
+        return data[:,:,:, :self.shape_data[-1]], data[:,:,:, -self.shape_data[-1]:]
+    #end
+    
+    def concat_components(self, data_u, data_v, dim_cat = -1):
+        
+        return torch.cat([data_u, data_v], dim = dim_cat)
+    #end
+    
+    def get_modulus(self, data_u, data_v):
+        
+        return (data_u.pow(2) + data_v.pow(2)).sqrt()
     #end
     
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         # Import the components
         data_hr_u, data_hr_v = batch[0], batch[1]
-        
+                
         # Downsample to obtain low-resolution
         data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
         data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
         
         # Obtain the wind speed modulus as high-resolution observation
         data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
-        
-        # Obtain the anomalies
-        data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_u
-        data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_v
-        
-        # Concatenate the two components
         data_lr = torch.cat([data_lr_u, data_lr_v], dim = -1)
-        data_an = torch.cat([data_an_u, data_an_v], dim = -1)
         
         # Delay mode
         if self.hparams.lr_sampl_delay:
-            data_lr_input = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
+            data_lr_obs = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
-            data_lr_input = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
+            data_lr_obs = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
         else:
-            data_lr_input = data_lr.clone()
+            data_lr_obs = data_lr.clone()
         #end
         
+        # Obtain the anomalies
+        data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, :self.shape_data[-1]]
+        data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, -self.shape_data[-1]:]
+        data_an = torch.cat([data_an_u, data_an_v], dim = -1)
+        
         # Isolate the 24 central timesteps
-        data_lr_input = data_lr_input[:, timewindow_start : timewindow_end, :,:]
-        data_hr       = data_hr[:, timewindow_start : timewindow_end, :,:]
-        data_lr       = data_lr[:, timewindow_start : timewindow_end, :,:]
-        data_an       = data_an[:, timewindow_start : timewindow_end, :,:]
+        data_hr     = data_hr[:, timewindow_start : timewindow_end, :,:]
+        data_lr_obs = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        data_lr     = data_lr[:, timewindow_start : timewindow_end, :,:]
+        data_an     = data_an[:, timewindow_start : timewindow_end, :,:]
         
         # Temporal interpolation
-        data_lr_input_u = data_lr_input[:,:,:,:self.shape_data[-1]]
-        data_lr_input_v = data_lr_input[:,:,:,-self.shape_data[-1]:]
-        data_lr_input_u = self.get_baseline(data_lr_input_u, timesteps)
-        data_lr_input_v = self.get_baseline(data_lr_input_v, timesteps)
-        data_lr_input = torch.cat([data_lr_input_u, data_lr_input_v], dim = -1)
+        # data_lr_obs_u = data_lr_obs[:,:,:,:self.shape_data[-1]]
+        # data_lr_obs_v = data_lr_obs[:,:,:,-self.shape_data[-1]:]
+        # data_lr_input_u = self.get_baseline(data_lr_input_u, timesteps)
+        # data_lr_input_v = self.get_baseline(data_lr_input_v, timesteps)
+        # data_lr_obs = torch.cat([data_lr_obs_u, data_lr_obs_v], dim = -1)
         
-        return data_hr, data_lr, data_lr_input, data_an
+        return data_lr, data_lr_obs, data_hr, data_an
+    #end
+    
+    def get_input_data_state(self, data_lr, data_hr, data_an, init_state):
+        
+        # Prepare observations
+        input_data = torch.cat([data_lr, data_hr, data_hr], dim = 1)
+        
+        # Prepare state variable
+        if init_state is not None:
+            input_state = init_state
+        else:
+            input_state = torch.cat([data_lr, data_an, data_an], dim = 1)
+        #end
+        
+        return input_data, input_state
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
@@ -766,7 +642,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Prepare batch
         
         ## To prepare the input data and input state
-        data_hr, data_lr, data_lr_input, data_an = self.prepare_batch(data)
+        data_lr, data_lr_obs, data_hr, data_an = self.prepare_batch(data)
         
         ## Ground truths
         data_hr_u = data_hr[:,:,:, :self.shape_data[-1]]
@@ -775,14 +651,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_lr_v = data_lr[:,:,:, -self.shape_data[-1]:]
         
         # Prepare low-resolution data
-        input_data = torch.cat([data_lr_input, data_an, data_an], dim = 1)
-        
-        # Prepare input state initialized
-        if init_state is None:
-            input_state = torch.cat((data_lr_input, data_an, data_an), dim = 1)
-        else:
-            input_state = init_state
-        #end
+        input_data, input_state = self.get_input_data_state(data_lr_obs, data_hr, data_an, init_state)
         
         # Mask data
         mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_hr_u.shape, 
@@ -801,7 +670,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 
                 outputs = self.model.Phi(input_data)
-                reco_lr = data_lr_input.clone()
+                reco_lr = data_lr_obs.clone()
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
@@ -817,8 +686,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.model.Phi(input_data)
-                reco_lr = data_lr_input.clone()
-                reco_hr = reco_lr + outputs[:,48:,:,:]
+                # reco_lr = data_lr_obs.clone()
+                reco_lr = self.get_baseline_components(data_lr_obs)
+                reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
             #end
         #end
         
@@ -841,32 +711,32 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         ## Reconstruction loss
         ## both mod and uv
-        data_hr = torch.sqrt( torch.pow(data_hr_u, 2) + torch.pow(data_hr_v, 2) )
-        data_lr = torch.sqrt( torch.pow(data_lr_u, 2) + torch.pow(data_lr_v, 2) )
-        reco_hr = torch.sqrt( torch.pow(reco_hr_u, 2) + torch.pow(reco_hr_v, 2) )
-        reco_lr = torch.sqrt( torch.pow(reco_lr_u, 2) + torch.pow(reco_lr_v, 2) )
+        # data_hr = torch.sqrt( torch.pow(data_hr_u, 2) + torch.pow(data_hr_v, 2) )
+        # data_lr = torch.sqrt( torch.pow(data_lr_u, 2) + torch.pow(data_lr_v, 2) )
+        # reco_hr = torch.sqrt( torch.pow(reco_hr_u, 2) + torch.pow(reco_hr_v, 2) )
+        # reco_lr = torch.sqrt( torch.pow(reco_lr_u, 2) + torch.pow(reco_lr_v, 2) )
         loss_hr_mod = self.loss_fn((data_hr - reco_hr), mask = None)
         loss_lr_mod = self.loss_fn((data_lr - reco_lr), mask = None)
-        loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
-                  self.loss_fn((reco_hr_v - data_hr_v), mask = None)
-        loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
-                  self.loss_fn((reco_lr_v - data_lr_v), mask = None)
+        # loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
+        #           self.loss_fn((reco_hr_v - data_hr_v), mask = None)
+        # loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
+        #           self.loss_fn((reco_lr_v - data_lr_v), mask = None)
         
-        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        loss += (loss_lr_mod + loss_hr_mod)
+        loss = self.hparams.weight_lres * loss_lr_mod + self.hparams.weight_hres * loss_hr_mod
+        # loss += (loss_lr_mod + loss_hr_mod)
         
         ## Loss on gradients
-        grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
-        grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
-        grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
-        grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
-        grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
-        grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
-        grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
-        grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
+        # grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
+        # grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
+        # grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
+        # grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
+        # grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
+        # grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
+        # grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
+        # grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
         
-        loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
-        loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
+        # loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
+        # loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
         
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
@@ -874,7 +744,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
         ## both mod and uv
-        loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
+        # loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
         loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad_mod
         
