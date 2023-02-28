@@ -455,9 +455,10 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         #end
         
         for name, params in self.model.named_parameters():
-            print('param {} min : {}'.format(name, params.min()))
+            print('param {} min / max : {} / {}'.format(name, params.min(), params.max()))
             try:
-                print('param {} grad min : {}'.format(name, params.grad.min()))
+                print('param {} grad min / max : {} / {}'.format(name, params.grad.min(),
+                                                                 params.grad.max()))
             except:
                 pass
             #end
