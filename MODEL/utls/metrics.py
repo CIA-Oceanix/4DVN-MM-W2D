@@ -182,7 +182,7 @@ class NormLoss(nn.Module):
     def __init__(self, divide_nitems = False):
         super(NormLoss, self).__init__()
         
-        self.divide_items = divide_nitems
+        self.divide_nitems = divide_nitems
     #end
     
     def forward(self, item, mask = None):
