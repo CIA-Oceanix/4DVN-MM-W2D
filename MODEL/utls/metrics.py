@@ -130,9 +130,9 @@ def peak_signal_to_noise_ratio(target, output):
     return np.nanmean(psnr)
 #end
 
-def mse(target, output, mask = None, divide_std = True):
+def mse(target, output, mask = None, divide_std = True, divide_nitems = True):
     
-    mserror = NormLoss()((target - output), mask = mask)
+    mserror = NormLoss(divide_nitems = divide_nitems)((target - output), mask = mask)
     if divide_std:
         mserror = mserror / target.std()
     #end
@@ -179,9 +179,10 @@ class _NormLoss(nn.Module):
 
 class NormLoss(nn.Module):
     
-    def __init__(self):
+    def __init__(self, divide_nitems = False):
         super(NormLoss, self).__init__()
         
+        self.divide_items = divide_nitems
     #end
     
     def forward(self, item, mask = None):
@@ -209,11 +210,14 @@ class NormLoss(nn.Module):
             n_items = mask.sum()
         #end
         
-        # loss = argument.div(n_items)
-        # loss = torch.sum(loss, dim = (2,3))
-        # loss = torch.sum(loss, dim = (1,0))
-        loss = argument.mean()
-        
+        if self.divide_nitems:
+            loss = argument.div(n_items)
+            loss = torch.sum(loss, dim = (2,3))
+            loss = torch.sum(loss, dim = (1,0))
+        else:
+            loss = argument.mean()
+        #end
+                
         return loss
     #end
 #end
