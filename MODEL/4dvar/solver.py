@@ -12,7 +12,8 @@ import torch.nn.functional as F
 
 # DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if torch.cuda.is_available():
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
     DEVICE = torch.device('cuda')
 else:
     DEVICE = torch.device('cpu')

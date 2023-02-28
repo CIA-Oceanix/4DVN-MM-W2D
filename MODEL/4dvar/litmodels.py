@@ -13,6 +13,13 @@ from dlmodels import ModelObs_MM, ModelObs_MM1d, ModelObs_MM2d, ModelObs_SM
 import solver as NN_4DVar
 import futls as fs
 
+if torch.cuda.is_available():
+    DEVICE = torch.device('cuda')
+    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+else:
+    DEVICE = torch.device('cpu')
+#end
+
 
 
 class LitModel_Base(pl.LightningModule):
@@ -347,7 +354,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         # data_hr = data.clone()
-        data_hr_u, data_hr_v = data[0], data[1]
+        data_hr_u, data_hr_v = data[0].double(), data[1].double()
         data_hr = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
         # Downsample to obtain ERA5-like data

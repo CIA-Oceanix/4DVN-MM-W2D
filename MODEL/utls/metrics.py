@@ -5,6 +5,13 @@ from torch import nn
 import numpy as np
 from skimage.metrics import structural_similarity
 
+if torch.cuda.is_available():
+    DEVICE = torch.device('cuda')
+    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+else:
+    DEVICE = torch.device('cpu')
+#end
+
 
 # Crop central patch
 def crop_central_patch(img_ts, length):

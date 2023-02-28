@@ -3,6 +3,13 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
+if torch.cuda.is_available():
+    DEVICE = torch.device('cuda')
+    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+else:
+    DEVICE = torch.device('cpu')
+#end
+
 
 def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_obs_points, buoys_positions, mm_obsmodel):
     
