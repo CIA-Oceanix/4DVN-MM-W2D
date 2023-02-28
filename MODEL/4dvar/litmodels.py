@@ -396,8 +396,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         # Get and manipulate the data as desidered
         data_lr, data_lr_obs, data_hr, data_an = self.prepare_batch(data)
-        print('data lr, data_lr_obs, data_hr, data_an min : {}, {}, {}, {}'.format(
-            data_lr.min(), data_lr_obs.min(), data_hr.min(), data_an.min()))
         
         input_data, input_state = self.get_input_data_state(data_lr_obs, data_hr, data_an, init_state)
         
@@ -409,9 +407,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         input_state = input_state * mask
         input_data  = input_data * mask
-        
-        print('input_data, input_state min : {}, {}'.format(input_data.min(), input_state.min()))
-        
+                
         # Inverse problem solution
         with torch.set_grad_enabled(True):
             input_state = torch.autograd.Variable(input_state, requires_grad = True)
@@ -419,12 +415,12 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 
                 outputs = self.model.Phi(input_data)
-                print('outputs min : {}'.format(outputs.min()))
+                # 
                 # reco_lr = data_lr_obs.clone()
                 reco_lr = self.get_baseline(data_lr_obs)
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
-                print('reco_hr {}'.format(reco_hr.min()))
+                # 
                 
             elif self.hparams.inversion == 'gs':
                 
@@ -454,21 +450,11 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             #end
         #end
         
-        for name, params in self.model.named_parameters():
-            print('param {} min : {}'.format(name, params.min()))
-            try:
-                print('param {} grad min : {}'.format(name, params.grad.min()))
-            except:
-                pass
-            #end
-        #end
-        
         # Compute loss
         ## Reconstruction loss
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        print('loss : {}'.format(loss))
         
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
@@ -478,7 +464,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
         loss += loss_grad * self.hparams.grad_coeff
-        print('loss : {}'.format(loss))
         
         ## Regularization
         if not self.hparams.inversion == 'bl':
@@ -487,9 +472,20 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             loss += regularization * self.hparams.reg_coeff
         #end
         
-        print('loss : {}'.format(loss))
-        
         if loss.isnan():
+            print('data lr, data_lr_obs, data_hr, data_an min : {}, {}, {}, {}'.format(
+                data_lr.min(), data_lr_obs.min(), data_hr.min(), data_an.min()))
+            print('input_data, input_state min : {}, {}'.format(input_data.min(), input_state.min()))
+            print('outputs min : {}'.format(outputs.min()))
+            print('reco_hr {}'.format(reco_hr.min()))
+            for name, params in self.model.named_parameters():
+                print('param {} min : {}'.format(name, params.min()))
+                try:
+                    print('param {} grad min : {}'.format(name, params.grad.min()))
+                except:
+                    pass
+                #end
+            #end
             raise ValueError('Loss is nan')
         #end
         
