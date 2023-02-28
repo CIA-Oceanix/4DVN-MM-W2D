@@ -357,7 +357,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         data_hr_u, data_hr_v = data[0], data[1]
         data_hr = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
-        if False:
+        if True:
             # Downsample to obtain ERA5-like data
             data_lr = self.spatial_downsample_interpolate(data_hr)
         else:
