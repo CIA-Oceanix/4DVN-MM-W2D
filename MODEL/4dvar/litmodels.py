@@ -357,8 +357,15 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         data_hr_u, data_hr_v = data[0], data[1]
         data_hr = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
-        # Downsample to obtain ERA5-like data
-        data_lr = self.spatial_downsample_interpolate(data_hr)
+        if False:
+            # Downsample to obtain ERA5-like data
+            data_lr = self.spatial_downsample_interpolate(data_hr)
+        else:
+            data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
+            data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
+            
+            data_lr = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
+        #end
         
         # Bias: random phase shift or amplitude remodulation
         if self.hparams.lr_sampl_delay:
@@ -619,14 +626,16 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Import the components
         data_hr_u, data_hr_v = batch[0], batch[1]
-                
+        
         # Downsample to obtain low-resolution
         data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
         data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
         
         # Obtain the wind speed modulus as high-resolution observation
-        data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
-        data_lr = torch.cat([data_lr_u, data_lr_v], dim = -1)
+        # data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
+        # data_lr = torch.cat([data_lr_u, data_lr_v], dim = -1)
+        data_lr = self.get_modulus(data_lr_u, data_lr_v)
+        data_hr = self.get_modulus(data_hr_u, data_hr_v)
         
         # Delay mode
         if self.hparams.lr_sampl_delay:
@@ -638,9 +647,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         #end
         
         # Obtain the anomalies
-        data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, :self.shape_data[-1]]
-        data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, -self.shape_data[-1]:]
-        data_an = torch.cat([data_an_u, data_an_v], dim = -1)
+        # data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, :self.shape_data[-1]]
+        # data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, -self.shape_data[-1]:]
+        # data_an = torch.cat([data_an_u, data_an_v], dim = -1)
+        data_an = data_hr - data_lr_obs
         
         # Isolate the 24 central timesteps
         data_hr     = data_hr[:, timewindow_start : timewindow_end, :,:]
@@ -706,7 +716,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 
                 outputs = self.model.Phi(input_data)
-                reco_lr = data_lr_obs.clone()
+                # reco_lr = data_lr_obs.clone()
+                reco_lr = self.interpolate_channelwise(data_lr_obs)
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
@@ -723,7 +734,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
                 outputs = self.model.Phi(input_data)
                 # reco_lr = data_lr_obs.clone()
-                reco_lr = self.get_baseline_components(data_lr_obs)
+                # reco_lr = self.get_baseline_components(data_lr_obs)
+                reco_lr = self.interpolate_channelwise(data_lr_obs)
                 reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
             #end
         #end
@@ -784,7 +796,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         ## both mod and uv
         # loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
         # loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
-        loss_grad_mod = loss_grad_x + loss_grad_y
+        loss_grad_mod = (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
         loss += loss_grad_mod
         
         ## Regularization term
