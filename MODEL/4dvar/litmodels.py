@@ -398,21 +398,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         return input_data, input_state
     #end
-    
-    def on_before_zero_grad(self, optimizer):
         
-        # print('ON BEFORE ZERO GRAD')
-        for name, param in self.model.named_parameters():
-            try:
-                pass
-                # print('param {} min / max : {} / {}'.format(name, param.min(), param.max()))
-                # print('param {} grad min / max : {} / {}'.format(name, param.grad.min(), param.grad.max()))
-            except:
-                pass
-            #end
-        #end
-    #end
-    
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Get and manipulate the data as desidered
@@ -790,12 +776,15 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
-        grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
+        loss_grad_x = self.loss_fn((grad_data[1] - grad_reco[1]), mask = None)
+        loss_grad_y = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
+        # grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
+        # grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
         ## both mod and uv
         # loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
-        loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
+        # loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
+        loss_grad_mod = loss_grad_x + loss_grad_y
         loss += loss_grad_mod
         
         ## Regularization term
