@@ -502,7 +502,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
         loss_grad_x = self.loss_fn((grad_data[1] - grad_reco[1]), mask = None)
-        loss_grad_x = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
+        loss_grad_y = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
         loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
         print('loss : {}'.format(loss))
         
