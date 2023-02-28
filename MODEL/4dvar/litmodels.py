@@ -498,11 +498,12 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         print('grad_data y min / max : {} / {}'.format(grad_data[0].min(), grad_data[0].max()))
         print('grad_reco x min / max : {} / {}'.format(grad_reco[1].min(), grad_reco[1].max()))
         print('grad_reco y min / max : {} / {}'.format(grad_reco[0].min(), grad_reco[0].max()))
-        grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
-        grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
+        # grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
+        # grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
-        loss_grad = self.loss_fn((grad_data - grad_reco), mask = None)
-        loss += loss_grad * self.hparams.grad_coeff
+        loss_grad_x = self.loss_fn((grad_data[1] - grad_reco[1]), mask = None)
+        loss_grad_x = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
+        loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
         print('loss : {}'.format(loss))
         
         ## Regularization
