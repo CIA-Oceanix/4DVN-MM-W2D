@@ -209,9 +209,10 @@ class NormLoss(nn.Module):
             n_items = mask.sum()
         #end
         
-        loss = argument.div(n_items)
-        loss = torch.sum(loss, dim = (2,3))
-        loss = torch.sum(loss, dim = (1,0))
+        # loss = argument.div(n_items)
+        # loss = torch.sum(loss, dim = (2,3))
+        # loss = torch.sum(loss, dim = (1,0))
+        loss = argument.mean()
         
         return loss
     #end
