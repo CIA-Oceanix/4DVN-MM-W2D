@@ -399,7 +399,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         return input_data, input_state
     #end
     
-    def on_before_zero_grad(self):
+    def on_before_zero_grad(self, optimizer):
         
         print('ON BEFORE ZERO GRAD')
         for name, param in self.model.named_parameters():
