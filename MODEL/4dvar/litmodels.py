@@ -403,8 +403,12 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         print('ON BEFORE ZERO GRAD')
         for name, param in self.model.named_parameters():
-            print('param {} min / max : {} / {}'.format(name, param.min(), param.max()))
-            print('param {} grad min / max : {} / {}'.format(name, param.grad.min(), param.grad.max()))
+            try:
+                print('param {} min / max : {} / {}'.format(name, param.min(), param.max()))
+                print('param {} grad min / max : {} / {}'.format(name, param.grad.min(), param.grad.max()))
+            except:
+                pass
+            #end
         #end
     #end
     
