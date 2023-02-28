@@ -490,8 +490,10 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        print('grad_data min / max : {} / {}'.format(grad_data.min(), grad_data.max()))
-        print('grad_reco min / max : {} / {}'.format(grad_reco.min(), grad_reco.max()))
+        print('grad_data x min / max : {} / {}'.format(grad_data[1].min(), grad_data[1].max()))
+        print('grad_data y min / max : {} / {}'.format(grad_data[0].min(), grad_data[0].max()))
+        print('grad_reco x min / max : {} / {}'.format(grad_reco[1].min(), grad_reco[1].max()))
+        print('grad_reco y min / max : {} / {}'.format(grad_reco[0].min(), grad_reco[0].max()))
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
