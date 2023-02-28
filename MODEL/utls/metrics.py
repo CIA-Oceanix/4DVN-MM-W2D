@@ -211,13 +211,18 @@ class NormLoss(nn.Module):
         argument = item.pow(2)
         argument = argument.mul(mask)
         
-        if mask.sum() < 1:
-            n_items = 1.
-        else:
-            n_items = mask.sum()
-        #end
-        
         if self.divide_nitems:
+            
+            if mask.sum() < 1:
+                n_items = 1.
+            else:
+                n_items = mask.sum()
+            #end
+            
+            if n_items < 1:
+                raise ValueError('NO DIVISION BY 0 !!!')
+            #end
+            
             loss = argument.div(n_items)
             loss = torch.sum(loss, dim = (2,3))
             loss = torch.sum(loss, dim = (1,0))
