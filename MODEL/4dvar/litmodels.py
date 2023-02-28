@@ -456,7 +456,11 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         for name, params in self.model.named_parameters():
             print('param {} min : {}'.format(name, params.min()))
-            print('param {} grad min : {}'.format(name, params.grad.min()))
+            try:
+                print('param {} grad min : {}'.format(name, params.grad.min()))
+            except:
+                pass
+            #end
         #end
         
         # Compute loss
