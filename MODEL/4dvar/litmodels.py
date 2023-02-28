@@ -14,7 +14,7 @@ import solver as NN_4DVar
 import futls as fs
 
 if torch.cuda.is_available():
-    # DEVICE = torch.device('cuda')
+    DEVICE = torch.device('cuda')
     # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
 else:
     DEVICE = torch.device('cpu')
