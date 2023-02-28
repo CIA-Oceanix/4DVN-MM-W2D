@@ -399,6 +399,14 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         return input_data, input_state
     #end
     
+    def on_before_zero_grad(self):
+        
+        for name, param in self.model.named_parameters():
+            print('param {} min / max : {} / {}'.format(name, param.min(), param.max()))
+            print('param {} grad min / max : {} / {}'.format(name, param.grad.min(), param.grad.max()))
+        #end
+    #end
+    
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Get and manipulate the data as desidered
@@ -481,6 +489,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
+        print('grad_data min / max : {} / {}'.format(grad_data.min(), grad_data.max()))
+        print('grad_reco min / max : {} / {}'.format(grad_reco.min(), grad_reco.max()))
         grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
         grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
         
