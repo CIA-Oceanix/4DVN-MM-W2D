@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 if torch.cuda.is_available():
     DEVICE  = torch.device('cuda')
     # torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+    # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
     WORKERS = 32
 else:
     DEVICE  = torch.device('cpu')

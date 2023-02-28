@@ -5,7 +5,7 @@ import numpy as np
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
-    torch.set_default_tensor_type(torch.cuda.DoubleTensor)
+    # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
 else:
     DEVICE = torch.device('cpu')
 #end
