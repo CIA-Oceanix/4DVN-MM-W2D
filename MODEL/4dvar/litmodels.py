@@ -398,7 +398,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         #end
         
         # Alternative : persistence models
-        if True:
+        if False:
             data_lr = data_lr_gt.clone()
             data_hr = data_hr_gt.clone()
         else:
