@@ -31,6 +31,9 @@ else:
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
 torch.autograd.set_detect_anomaly(True)
+torch.manual_seed(161020)
+
+
 
 class LoadCkpt(Callback):
     def __init__(self, path_ckpt, model_name):

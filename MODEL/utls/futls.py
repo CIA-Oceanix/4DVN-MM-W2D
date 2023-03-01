@@ -174,3 +174,41 @@ def interpolate_along_channels(data, sampling_freq, timesteps):
     
     return data_interpolated
 #end
+
+def get_persistency_model(data, frequency):
+    
+    persistence = torch.zeros(data.shape)
+    
+    if frequency is None:
+        pass
+    elif frequency.__class__ is int:
+        t_previous = 0
+        for t in range(data.shape[1]):
+            if t % frequency == 0:
+                persistence[:,t,:,:] = data[:,t,:,:]
+                t_previous = t
+            else:
+                persistence[:,t,:,:] = data[:,t_previous,:,:]
+            #end
+        #end
+    elif frequency.__class__ is list:
+        t_previous = 0
+        for p in range(frequency.__len__()):
+            try:
+                t_next = (frequency[p] + frequency[p + 1]) // 2
+            except:
+                t_next = data.shape[1]
+            #end
+            for t in range(t_previous, t_next):
+                persistence[:,t,:,:] = data[:, frequency[p], :,:]
+            #end
+            t_previous = t_next
+        #end
+    #end
+
+    return persistence
+#end
+
+
+
+

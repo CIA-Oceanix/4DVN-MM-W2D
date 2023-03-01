@@ -234,11 +234,19 @@ class LitModel_Base(pl.LightningModule):
         return pooled
     #end
     
-    def get_osse_mask(self, data_shape, lr_sfreq, hr_sfreq, hr_obs_point):
+    def get_osse_mask(self, data_shape):
         
         mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = fs.get_data_mask(data_shape, 
-                    self.mask_land, self.hparams.lr_mask_sfreq, self.hparams.hr_mask_sfreq, 
-                    self.hparams.hr_mask_mode, self.buoy_position, self.hparams.mm_obsmodel)
+                                                                   self.mask_land, 
+                                                                   self.hparams.lr_mask_sfreq, 
+                                                                   self.hparams.hr_mask_sfreq, 
+                                                                   self.hparams.hr_mask_mode, 
+                                                                   self.buoy_position, 
+                                                                   self.hparams.mm_obsmodel)
+        # if self.hparams.inversion == 'bl':
+        mask_lr[:,-1,:,:] = 1.
+        #end
+        
         return mask, mask_lr, mask_hr_dx1, mask_hr_dx2
     #end
     
@@ -253,7 +261,7 @@ class LitModel_Base(pl.LightningModule):
     def get_data_lr_alpha(self, data_lr, timesteps = 24, timewindow_start = 6,
                           intensity_min = 0.5, intensity_max = 1.5):
         
-        data_lr = fs.get_remodulation_bias(data_lr, self.hparams.lr_mask_dfreq, timesteps, 
+        data_lr = fs.get_remodulation_bias(data_lr, self.hparams.lr_mask_sfreq, timesteps, 
                                            timewindow_start, intensity_min, intensity_max)
         return data_lr
     #end
@@ -262,6 +270,27 @@ class LitModel_Base(pl.LightningModule):
         
         data_interpolated = fs.interpolate_along_channels(data_lr, self.hparams.lr_mask_sfreq, timesteps)
         return data_interpolated
+    #end
+    
+    def get_persistence(self, data, scale, longer_series, timesteps = 24, timewindow_start = 6):
+        
+        if scale == 'hr':
+            frequency = self.hparams.hr_mask_sfreq
+        elif scale == 'lr':
+            frequency = self.hparams.lr_mask_sfreq
+        #end
+        
+        if frequency.__class__ is list:
+            in_freq = list()
+            for i in range(frequency.__len__()):
+                in_freq.append(frequency[i] + timewindow_start)
+            #end
+        else:
+            in_freq = frequency
+        #end
+        
+        persistence = fs.get_persistency_model(data, in_freq)
+        return persistence
     #end
 #end
 
@@ -355,19 +384,31 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         # data_hr = data.clone()
         data_hr_u, data_hr_v = data[0], data[1]
-        data_hr = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
+        data_hr_gt = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
         if True:
             # Downsample to obtain ERA5-like data
-            data_lr = self.spatial_downsample_interpolate(data_hr)
+            data_lr_gt = self.spatial_downsample_interpolate(data_hr_gt)
         else:
+            # Modulus obtained as modulus of LR components
             data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
             data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
-            
-            data_lr = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
+            data_lr_gt = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
+        #end
+        
+        # Alternative : persistence models
+        if False:
+            data_lr = data_lr_gt.clone()
+            data_hr = data_hr_gt.clone()
+        else:
+            data_lr = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
+            data_hr = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
         #end
         
         # Bias: random phase shift or amplitude remodulation
+        # Note: this is really one simuated data thing. With real data
+        # there are no issues related to +/- Delta t
+        # (thanks goodness real data are themselves biased)
         if self.hparams.lr_sampl_delay:
             data_lr_obs = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
@@ -377,24 +418,39 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         #end
         
         # Obtain anomaly
-        data_an = (data_hr - data_lr_obs)
+        if self.hparams.hr_mask_sfreq is None:
+            # Cases : baselines (interpolation of LR and super-resolution)
+            # that is, when no HR data is observed whatsoever
+            data_an_obs = data_lr_obs
+        else:
+            # All the other cases
+            data_an_obs = (data_hr - data_lr_obs)
+        #end
         
         # Isolate the 24 central timesteps
-        data_lr     = data_lr[:, timewindow_start : timewindow_end, :,:]
+        data_lr_gt  = data_lr_gt[:, timewindow_start : timewindow_end, :,:]
         data_lr_obs = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        data_hr_gt  = data_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        data_an_obs = data_an_obs[:, timewindow_start : timewindow_end, :,:]
         data_hr     = data_hr[:, timewindow_start : timewindow_end, :,:]
-        data_an     = data_an[:, timewindow_start : timewindow_end, :,:]
+        
+        if True:
+            # This modification makes persistence and naive initializations to match
+            # That is, we assume to "close" each time series with u(23h, day0) = u(0h, day1)
+            # Activate it to implemen this (then initializations with persistence and naive match)
+            data_lr_obs[:,-1,:,:] = data_lr_gt[:,-1,:,:]
+        #end
         
         # Temporal interpolation
         # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
         
-        return data_lr, data_lr_obs, data_hr, data_an
+        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr
     #end
     
-    def get_input_data_state(self, data_lr, data_hr, data_an, init_state):
+    def get_input_data_state(self, data_lr, data_an, init_state):
         
         # Prepare observations
-        input_data = torch.cat([data_lr, data_hr, data_hr], dim = 1)
+        input_data = torch.cat([data_lr, data_an, data_an], dim = 1)
         
         # Prepare state variable
         if init_state is not None:
@@ -405,26 +461,18 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         return input_data, input_state
     #end
-        
+    
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Get and manipulate the data as desidered
-        data_lr, data_lr_obs, data_hr, data_an = self.prepare_batch(data)
-        # print('data lr, data_lr_obs, data_hr, data_an min : {}, {}, {}, {}'.format(
-        #     data_lr.min(), data_lr_obs.min(), data_hr.min(), data_an.min()))
-        
-        input_data, input_state = self.get_input_data_state(data_lr_obs, data_hr, data_an, init_state)
+        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data)
+        input_data, input_state = self.get_input_data_state(data_lr_obs, data_an, init_state)
         
         # Mask data
-        mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(data_hr.shape, 
-                                  self.hparams.lr_mask_sfreq, 
-                                  self.hparams.hr_mask_sfreq, 
-                                  self.hparams.hr_mask_mode)
+        mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(data_hr.shape)
         
         input_state = input_state * mask
         input_data  = input_data * mask
-        
-        # print('input_data, input_state min : {}, {}'.format(input_data.min(), input_state.min()))
         
         # Inverse problem solution
         with torch.set_grad_enabled(True):
@@ -433,12 +481,9 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 
                 outputs = self.model.Phi(input_data)
-                # print('outputs min : {}'.format(outputs.min()))
-                # reco_lr = data_lr_obs.clone()
-                reco_lr = self.get_baseline(data_lr_obs)
+                reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
-                # print('reco_hr {}'.format(reco_hr.min()))
                 
             elif self.hparams.inversion == 'gs':
                 
@@ -453,7 +498,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
                 outputs = self.model.Phi(input_data)
                 # reco_lr = data_lr_obs.clone()
-                reco_lr = self.get_baseline(data_lr_obs)
+                reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
             #end
         #end
@@ -468,37 +513,29 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             #end
         #end
         
-        # for name, params in self.model.named_parameters():
-        #     print('param {} min / max : {} / {}'.format(name, params.min(), params.max()))
-        #     try:
-        #         print('param {} grad min / max : {} / {}'.format(name, params.grad.min(),
-        #                                                          params.grad.max()))
-        #     except:
-        #         pass
-        #     #end
-        # #end
+        if True:
+            torch.save(reco_lr, './diagnostics/reco_lr.pkl')
+            torch.save(reco_hr, './diagnostics/reco_hr.pkl')
+            torch.save(data_lr, './diagnostics/data_lr.pkl')
+            torch.save(data_hr, './diagnostics/data_hr.pkl')
+            torch.save(data_lr_obs, './diagnostics/data_lr_obs.pkl')
+            torch.save(data_lr_obs.mul(mask_lr), './diagnostics/data_lr_obs_mask.pkl')
+            torch.save(data_an, './diagnostics/data_an.pkl')
+            torch.save(data_hr_obs, './diagnostics/data_hr_obs.pkl')
+        #end
         
         # Compute loss
         ## Reconstruction loss
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
-        # print('loss : {}'.format(loss))
         
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        # print('grad_data x min / max : {} / {}'.format(grad_data[1].min(), grad_data[1].max()))
-        # print('grad_data y min / max : {} / {}'.format(grad_data[0].min(), grad_data[0].max()))
-        # print('grad_reco x min / max : {} / {}'.format(grad_reco[1].min(), grad_reco[1].max()))
-        # print('grad_reco y min / max : {} / {}'.format(grad_reco[0].min(), grad_reco[0].max()))
-        # grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
-        # grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
-        
         loss_grad_x = self.loss_fn((grad_data[1] - grad_reco[1]), mask = None)
         loss_grad_y = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
         loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
-        # print('loss : {}'.format(loss))
         
         ## Regularization
         if not self.hparams.inversion == 'bl':
@@ -506,8 +543,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             regularization = self.loss_fn( (outputs - self.model.Phi(outputs)), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
-        
-        # print('loss : {}'.format(loss))
         
         if loss.isnan():
             raise ValueError('Loss is nan')
@@ -700,11 +735,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         input_data, input_state = self.get_input_data_state(data_lr_obs, data_hr, data_an, init_state)
         
         # Mask data
-        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_hr_u.shape, 
-                                  self.hparams.lr_mask_sfreq, 
-                                  self.hparams.hr_mask_sfreq, 
-                                  self.hparams.hr_mask_mode)
-        mask = torch.cat([mask, mask], dim = -1)
+        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_hr_u.shape)
         
         input_state = input_state * mask
         input_data  = input_data * mask
