@@ -243,8 +243,10 @@ class LitModel_Base(pl.LightningModule):
                                                                    self.hparams.hr_mask_mode, 
                                                                    self.buoy_position, 
                                                                    self.hparams.mm_obsmodel)
-        # if self.hparams.inversion == 'bl':
-        mask_lr[:,-1,:,:] = 1.
+        
+        if True:
+            # Assume that u(23h day0) = u(0h day1)
+            mask_lr[:,-1,:,:] = 1.
         #end
         
         return mask, mask_lr, mask_hr_dx1, mask_hr_dx2
@@ -305,7 +307,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # Dynamical prior and mask for land/sea locations
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
-        # self.wdatamodule = wdatamodule
         
         # Loss function — parameters optimization
         self.loss_fn = NormLoss()
@@ -444,7 +445,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # Temporal interpolation
         # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
         
-        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr
+        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs
     #end
     
     def get_input_data_state(self, data_lr, data_an, init_state):
@@ -465,7 +466,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Get and manipulate the data as desidered
-        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data)
+        data_lr, data_lr_obs, data_hr, data_an = self.prepare_batch(data)
         input_data, input_state = self.get_input_data_state(data_lr_obs, data_an, init_state)
         
         # Mask data
@@ -512,18 +513,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 self.save_var_cost_values(self.model.var_cost_values)
             #end
         #end
-        
-        if True:
-            torch.save(reco_lr, './diagnostics/reco_lr.pkl')
-            torch.save(reco_hr, './diagnostics/reco_hr.pkl')
-            torch.save(data_lr, './diagnostics/data_lr.pkl')
-            torch.save(data_hr, './diagnostics/data_hr.pkl')
-            torch.save(data_lr_obs, './diagnostics/data_lr_obs.pkl')
-            torch.save(data_lr_obs.mul(mask_lr), './diagnostics/data_lr_obs_mask.pkl')
-            torch.save(data_an, './diagnostics/data_an.pkl')
-            torch.save(data_hr_obs, './diagnostics/data_hr_obs.pkl')
-        #end
-        
+                
         # Compute loss
         ## Reconstruction loss
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
