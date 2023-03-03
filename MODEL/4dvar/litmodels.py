@@ -405,7 +405,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         data_hr_u, data_hr_v = data[0], data[1]
         data_hr_gt = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
-        if False:
+        if True:
             # Downsample to obtain ERA5-like data
             data_lr_gt = self.spatial_downsample_interpolate(data_hr_gt)
         else:
@@ -428,7 +428,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         #end
         
         # Alternative : persistence models
-        if True:
+        if False:
             data_lr_obs = data_lr_obs.clone()
             data_hr_obs = data_hr_gt.clone()
         else:
