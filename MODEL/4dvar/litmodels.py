@@ -825,8 +825,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_costh_hr = reco_costh[:,48:,:,:]
                 reco_sinth_hr = reco_sinth[:,48:,:,:]
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an
-                # reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
-                reco_theta_hr = torch.atan2(data_sinth_hr_gt, data_costh_hr_gt)
+                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
                 
             elif self.hparams.inversion == 'gs':
                 

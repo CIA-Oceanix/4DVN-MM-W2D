@@ -185,11 +185,16 @@ class ConvNet(nn.Module):
     #end
 #end
 
-class ConvNet_angle_cossin(ConvNet):
+class ConvNet_angle_cossin(nn.Module):
     
     def __init__(self, shape_data, config_params):
         super(ConvNet_angle_cossin, self).__init__(shape_data, config_params)
         
+        ts_length = shape_data[1] * 3
+        
+        self.net = nn.Sequential(
+            nn.Conv2d(ts_length, ts_length, (3,3), padding = 1)
+        )
         self.non_linearity = torch.nn.Sigmoid()
     #end
     
