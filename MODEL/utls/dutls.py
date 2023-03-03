@@ -93,16 +93,7 @@ class W2DSimuDataset_WindComponents(Dataset):
         data_std  = np.sqrt(data[:,:,:,:,0]**2 + data[:,:,:,:,1]**2).std()
         data[:,:,:,:,0] = data[:,:,:,:,0] / data_std
         data[:,:,:,:,1] = data[:,:,:,:,1] / data_std
-        
-        if not case_wmod:
-            # Dirty trick to positivize the components distribution
-            # Rather sure it's illigal
-            # print('Dirty positivizing trick')
-            # data[:,:,:,:,0] += np.abs(data[:,:,:,:,0].min())
-            # data[:,:,:,:,1] += np.abs(data[:,:,:,:,1].min())
-            pass
-        #end
-        
+                
         normparams.update({'std'  : data_std})
         
         self.normparams = normparams

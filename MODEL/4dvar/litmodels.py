@@ -145,17 +145,35 @@ class LitModel_Base(pl.LightningModule):
     
     def configure_optimizers(self):
         
-        params = [
-            {'params'       : self.model.model_Grad.parameters(),
-             'lr'           : self.hparams.mgrad_lr,
-             'weight_decay' : self.hparams.mgrad_wd},
-            {'params'       : self.model.Phi.parameters(),
-             'lr'           : self.hparams.prior_lr,
-             'weight_decay' : self.hparams.prior_wd},
-            {'params'       : self.model.model_VarCost.parameters(),
-             'lr'           : self.hparams.varcost_lr,
-             'weight_decay' : self.hparams.varcost_wd}
-        ]
+        params = list()
+        
+        if self.hparams.inversion == 'gs':
+            params.append(
+                {'params'       : self.model.model_Grad.parameters(),
+                 'lr'           : self.hparams.mgrad_lr,
+                 'weight_decay' : self.hparams.mgrad_wd},
+                {'params'       : self.model.model_VarCost.parameters(),
+                 'lr'           : self.hparams.varcost_lr,
+                 'weight_decay' : self.hparams.varcost_wd}
+            )
+        #end
+        
+        if self.model.Phi.__class__ is list:
+            for phi in self.model.Phi:
+                params.append(
+                    {'params'       : phi.parameters(),
+                     'lr'           : self.hparams.prior_lr,
+                     'weight_decay' : self.hparams.prior_wd}
+                )
+            #end
+        else:
+            params.append(
+                {'params'       : self.model.Phi.parameters(),
+                 'lr'           : self.hparams.prior_lr,
+                 'weight_decay' : self.hparams.prior_wd}    
+            )
+        #end
+        
         if self.hparams.mm_obsmodel:
             print('Multi-modal obs model')
             params.append(
@@ -304,7 +322,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         
         self.start_time = start_time
         
-        # Dynamical prior and mask for land/sea locations
+        # Mask for land/sea locations and buoys positions
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         
@@ -397,25 +415,25 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             data_lr_gt = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
         #end
         
-        # Alternative : persistence models
-        if True:
-            data_lr = data_lr_gt.clone()
-            data_hr = data_hr_gt.clone()
-        else:
-            data_lr = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
-            data_hr = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
-        #end
-        
         # Bias: random phase shift or amplitude remodulation
         # Note: this is really one simuated data thing. With real data
         # there are no issues related to +/- Delta t
         # (thanks goodness real data are themselves biased)
         if self.hparams.lr_sampl_delay:
-            data_lr_obs = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
+            data_lr_obs = self.get_data_lr_delay(data_lr_gt.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
-            data_lr_obs = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
+            data_lr_obs = self.get_data_lr_alpha(data_lr_gt.clone(), timesteps, timewindow_start)
         else:
-            data_lr_obs = data_lr.clone()
+            data_lr_obs = data_lr_gt.clone()
+        #end
+        
+        # Alternative : persistence models
+        if False:
+            data_lr_obs = data_lr_obs.clone()
+            data_hr_obs = data_hr_gt.clone()
+        else:
+            data_lr_obs = self.get_persistence(data_lr_obs, 'lr', longer_series = True)
+            data_hr_obs = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
         #end
         
         # Obtain anomaly
@@ -425,7 +443,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             data_an_obs = data_lr_obs
         else:
             # All the other cases
-            data_an_obs = (data_hr - data_lr_obs)
+            data_an_obs = (data_hr_obs - data_lr_obs)
         #end
         
         # Isolate the 24 central timesteps
@@ -433,7 +451,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         data_lr_obs = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
         data_hr_gt  = data_hr_gt[:, timewindow_start : timewindow_end, :,:]
         data_an_obs = data_an_obs[:, timewindow_start : timewindow_end, :,:]
-        data_hr     = data_hr[:, timewindow_start : timewindow_end, :,:]
+        data_hr_obs = data_hr_obs[:, timewindow_start : timewindow_end, :,:]
         
         if True:
             # This modification makes persistence and naive initializations to match
@@ -513,7 +531,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 self.save_var_cost_values(self.model.var_cost_values)
             #end
         #end
-                
+        
         # Compute loss
         ## Reconstruction loss
         loss_lr = self.loss_fn( (reco_lr - data_lr), mask = None )
@@ -550,7 +568,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         self.start_time = start_time
         
-        # Dynamical prior and mask for land/sea locations
+        # Mask for land/sea locations and buoys positions
         self.mask_land = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
         
@@ -582,7 +600,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
             # Case only time series, trainable obs term for in-situ data
             observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 3)
-        
+            
         else:
             # Case default. No trainable obs term at all
             observation_model = ModelObs_SM(shape_data, wind_modulus = False, dim_obs = 1)
@@ -607,7 +625,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
         )
     #end
-    
+        
     def forward(self, batch, batch_idx, phase = 'train'):
         
         state_init = None
@@ -623,7 +641,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     #end
     
     def get_baseline_components(self, data_lr):
-        
         data_lr_u = data_lr[:,:,:, :self.shape_data[-1]]
         data_lr_v = data_lr[:,:,:, -self.shape_data[-1]:]
         data_interpolated_u = self.interpolate_channelwise(data_lr_u)
@@ -633,76 +650,123 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     #end
     
     def split_components(self, data):
-        
         return data[:,:,:, :self.shape_data[-1]], data[:,:,:, -self.shape_data[-1]:]
     #end
     
     def concat_components(self, data_u, data_v, dim_cat = -1):
-        
         return torch.cat([data_u, data_v], dim = dim_cat)
     #end
     
     def get_modulus(self, data_u, data_v):
-        
         return (data_u.pow(2) + data_v.pow(2)).sqrt()
+    #end
+    
+    def get_angle(self, w_mod, comp_u, comp_v, cos_sin = False):
+        
+        cos_theta = comp_v / w_mod
+        sin_theta = comp_u / w_mod
+        
+        if torch.any(cos_theta > 1.) or torch.any(cos_theta < -1.):
+            raise ValueError('COS > 1 or < -1')
+        #end
+        if torch.any(sin_theta > 1.) or torch.any(sin_theta < -1.):
+            raise ValueError('SIN > 1 or < -1')
+        #end
+        
+        if cos_sin:
+            return cos_theta, sin_theta
+        else:
+            theta = torch.atan2(sin_theta, cos_theta)
+            return theta
+        #end
     #end
     
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         # Import the components
-        data_hr_u, data_hr_v = batch[0], batch[1]
+        mwind_hr_gt_u, mwind_hr_gt_v = batch[0], batch[1]
+        
+        # High reso ground truths
+        mwind_hr_gt = self.get_modulus(mwind_hr_gt_u, mwind_hr_gt_v)
+        theta_hr_gt = self.get_angle(mwind_hr_gt, mwind_hr_gt_u, mwind_hr_gt_v)
         
         # Downsample to obtain low-resolution
-        data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
-        data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
+        mwind_lr_gt_u = self.spatial_downsample_interpolate(mwind_hr_gt_u)
+        mwind_lr_gt_v = self.spatial_downsample_interpolate(mwind_hr_gt_v)
         
-        # Obtain the wind speed modulus as high-resolution observation
-        # data_hr = torch.cat([data_hr_u, data_hr_v], dim = -1)
-        # data_lr = torch.cat([data_lr_u, data_lr_v], dim = -1)
-        data_lr = self.get_modulus(data_lr_u, data_lr_v)
-        data_hr = self.get_modulus(data_hr_u, data_hr_v)
+        # Low reso ground truths
+        mwind_lr_gt = self.get_modulus(mwind_lr_gt_u, mwind_lr_gt_v)
+        theta_lr_gt = self.get_angle(mwind_lr_gt, mwind_lr_gt_u, mwind_lr_gt_v)
         
-        # Delay mode
+        # Delay or bias
+        mwind_lr_gt_join = self.concat_components(mwind_lr_gt_u, mwind_lr_gt_v)
         if self.hparams.lr_sampl_delay:
-            data_lr_obs = self.get_data_lr_delay(data_lr.clone(), timesteps, timewindow_start)
+            mwind_lr_obs = self.get_mwind_lr_delay(mwind_lr_gt_join.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
-            data_lr_obs = self.get_data_lr_alpha(data_lr.clone(), timesteps, timewindow_start)
+            mwind_lr_obs = self.get_mwind_lr_alpha(mwind_lr_gt_join.clone(), timesteps, timewindow_start)
         else:
-            data_lr_obs = data_lr.clone()
+            mwind_lr_obs = mwind_lr_gt_join.clone()
         #end
         
+        # Low reso observations
+        mwind_lr_obs_u, mwind_lr_obs_v = self.split_components(mwind_lr_obs)
+        mwind_lr_obs_u = self.get_persistence(mwind_lr_obs_u, 'lr', longer_series = True)
+        mwind_lr_obs_v = self.get_persistence(mwind_lr_obs_v, 'lr', longer_series = True)
+        mwind_lr_obs = self.get_modulus(mwind_lr_obs_u, mwind_lr_obs_v)
+        theta_lr_obs = self.get_angle(mwind_lr_obs, mwind_lr_obs_u, mwind_lr_obs_v)
+        
+        # High reso observations
+        mwind_hr_obs = self.get_persistence(mwind_hr_gt, 'hr', longer_series = True)
+        theta_hr_obs = self.get_persistence(theta_hr_gt, 'hr', longer_series = True)
+        
         # Obtain the anomalies
-        # data_an_u = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, :self.shape_data[-1]]
-        # data_an_v = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt() - data_lr_obs[:,:,:, -self.shape_data[-1]:]
-        # data_an = torch.cat([data_an_u, data_an_v], dim = -1)
-        data_an = data_hr - data_lr_obs
+        if self.hparams.hr_mask_sfreq is None:
+            mwind_an_obs = mwind_lr_obs
+        else:
+            mwind_an_obs = (mwind_hr_obs - mwind_lr_obs)
+        #end
         
         # Isolate the 24 central timesteps
-        data_hr     = data_hr[:, timewindow_start : timewindow_end, :,:]
-        data_lr_obs = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        data_lr     = data_lr[:, timewindow_start : timewindow_end, :,:]
-        data_an     = data_an[:, timewindow_start : timewindow_end, :,:]
+        mwind_lr_gt  = mwind_lr_gt[:, timewindow_start : timewindow_end, :,:]
+        mwind_lr_obs = mwind_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        mwind_hr_gt  = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        mwind_hr_obs = mwind_an_obs[:, timewindow_start : timewindow_end, :,:]
+        theta_hr_gt  = theta_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        theta_hr_obs = theta_hr_obs[:, timewindow_start : timewindow_end, :,:]
+        theta_lr_gt  = theta_lr_gt[:, timewindow_start : timewindow_end, :,:]
+        theta_lr_obs = theta_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        mwind_an_obs = mwind_an_obs[:, timewindow_start : timewindow_end, :,:]
         
-        # Temporal interpolation
-        # data_lr_obs_u = data_lr_obs[:,:,:,:self.shape_data[-1]]
-        # data_lr_obs_v = data_lr_obs[:,:,:,-self.shape_data[-1]:]
-        # data_lr_input_u = self.get_baseline(data_lr_input_u, timesteps)
-        # data_lr_input_v = self.get_baseline(data_lr_input_v, timesteps)
-        # data_lr_obs = torch.cat([data_lr_obs_u, data_lr_obs_v], dim = -1)
+        if True:
+            mwind_lr_obs[:,-1,:,:] = mwind_lr_gt[:,-1,:,:]
+            theta_hr_obs[:,-1,:,:] = theta_lr_obs[:,-1,:,:]
+        #end
         
-        return data_lr, data_lr_obs, data_hr, data_an
+        prepared_batch = [
+            mwind_lr_obs, theta_lr_obs,
+            mwind_an_obs, theta_hr_obs,
+            mwind_lr_gt,  theta_lr_gt,
+            mwind_hr_gt,  theta_hr_gt,
+            mwind_hr_obs
+            # maybe + lr gt components, for baseline interpolation of u,v ?
+        ]
+        
+        return prepared_batch
     #end
     
-    def get_input_data_state(self, data_lr, data_hr, data_an, init_state):
+    def get_input_data_state(self, mwind_lr, mwind_an, costh_lr, senth_lr, costh_hr, senth_hr, init_state = None):
         
         # Prepare observations
-        input_data = torch.cat([data_lr, data_hr, data_hr], dim = 1)
+        chunk_mwind = torch.cat([mwind_lr, mwind_an, mwind_an], dim = 1)
+        chunk_costh = torch.cat([costh_lr, costh_hr, costh_hr], dim = 1)
+        chunk_senth = torch.cat([senth_lr, senth_hr, senth_hr], dim = 1)
+        input_data  = torch.stack([chunk_mwind, chunk_costh, chunk_senth], dim = -1)
         
         # Prepare state variable
         if init_state is not None:
             input_state = init_state
         else:
-            input_state = torch.cat([data_lr, data_an, data_an], dim = 1)
+            input_state = torch.stack([chunk_mwind, chunk_costh, chunk_senth], dim = -1)
         #end
         
         return input_data, input_state
@@ -711,24 +775,38 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Prepare batch
+        prepared_batch = self.prepare_batch(data)
         
-        ## To prepare the input data and input state
-        data_lr, data_lr_obs, data_hr, data_an = self.prepare_batch(data)
+        # Elements of prepared batch
+        data_mwind_lr_obs = prepared_batch[0]   # LR observation modulus
+        data_theta_lr_obs = prepared_batch[1]   # LR observation angle
+        data_mwind_an_obs = prepared_batch[2]   # Anomaly = HR - LR observation
+        data_theta_hr_obs = prepared_batch[3]   # HR observation angle
+        data_mwind_lr_gt  = prepared_batch[4]   # LR ground truth modulus
+        data_theta_lr_gt  = prepared_batch[5]   # LR ground truth angle
+        data_mwind_hr_gt  = prepared_batch[6]   # HR ground truth modulus
+        data_theta_hr_gt  = prepared_batch[7]   # HR ground truth angle
         
-        ## Ground truths
-        data_hr_u = data_hr[:,:,:, :self.shape_data[-1]]
-        data_hr_v = data_hr[:,:,:, -self.shape_data[-1]:]
-        data_lr_u = data_lr[:,:,:, :self.shape_data[-1]]
-        data_lr_v = data_lr[:,:,:, -self.shape_data[-1]:]
+        data_costh_lr_obs = torch.cos(data_theta_lr_obs)
+        data_sinth_lr_obs = torch.sin(data_theta_lr_obs)
+        data_costh_hr_obs = torch.cos(data_theta_hr_obs)
+        data_sinth_hr_obs = torch.sin(data_theta_hr_obs)
+        data_costh_lr_gt  = torch.cos(data_theta_lr_gt)
+        data_sinth_lr_gt  = torch.sin(data_theta_lr_gt)
+        data_costh_hr_gt  = torch.cos(data_theta_hr_gt)
+        data_sinth_hr_gt  = torch.sin(data_theta_hr_gt)
         
-        # Prepare low-resolution data
-        input_data, input_state = self.get_input_data_state(data_lr_obs, data_hr, data_an, init_state)
+        # Prepare input observation and state
+        input_data, input_state = self.get_input_data_state(data_mwind_lr_obs, data_mwind_an_obs,
+                                                            data_costh_lr_obs, data_sinth_lr_obs,
+                                                            data_costh_hr_obs, data_sinth_hr_obs)
         
         # Mask data
-        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_hr_u.shape)
+        mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_mwind_lr_obs.shape)
+        mask_global = torch.stack([mask, mask, mask], dim = -1)
         
-        input_state = input_state * mask
-        input_data  = input_data * mask
+        input_state = input_state * mask_global
+        input_data  = input_data * mask_global
         
         # Inverse problem solution
         with torch.set_grad_enabled(True):
@@ -736,11 +814,18 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             
             if self.hparams.inversion == 'fp':
                 
-                outputs = self.model.Phi(input_data)
-                # reco_lr = data_lr_obs.clone()
-                reco_lr = self.interpolate_channelwise(data_lr_obs)
-                reco_an = outputs[:,48:,:,:]
-                reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
+                reco_mwind = self.model.Phi[0](input_data[:,:,:,:,0])
+                reco_costh = self.model.Phi[1](input_data[:,:,:,:,1])
+                reco_sinth = self.model.Phi[2](input_data[:,:,:,:,2])
+                
+                reco_mwind_lr = self.interpolate_channelwise(data_mwind_lr_obs.mul(mask_lr))
+                reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
+                reco_sinth_lr = self.interpolate_channelwise(data_sinth_lr_obs.mul(mask_lr))
+                reco_mwind_an = reco_mwind[:,48:,:,:]
+                reco_costh_hr = reco_costh[:,48:,:,:]
+                reco_sinth_hr = reco_sinth[:,48:,:,:]
+                reco_mwind_hr = reco_mwind_lr + reco_mwind_an
+                reco_theta_hr = torch.atan2(reco_sinth_lr, reco_costh_lr)
                 
             elif self.hparams.inversion == 'gs':
                 
@@ -753,16 +838,27 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
             elif self.hparams.inversion == 'bl':
                 
-                outputs = self.model.Phi(input_data)
-                # reco_lr = data_lr_obs.clone()
-                # reco_lr = self.get_baseline_components(data_lr_obs)
-                reco_lr = self.interpolate_channelwise(data_lr_obs)
-                reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
+                reco_mwind = self.model.Phi[0](input_data[:,:,:,:,0])
+                reco_costh = self.model.Phi[1](input_data[:,:,:,:,1])
+                reco_sinth = self.model.Phi[2](input_data[:,:,:,:,2])
+                
+                reco_mwind_lr = self.interpolate_channelwise(data_mwind_lr_obs.mul(mask_lr))
+                reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
+                reco_sinth_lr = self.interpolate_channelwise(data_sinth_lr_obs.mul(mask_lr))
+                reco_mwind_an = torch.mul(reco_mwind[:,48:,:,:], 0.)
+                reco_costh_hr = torch.mul(reco_costh[:,48:,:,:], 0.)
+                reco_sinth_hr = torch.mul(reco_sinth[:,48:,:,:], 0.)
+                reco_mwind_hr = reco_mwind_lr + reco_mwind_an
+                reco_theta_hr = torch.atan2(reco_sinth_lr, reco_costh_lr)
             #end
         #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
+            
+            data_hr = torch.cat([data_mwind_hr_gt, data_theta_hr_gt], dim = -1)
+            reco_hr = torch.cat([reco_mwind_hr, reco_theta_hr], dim = -1)
+            
             self.save_samples({'data' : data_hr.detach().cpu(),
                                'reco' : reco_hr.detach().cpu()})
             
@@ -772,62 +868,38 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         #end
         
         # Loss
-        ## Split the output state in (u,v) components
-        reco_hr_u = reco_hr[:,:,:, :self.shape_data[-1]]
-        reco_hr_v = reco_hr[:,:,:, -self.shape_data[-1]:]
-        reco_lr_u = reco_lr[:,:,:, :self.shape_data[-1]]
-        reco_lr_v = reco_lr[:,:,:, -self.shape_data[-1]:]
-        
         ## Reconstruction loss
-        ## both mod and uv
-        # data_hr = torch.sqrt( torch.pow(data_hr_u, 2) + torch.pow(data_hr_v, 2) )
-        # data_lr = torch.sqrt( torch.pow(data_lr_u, 2) + torch.pow(data_lr_v, 2) )
-        # reco_hr = torch.sqrt( torch.pow(reco_hr_u, 2) + torch.pow(reco_hr_v, 2) )
-        # reco_lr = torch.sqrt( torch.pow(reco_lr_u, 2) + torch.pow(reco_lr_v, 2) )
-        loss_hr_mod = self.loss_fn((data_hr - reco_hr), mask = None)
-        loss_lr_mod = self.loss_fn((data_lr - reco_lr), mask = None)
-        # loss_hr = self.loss_fn((reco_hr_u - data_hr_u), mask = None) + \
-        #           self.loss_fn((reco_hr_v - data_hr_v), mask = None)
-        # loss_lr = self.loss_fn((reco_lr_u - data_lr_u), mask = None) + \
-        #           self.loss_fn((reco_lr_v - data_lr_v), mask = None)
+        ## both mod and angle
+        loss_mwind_lr = self.loss_fn((data_mwind_lr_gt - reco_mwind_lr))
+        loss_mwind_hr = self.loss_fn((data_mwind_hr_gt - reco_mwind_hr))
+        loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
-        loss = self.hparams.weight_lres * loss_lr_mod + self.hparams.weight_hres * loss_hr_mod
-        # loss += (loss_lr_mod + loss_hr_mod)
+        loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
+        loss_costh_hr = self.loss_fn((data_costh_hr_gt - reco_costh_hr))
+        loss += ( loss_costh_lr + loss_costh_hr ) * 0.
         
-        ## Loss on gradients
-        # grad_data_u = torch.gradient(data_hr_u, dim = (3,2))
-        # grad_reco_u = torch.gradient(reco_hr_u, dim = (3,2))
-        # grad_data_u = torch.sqrt(grad_data_u[0].pow(2) + grad_data_u[1].pow(2))
-        # grad_reco_u = torch.sqrt(grad_reco_u[0].pow(2) + grad_reco_u[1].pow(2))
-        # grad_data_v = torch.gradient(data_hr_v, dim = (3,2))
-        # grad_reco_v = torch.gradient(reco_hr_v, dim = (3,2))
-        # grad_data_v = torch.sqrt(grad_data_v[0].pow(2) + grad_data_v[1].pow(2))
-        # grad_reco_v = torch.sqrt(grad_reco_v[0].pow(2) + grad_reco_v[1].pow(2))
+        loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
+        loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - reco_sinth_hr))
+        loss += ( loss_sinth_lr + loss_sinth_hr ) * 0.
         
-        # loss_grad_u = self.loss_fn((grad_data_u - grad_reco_u), mask = None)
-        # loss_grad_v = self.loss_fn((grad_data_v - grad_reco_v), mask = None)
+        ## Gradient loss
+        grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
+        grad_reco_mwind = torch.gradient(reco_mwind_hr,    dim = (3,2))
         
-        grad_data = torch.gradient(data_hr, dim = (3,2))
-        grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        loss_grad_x = self.loss_fn((grad_data[1] - grad_reco[1]), mask = None)
-        loss_grad_y = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
-        # grad_data = torch.sqrt(grad_data[0].pow(2) + grad_data[1].pow(2))
-        # grad_reco = torch.sqrt(grad_reco[0].pow(2) + grad_reco[1].pow(2))
+        loss_grad_x = self.loss_fn((grad_data_mwind[1] - grad_reco_mwind[1]))
+        loss_grad_y = self.loss_fn((grad_data_mwind[0] - grad_reco_mwind[0]))
+        loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
         
-        ## both mod and uv
-        # loss += self.hparams.grad_coeff * (loss_grad_u + loss_grad_v)
-        # loss_grad_mod = self.loss_fn((grad_data - grad_reco), mask = None)
-        loss_grad_mod = (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
-        loss += loss_grad_mod
-        
-        ## Regularization term
+        # Regularization term
         if not self.hparams.inversion == 'bl':
             
-            regularization = self.loss_fn( (outputs - self.model.Phi(outputs)), mask = None )
+            regularization  = self.loss_fn( (reco_mwind - self.model.Phi[0](reco_mwind)) )
+            regularization += self.loss_fn( (reco_costh - self.model.Phi[1](reco_costh)) ) * 0.
+            regularization += self.loss_fn( (reco_sinth - self.model.Phi[2](reco_sinth)) ) * 0.
             loss += regularization * self.hparams.reg_coeff
         #end
         
-        return dict({'loss' : loss}), outputs
+        return dict({'loss' : loss}), torch.stack([reco_mwind, reco_costh, reco_sinth])
     #end
 #end
 

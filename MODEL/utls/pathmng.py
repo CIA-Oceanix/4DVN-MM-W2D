@@ -9,7 +9,7 @@ import netCDF4 as nc
 import numpy as np
 
 
-def get_model_name(cparams, versioning = False):
+def get_model_name(cparams):
     
     # format : 4DVN-W2D-<mask_HR>[-ckpt-gs_n_itref]-<inversion>-<lr_hr_sfreqs / "REFRUN">-<prior>
     model_name = f'{cparams.VNAME}'
@@ -118,15 +118,15 @@ def get_model_name(cparams, versioning = False):
 
 class PathManager:
     
-    def __init__(self, mother_dir, cparams, versioning = False, tabula_rasa = False):
+    def __init__(self, mother_dir, cparams):
         
-        if tabula_rasa:
+        if cparams.TABULA_RASA:
             os.system(r'rm -rf {}/*'.format(mother_dir))
         #end
         
         #---------------------------------------------------------------------------------------------
         # MODEL  NAME
-        model_name, model_source = get_model_name(cparams, versioning)
+        model_name, model_source = get_model_name(cparams)
         
         if model_source is not None:
             self.path_ckpt_source = os.path.join(mother_dir, model_source, 'ckpt')
@@ -135,7 +135,7 @@ class PathManager:
         #end
         self.model_source = model_source
         
-        if versioning:
+        if cparams.VERSIONING:
             time_now = datetime.datetime.now()
             unique_token = '-' + time_now.strftime('%Y%m%d%H%M%S')
             version_path = os.path.join(mother_dir, model_name + unique_token)

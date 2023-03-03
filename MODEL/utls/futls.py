@@ -136,6 +136,14 @@ def get_remodulation_bias(data, lr_sampling_freq, timesteps, timewindow_start, i
     
     batch_size = data.shape[0]
     
+    """ Alternative :
+    if lr_sampling_freq.__class__ is int:
+        iteration_list = [i for i in range(timesteps) if i % lr_sampling_freq == 0]
+    else:
+        iteration_list = lr_sampling_freq
+    #end
+    """
+    
     for m in range(batch_size):
         intensity = np.random.uniform(intensity_min, intensity_max)
         for t in range(timesteps):

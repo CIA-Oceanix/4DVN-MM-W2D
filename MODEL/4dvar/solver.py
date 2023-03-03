@@ -472,7 +472,7 @@ class Solver_Grad_4DVarNN(nn.Module):
                  varcost_learnable_params = False):
         
         super(Solver_Grad_4DVarNN, self).__init__()
-                
+        
         self.Phi = prior
         
         if m_NormObs == None:

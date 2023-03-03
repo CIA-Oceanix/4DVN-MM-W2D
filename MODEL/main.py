@@ -98,7 +98,7 @@ class LoadCkpt(Callback):
 
 class Experiment:
     
-    def __init__(self, versioning = False, tabula_rasa = False):
+    def __init__(self):
         
         # Load configuration file
         load_dotenv(os.path.join(os.getcwd(), 'config.env'))
@@ -115,8 +115,6 @@ class Experiment:
         
         self.path_model  = path_model
         self.path_data   = path_data
-        self.versioning  = versioning
-        self.tabula_rasa = tabula_rasa
         self.cparams     = cparams
         
         self.check_inconstistency()
@@ -134,6 +132,10 @@ class Experiment:
             raise ValueError('Inversion given not implemented')
         #end
         
+        if self.cparams.TABULA_RASA and not self.cparams.VERSIONING:
+            raise ValueError('Attention! TABULA_RASA set True and VERSIONING False. This will delete all results')
+        #end
+        
         if self.cparams.INVERSION == 'bl' and self.cparams.HR_MASK_SFREQ is not None:
             raise ValueError('Baseline run does not allow HR observations')
         
@@ -145,7 +147,7 @@ class Experiment:
             raise ValueError('Reference run requires fixed point')
         #end
         
-        if self.versioning and self.cparams.RUNS > 1:
+        if self.cparams.VERSIONING and self.cparams.RUNS > 1:
             raise ValueError('Versioning with RUNS > 1 not allowed')
         #end
         
@@ -207,7 +209,6 @@ class Experiment:
         
         if stage == 'TEST':
             lit_model.eval()
-            # lit_model.Phi.eval()
             lit_model.model.eval()
         #end
         
@@ -216,7 +217,7 @@ class Experiment:
     
     def run_simulation(self):
         
-        path_manager = PathManager(self.path_model, self.cparams, versioning = self.versioning, tabula_rasa = self.tabula_rasa)
+        path_manager = PathManager(self.path_model, self.cparams)
         self.initialize_model_names_paths(path_manager)
         
         self.path_manager = path_manager
@@ -228,7 +229,7 @@ class Experiment:
         # DATAMODULE : initialize
         self.w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
         
-        if self.versioning:
+        if self.cparams.VERSIONING:
             
             # grid search for optimal hyper-params
             self.main(None)
@@ -267,9 +268,9 @@ class Experiment:
         land_buoy_coords = self.w2d_dm.get_land_and_buoy_positions()
         
         ## Instantiate dynamical prior and lit model
-        Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-        
         if self.cparams.WIND_MODULUS:
+            
+            Phi = model_selection(shape_data, self.cparams).to(DEVICE)
             lit_model = LitModel_OSSE1_WindModulus(Phi,
                                                    shape_data,
                                                    land_buoy_coords,
@@ -277,7 +278,13 @@ class Experiment:
                                                    real_run,
                                                    start_time = start_time).to(DEVICE)
         else:
-            lit_model = LitModel_OSSE1_WindComponents(Phi, 
+            
+            Phi_mwind = model_selection(shape_data, self.cparams).to(DEVICE)
+            Phi_costh = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
+            Phi_sinth = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
+            
+            Phi_group = [Phi_mwind, Phi_costh, Phi_sinth]
+            lit_model = LitModel_OSSE1_WindComponents(Phi_group, 
                                                       shape_data, 
                                                       land_buoy_coords, 
                                                       self.cparams, 
@@ -316,22 +323,13 @@ class Experiment:
             check_finite = True,
         )
         
-        # lckpt = LoadCkpt(path_ckpt, self.model_name)
-        
-        # logger = CSVLogger(
-        #     save_dir = path_ckpt,
-        #     name     = 'csv-log.csv'
-        # )
-        
         ## Instantiate Trainer
         trainer = pl.Trainer(
             **profiler_kwargs, 
             callbacks = [
                 model_checkpoint, 
                 early_stopping,
-                # lckpt
-            ]#,
-            # logger = logger
+            ]
         )
         
         # Train and test
@@ -381,22 +379,14 @@ class Experiment:
 
 if __name__ == '__main__':
     
-    # qui argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-vr', type = int, default = 0)
-    parser.add_argument('-tr', type = int, default = 0)
+    # Argparse
+    # parser = argparse.ArgumentParser()
     
-    args = parser.parse_args()
-    versioning  = args.vr
-    tabula_rasa = args.tr
+    # args = parser.parse_args()
+    # versioning  = args.vr
+    # tabula_rasa = args.tr
     
-    if versioning > 1:  versioning = 1
-    if tabula_rasa > 1: tabula_rasa = 1
-    
-    versioning  = bool(versioning)
-    tabula_rasa = bool(tabula_rasa)
-    
-    exp = Experiment(versioning = versioning, tabula_rasa = tabula_rasa)
+    exp = Experiment()
     exp.run_simulation()
 #end
 

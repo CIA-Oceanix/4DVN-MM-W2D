@@ -185,6 +185,22 @@ class ConvNet(nn.Module):
     #end
 #end
 
+class ConvNet_angle_cossin(ConvNet):
+    
+    def __init__(self, shape_data, config_params):
+        super(ConvNet_angle_cossin, self).__init__(shape_data, config_params)
+        
+        self.non_linearity = torch.nn.Sigmoid()
+    #end
+    
+    def forward(self, data):
+        
+        output = self.net(data)
+        return self.non_linearity(output)
+    #end
+#end
+    
+
 
 class ConvAutoEncoder(nn.Module):
     def __init__(self, shape_data, config_params):
@@ -687,20 +703,31 @@ class ModelObs_MM1d(nn.Module):
 ##### MODEL SELECTION #########################################################
 ###############################################################################
 
-def model_selection(shape_data, config_params):
+def model_selection(shape_data, config_params, components = False):
     
     if config_params.PRIOR == 'SN':
-        return ConvNet(shape_data, config_params)
+        if not components:
+            return ConvNet(shape_data, config_params)
+        else:
+            return ConvNet_angle_cossin(shape_data, config_params)
+        #end
+    #end
+    
     elif config_params.PRIOR == 'RN':
         return ResNet(shape_data, config_params)
+    
     elif config_params.PRIOR == 'UN':
         return UNet(shape_data, config_params)
+    
     elif config_params.PRIOR == 'UN1':
         return UNet1(shape_data[1] * 3, shape_data[1] * 3)
+    
     elif config_params.PRIOR == 'UN4':
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)
+    
     elif config_params.PRIOR == 'MLP':
         return MLP(config_params, shape_data)
+    
     else:
         raise NotImplementedError('No valid prior')
     #end
