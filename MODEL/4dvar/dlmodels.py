@@ -188,7 +188,7 @@ class ConvNet(nn.Module):
 class ConvNet_angle_cossin(nn.Module):
     
     def __init__(self, shape_data, config_params):
-        super(ConvNet_angle_cossin, self).__init__(shape_data, config_params)
+        super(ConvNet_angle_cossin, self).__init__()
         
         ts_length = shape_data[1] * 3
         
