@@ -754,19 +754,19 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         return prepared_batch
     #end
     
-    def get_input_data_state(self, mwind_lr, mwind_an, costh_lr, senth_lr, costh_hr, senth_hr, init_state = None):
+    def get_input_data_state(self, mwind_lr, mwind_an, costh_lr, sinth_lr, costh_hr, sinth_hr, init_state = None):
         
         # Prepare observations
         chunk_mwind = torch.cat([mwind_lr, mwind_an, mwind_an], dim = 1)
         chunk_costh = torch.cat([costh_lr, costh_hr, costh_hr], dim = 1)
-        chunk_senth = torch.cat([senth_lr, senth_hr, senth_hr], dim = 1)
-        input_data  = torch.stack([chunk_mwind, chunk_costh, chunk_senth], dim = -1)
+        chunk_sinth = torch.cat([sinth_lr, sinth_hr, sinth_hr], dim = 1)
+        input_data  = torch.stack([chunk_mwind, chunk_costh, chunk_sinth], dim = -1)
         
         # Prepare state variable
         if init_state is not None:
             input_state = init_state
         else:
-            input_state = torch.stack([chunk_mwind, chunk_costh, chunk_senth], dim = -1)
+            input_state = torch.stack([chunk_mwind, chunk_costh, chunk_sinth], dim = -1)
         #end
         
         return input_data, input_state
@@ -825,7 +825,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_costh_hr = reco_costh[:,48:,:,:]
                 reco_sinth_hr = reco_sinth[:,48:,:,:]
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an
-                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
+                # reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
+                reco_theta_hr = torch.atan2(data_sinth_hr_gt, data_costh_hr_gt)
                 
             elif self.hparams.inversion == 'gs':
                 
