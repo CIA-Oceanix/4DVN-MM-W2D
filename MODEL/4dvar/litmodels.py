@@ -825,7 +825,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_costh_hr = reco_costh[:,48:,:,:]
                 reco_sinth_hr = reco_sinth[:,48:,:,:]
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an
-                reco_theta_hr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
                 
             elif self.hparams.inversion == 'gs':
                 
@@ -849,7 +849,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_costh_hr = torch.mul(reco_costh[:,48:,:,:], 0.)
                 reco_sinth_hr = torch.mul(reco_sinth[:,48:,:,:], 0.)
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an
-                reco_theta_hr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
             #end
         #end
         
@@ -876,11 +876,11 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
         loss_costh_hr = self.loss_fn((data_costh_hr_gt - reco_costh_hr))
-        loss += ( loss_costh_lr + loss_costh_hr ) * 0.
+        loss += ( loss_costh_lr + loss_costh_hr )
         
         loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
         loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - reco_sinth_hr))
-        loss += ( loss_sinth_lr + loss_sinth_hr ) * 0.
+        loss += ( loss_sinth_lr + loss_sinth_hr )
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
@@ -894,8 +894,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         if not self.hparams.inversion == 'bl':
             
             regularization  = self.loss_fn( (reco_mwind - self.model.Phi[0](reco_mwind)) )
-            regularization += self.loss_fn( (reco_costh - self.model.Phi[1](reco_costh)) ) * 0.
-            regularization += self.loss_fn( (reco_sinth - self.model.Phi[2](reco_sinth)) ) * 0.
+            regularization += self.loss_fn( (reco_costh - self.model.Phi[1](reco_costh)) )
+            regularization += self.loss_fn( (reco_sinth - self.model.Phi[2](reco_sinth)) )
             loss += regularization * self.hparams.reg_coeff
         #end
         
