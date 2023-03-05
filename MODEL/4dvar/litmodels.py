@@ -722,8 +722,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Obtain the anomalies
         if self.hparams.hr_mask_sfreq is None:
             mwind_an_obs = mwind_lr_obs
+            theta_an_obs = theta_lr_obs
         else:
             mwind_an_obs = (mwind_hr_obs - mwind_lr_obs)
+            theta_an_obs = (theta_hr_obs - theta_lr_obs)
         #end
         
         # Isolate the 24 central timesteps
@@ -742,14 +744,18 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             theta_hr_obs[:,-1,:,:] = theta_lr_obs[:,-1,:,:]
         #end
         
-        prepared_batch = [
-            mwind_lr_obs, theta_lr_obs,
-            mwind_an_obs, theta_hr_obs,
-            mwind_lr_gt,  theta_lr_gt,
-            mwind_hr_gt,  theta_hr_gt,
-            mwind_hr_obs
-            # maybe + lr gt components, for baseline interpolation of u,v ?
-        ]
+        prepared_batch = {
+            'mwind_lr_gt'  : mwind_lr_gt,
+            'theta_lr_gt'  : theta_lr_gt,
+            'mwind_hr_gt'  : mwind_hr_gt,
+            'theta_hr_gt'  : theta_hr_gt,
+            'mwind_lr_obs' : mwind_lr_obs,
+            'theta_lr_obs' : theta_lr_obs,
+            'mwind_an_obs' : mwind_an_obs,
+            'theta_an_obs' : theta_an_obs,
+            'mwind_hr_obs' : mwind_hr_obs,
+            'theta_hr_obs' : theta_hr_obs
+        }
         
         return prepared_batch
     #end
@@ -778,14 +784,16 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         prepared_batch = self.prepare_batch(data)
         
         # Elements of prepared batch
-        data_mwind_lr_obs = prepared_batch[0]   # LR observation modulus
-        data_theta_lr_obs = prepared_batch[1]   # LR observation angle
-        data_mwind_an_obs = prepared_batch[2]   # Anomaly = HR - LR observation
-        data_theta_hr_obs = prepared_batch[3]   # HR observation angle
-        data_mwind_lr_gt  = prepared_batch[4]   # LR ground truth modulus
-        data_theta_lr_gt  = prepared_batch[5]   # LR ground truth angle
-        data_mwind_hr_gt  = prepared_batch[6]   # HR ground truth modulus
-        data_theta_hr_gt  = prepared_batch[7]   # HR ground truth angle
+        data_mwind_lr_obs = prepared_batch['wmind_lr_obs']   # LR observation modulus
+        data_theta_lr_obs = prepared_batch['theta_lr_obs']   # LR observation angle
+        data_mwind_an_obs = prepared_batch['wmind_an_obs']   # Anomaly observation modulus
+        data_theta_an_obs = prepared_batch['theta_an_obs']   # Anomaly observation angle
+        data_mwind_hr_obs = prepared_batch['mwind_hr_obs']   # HR observation modulus
+        data_theta_hr_obs = prepared_batch['theta_hr_obs']   # HR observation angle
+        data_mwind_lr_gt  = prepared_batch['mwind_lr_gt']    # LR ground truth modulus
+        data_theta_lr_gt  = prepared_batch['theta_lr_gt']    # LR ground truth angle
+        data_mwind_hr_gt  = prepared_batch['mwind_hr_gt']    # HR ground truth modulus
+        data_theta_hr_gt  = prepared_batch['theta_hr_gt']    # HR ground truth angle
         
         data_costh_lr_obs = torch.cos(data_theta_lr_obs)
         data_sinth_lr_obs = torch.sin(data_theta_lr_obs)
