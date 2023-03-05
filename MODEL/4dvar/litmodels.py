@@ -730,14 +730,15 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Isolate the 24 central timesteps
         mwind_lr_gt  = mwind_lr_gt[:, timewindow_start : timewindow_end, :,:]
-        mwind_lr_obs = mwind_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        mwind_hr_gt  = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
-        mwind_hr_obs = mwind_an_obs[:, timewindow_start : timewindow_end, :,:]
-        theta_hr_gt  = theta_hr_gt[:, timewindow_start : timewindow_end, :,:]
-        theta_hr_obs = theta_hr_obs[:, timewindow_start : timewindow_end, :,:]
         theta_lr_gt  = theta_lr_gt[:, timewindow_start : timewindow_end, :,:]
+        mwind_hr_gt  = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        theta_hr_gt  = theta_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        mwind_lr_obs = mwind_lr_obs[:, timewindow_start : timewindow_end, :,:]
         theta_lr_obs = theta_lr_obs[:, timewindow_start : timewindow_end, :,:]
         mwind_an_obs = mwind_an_obs[:, timewindow_start : timewindow_end, :,:]
+        theta_an_obs = theta_an_obs[:, timewindow_start : timewindow_end, :,:]
+        mwind_hr_obs = mwind_hr_obs[:, timewindow_start : timewindow_end, :,:]
+        theta_hr_obs = theta_hr_obs[:, timewindow_start : timewindow_end, :,:]
         
         if True:
             mwind_lr_obs[:,-1,:,:] = mwind_lr_gt[:,-1,:,:]
