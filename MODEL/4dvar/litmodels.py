@@ -438,6 +438,13 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             data_hr_obs = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
         #end
         
+        # NOTE: is in-situ time series are actually measured, these positions
+        # in the persistence model must be filled with in-situ time series
+        if self.hparams.hr_mask_mode == 'buoys':
+            xp_buoys, yp_buoys = self.buoy_position[:,0], self.buoy_position[:,1]
+            data_hr_obs[:,:, xp_buoys, yp_buoys] = data_hr_gt[:,:, xp_buoys, yp_buoys]
+        #end
+        
         # Obtain anomaly
         if self.hparams.hr_mask_sfreq is None:
             # Cases : baselines (interpolation of LR and super-resolution)
@@ -510,7 +517,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
                 mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
                 
-                outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
+                outputs, _,_,_ = self.model(input_state, input_data, mask)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
