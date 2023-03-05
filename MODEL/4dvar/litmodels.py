@@ -784,9 +784,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         prepared_batch = self.prepare_batch(data)
         
         # Elements of prepared batch
-        data_mwind_lr_obs = prepared_batch['wmind_lr_obs']   # LR observation modulus
+        data_mwind_lr_obs = prepared_batch['mwind_lr_obs']   # LR observation modulus
         data_theta_lr_obs = prepared_batch['theta_lr_obs']   # LR observation angle
-        data_mwind_an_obs = prepared_batch['wmind_an_obs']   # Anomaly observation modulus
+        data_mwind_an_obs = prepared_batch['mwind_an_obs']   # Anomaly observation modulus
         data_theta_an_obs = prepared_batch['theta_an_obs']   # Anomaly observation angle
         data_mwind_lr_gt  = prepared_batch['mwind_lr_gt']    # LR ground truth modulus
         data_theta_lr_gt  = prepared_batch['theta_lr_gt']    # LR ground truth angle
