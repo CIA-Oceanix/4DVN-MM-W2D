@@ -891,7 +891,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr)) * self.hparams.weight_lres
         loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_hres 
-        loss += ( loss_sinth_lr + loss_sinth_hr ) * self.hparams.weight
+        loss += ( loss_sinth_lr + loss_sinth_hr )
         
         loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
         loss += loss_angle
