@@ -760,12 +760,12 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         return prepared_batch
     #end
     
-    def get_input_data_state(self, mwind_lr, mwind_an, costh_lr, sinth_lr, costh_hr, sinth_hr, init_state = None):
+    def get_input_data_state(self, mwind_lr, mwind_an, costh_lr, sinth_lr, costh_an, sinth_an, init_state = None):
         
         # Prepare observations
         chunk_mwind = torch.cat([mwind_lr, mwind_an, mwind_an], dim = 1)
-        chunk_costh = torch.cat([costh_lr, costh_hr, costh_hr], dim = 1)
-        chunk_sinth = torch.cat([sinth_lr, sinth_hr, sinth_hr], dim = 1)
+        chunk_costh = torch.cat([costh_lr, costh_an, costh_an], dim = 1)
+        chunk_sinth = torch.cat([sinth_lr, sinth_an, sinth_an], dim = 1)
         input_data  = torch.stack([chunk_mwind, chunk_costh, chunk_sinth], dim = -1)
         
         # Prepare state variable
@@ -788,8 +788,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_theta_lr_obs = prepared_batch['theta_lr_obs']   # LR observation angle
         data_mwind_an_obs = prepared_batch['wmind_an_obs']   # Anomaly observation modulus
         data_theta_an_obs = prepared_batch['theta_an_obs']   # Anomaly observation angle
-        data_mwind_hr_obs = prepared_batch['mwind_hr_obs']   # HR observation modulus
-        data_theta_hr_obs = prepared_batch['theta_hr_obs']   # HR observation angle
         data_mwind_lr_gt  = prepared_batch['mwind_lr_gt']    # LR ground truth modulus
         data_theta_lr_gt  = prepared_batch['theta_lr_gt']    # LR ground truth angle
         data_mwind_hr_gt  = prepared_batch['mwind_hr_gt']    # HR ground truth modulus
@@ -797,8 +795,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         data_costh_lr_obs = torch.cos(data_theta_lr_obs)
         data_sinth_lr_obs = torch.sin(data_theta_lr_obs)
-        data_costh_hr_obs = torch.cos(data_theta_hr_obs)
-        data_sinth_hr_obs = torch.sin(data_theta_hr_obs)
+        data_costh_an_obs = torch.cos(data_theta_an_obs)
+        data_sinth_an_obs = torch.sin(data_theta_an_obs)
         data_costh_lr_gt  = torch.cos(data_theta_lr_gt)
         data_sinth_lr_gt  = torch.sin(data_theta_lr_gt)
         data_costh_hr_gt  = torch.cos(data_theta_hr_gt)
@@ -807,7 +805,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Prepare input observation and state
         input_data, input_state = self.get_input_data_state(data_mwind_lr_obs, data_mwind_an_obs,
                                                             data_costh_lr_obs, data_sinth_lr_obs,
-                                                            data_costh_hr_obs, data_sinth_hr_obs)
+                                                            data_costh_an_obs, data_sinth_an_obs)
         
         # Mask data
         mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_mwind_lr_obs.shape)
@@ -830,10 +828,12 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
                 reco_sinth_lr = self.interpolate_channelwise(data_sinth_lr_obs.mul(mask_lr))
                 reco_mwind_an = reco_mwind[:,48:,:,:]
-                reco_costh_hr = reco_costh[:,48:,:,:]
-                reco_sinth_hr = reco_sinth[:,48:,:,:]
+                reco_costh_an = reco_costh[:,48:,:,:]
+                reco_sinth_an = reco_sinth[:,48:,:,:]
+                reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an
-                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
+                reco_theta_hr = reco_theta_lr + reco_theta_an
                 
             elif self.hparams.inversion == 'gs':
                 
@@ -853,11 +853,13 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_mwind_lr = self.interpolate_channelwise(data_mwind_lr_obs.mul(mask_lr))
                 reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
                 reco_sinth_lr = self.interpolate_channelwise(data_sinth_lr_obs.mul(mask_lr))
-                reco_mwind_an = torch.mul(reco_mwind[:,48:,:,:], 0.)
-                reco_costh_hr = torch.mul(reco_costh[:,48:,:,:], 0.)
-                reco_sinth_hr = torch.mul(reco_sinth[:,48:,:,:], 0.)
-                reco_mwind_hr = reco_mwind_lr + reco_mwind_an
-                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
+                reco_mwind_an = reco_mwind[:,48:,:,:]
+                reco_costh_an = reco_costh[:,48:,:,:]
+                reco_sinth_an = reco_sinth[:,48:,:,:]
+                reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
+                reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
+                reco_theta_hr = reco_theta_lr + torch.mul(reco_theta_an, 0.)
             #end
         #end
         
@@ -883,12 +885,15 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
         loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
-        loss_costh_hr = self.loss_fn((data_costh_hr_gt - reco_costh_hr))
+        loss_costh_hr = self.loss_fn((data_costh_hr_gt - torch.cos(reco_theta_hr)))
         loss += ( loss_costh_lr + loss_costh_hr )
         
         loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
-        loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - reco_sinth_hr))
+        loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr)))
         loss += ( loss_sinth_lr + loss_sinth_hr )
+        
+        loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
+        loss += loss_angle
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
