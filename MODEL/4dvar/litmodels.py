@@ -151,7 +151,9 @@ class LitModel_Base(pl.LightningModule):
             params.append(
                 {'params'       : self.model.model_Grad.parameters(),
                  'lr'           : self.hparams.mgrad_lr,
-                 'weight_decay' : self.hparams.mgrad_wd},
+                 'weight_decay' : self.hparams.mgrad_wd}
+                )
+            params.append(
                 {'params'       : self.model.model_VarCost.parameters(),
                  'lr'           : self.hparams.varcost_lr,
                  'weight_decay' : self.hparams.varcost_wd}
@@ -641,12 +643,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     #end
     
     def get_baseline_components(self, data_lr):
-        data_lr_u = data_lr[:,:,:, :self.shape_data[-1]]
-        data_lr_v = data_lr[:,:,:, -self.shape_data[-1]:]
-        data_interpolated_u = self.interpolate_channelwise(data_lr_u)
-        data_interpolated_v = self.interpolate_channelwise(data_lr_v)
-        data_lr = torch.cat([data_interpolated_u, data_interpolated_v], dim = -1)
-        return data_lr
+        pass
     #end
     
     def split_components(self, data):
@@ -718,6 +715,14 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # High reso observations
         mwind_hr_obs = self.get_persistence(mwind_hr_gt, 'hr', longer_series = True)
         theta_hr_obs = self.get_persistence(theta_hr_gt, 'hr', longer_series = True)
+        
+        # NOTE: is in-situ time series are actually measured, these positions
+        # in the persistence model must be filled with in-situ time series
+        if self.hparams.hr_mask_mode == 'buoys':
+            xp_buoys, yp_buoys = self.buoy_position[:,0], self.buoy_position[:,1]
+            mwind_hr_obs[:,:, xp_buoys, yp_buoys] = mwind_hr_gt[:,:, xp_buoys, yp_buoys]
+            theta_hr_obs[:,:, xp_buoys, yp_buoys] = theta_hr_gt[:,:, xp_buoys, yp_buoys]
+        #end
         
         # Obtain the anomalies
         if self.hparams.hr_mask_sfreq is None:

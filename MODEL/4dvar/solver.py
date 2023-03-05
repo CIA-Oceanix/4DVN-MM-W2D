@@ -546,15 +546,24 @@ class Solver_Grad_4DVarNN(nn.Module):
     def var_cost(self, x, yobs, mask):
         
         # qui poi ci metto self.model_H([x, x_situ], [yobs, ysitu], [mask, mask_situ])
-        if self.model_H.dim_obs == 1:
-            data_fidelty = self.model_H(x, yobs, mask[2])
-        elif self.model_H.dim_obs > 1:
-            x_lr = x[:,:24,:,:];    x_hr = x[:,24:48,:,:]
-            y_lr = yobs[:,:24,:,:]; y_hr = yobs[:,24:48,:,:]
-            data_fidelty = self.model_H([x_lr, x_hr], [y_lr, y_hr], mask)
-        #end
+        # if self.model_H.dim_obs == 1:
+        #     data_fidelty = self.model_H(x, yobs, mask)
+        # elif self.model_H.dim_obs > 1:
+        #     x_lr = x[:,:24,:,:];    x_an = x[:,24:48,:,:]
+        #     y_lr = yobs[:,:24,:,:]; y_an = yobs[:,24:48,:,:]
+        #     data_fidelty = self.model_H([x_lr, x_an], [y_lr, y_an], mask)
+        # #end
+        data_fidelty = self.model_H(x, yobs, mask)
         
-        regularization = x - self.Phi(x)
+        if self.Phi.__class__ is list:
+            
+            regularization = torch.zeros(x.shape)
+            for i, phi in enumerate(self.model.Phi):
+                regularization[:,:,:,:,i] = x[:,:,:,:,i] - phi(x[:,:,:,:,i])
+            #end
+        else:
+            regularization = x - self.Phi(x)
+        #end
         
         var_cost = self.model_VarCost(data_fidelty, regularization)
         var_cost_grad = torch.autograd.grad(var_cost, x, create_graph = True)[0]

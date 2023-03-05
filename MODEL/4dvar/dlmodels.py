@@ -366,13 +366,8 @@ class ModelObs_SM(nn.Module):
     
     def forward(self, x, y_obs, mask):
         
-        if self.wind_modulus:
-            obs_term = (x - y_obs).mul(mask)
-            return obs_term
-        else:
-            obs_term = (x - y_obs).mul(mask)
-            return obs_term
-        #end
+        obs_term = (x - y_obs).mul(mask)
+        return obs_term
     #end
 #end
 
