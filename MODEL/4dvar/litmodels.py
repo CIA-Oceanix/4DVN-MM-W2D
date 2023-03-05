@@ -850,9 +850,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
             elif self.hparams.inversion == 'gs':
                 
-                reco_mwind = self.model.Phi[0](input_data[:,:,:,:,0])
-                reco_costh = self.model.Phi[1](input_data[:,:,:,:,1])
-                reco_sinth = self.model.Phi[2](input_data[:,:,:,:,2])
+                outputs, _,_,_ = self.model(input_state, input_data, mask_global)
+                reco_mwind = outputs[:,:,:,:,0]
+                reco_costh = outputs[:,:,:,:,1]
+                reco_sinth = outputs[:,:,:,:,2]
                 
                 reco_mwind_lr = reco_mwind[:,:24,:,:]
                 reco_costh_lr = reco_costh[:,:24,:,:]

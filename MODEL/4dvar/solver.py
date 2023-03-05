@@ -518,7 +518,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         for _iter in range(self.n_grad):
             
             x_k_plus_1, hidden, cell, normgrad_, vvar_cost = self.solver_step(x_k, obs, mask, hidden, cell, normgrad_)
-            x_k = torch.mul(x_k_plus_1,1.)
+            x_k = torch.mul(x_k_plus_1, 1.)
             var_cost_values_tmp[_iter] = vvar_cost
         #end
         
