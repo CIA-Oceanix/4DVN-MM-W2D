@@ -534,7 +534,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 
                 outputs = self.model.Phi(input_data)
-                reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
+                # reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
+                reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
@@ -554,6 +555,17 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
             #end
+        #end
+        
+        if False:
+            torch.save(data_lr, './diagnostics/wmod/data_lr_gt.pkl')
+            torch.save(data_lr_obs, './diagnostics/wmod/data_lr_obs.pkl')
+            torch.save(data_lr_obs.mul(mask_lr), './diagnostics/wmod/data_lr_obs_mask.pkl')
+            torch.save(reco_lr, './diagnostics/wmod/reco_lr.pkl')
+            torch.save(reco_hr, './diagnostics/wmod/reco_hr.pkl')
+            torch.save(data_hr, './diagnostics/wmod/data_hr_gt.pkl')
+            torch.save(data_an, './diagnostics/wmod/data_an.pkl')
+            torch.save(data_hr_obs, './diagnostics/wmod/data_hr_obs.pkl')
         #end
         
         # Save reconstructions
