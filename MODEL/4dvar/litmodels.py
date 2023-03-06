@@ -517,7 +517,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
                 mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
                 
-                outputs, _,_,_ = self.model(input_state, input_data, mask)
+                outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
                 reco_lr = outputs[:,:24,:,:]
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an

@@ -60,6 +60,11 @@ def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_
     mask_hr_dx2 = torch.zeros(shape_data)
     
     mask_lr = get_resolution_mask(lr_sampling_freq, mask_lr, mask_land, 'lr')
+    
+    if True:
+        mask_lr[:,-1,:,:] = 1.
+    #end
+    
     mask_hr_dx1 = get_resolution_mask(hr_sampling_freq, mask_hr_dx1, mask_land, 'hr')
     
     mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
