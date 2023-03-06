@@ -534,8 +534,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             if self.hparams.inversion == 'fp':
                 
                 outputs = self.model.Phi(input_data)
-                # reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
-                reco_lr = outputs[:,:24,:,:]
+                reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
@@ -544,7 +543,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
                 
                 outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
-                reco_lr = outputs[:,:24,:,:]
+                # reco_lr = outputs[:,:24,:,:]
+                reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
                 
