@@ -540,9 +540,9 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
             elif self.hparams.inversion == 'gs':
                 
-                mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
+                # mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
                 
-                outputs, _,_,_ = self.model(input_state, input_data, mask_4DVarNet)
+                outputs, _,_,_ = self.model(input_state, input_data, mask)
                 # reco_lr = outputs[:,:24,:,:]
                 reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_an = outputs[:,48:,:,:]

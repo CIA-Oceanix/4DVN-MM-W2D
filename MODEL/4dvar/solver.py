@@ -536,35 +536,35 @@ class Solver_Grad_4DVarNN(nn.Module):
             normgrad_= normgrad
         #end
         
-        # if self.Phi.__class__ is list:
-        #     vc_grad_mwind = var_cost_grad[:,:,:,:,0]
-        #     vc_grad_costh = var_cost_grad[:,:,:,:,1]
-        #     vc_grad_sinth = var_cost_grad[:,:,:,:,2]
+        if self.Phi.__class__ is list:
+            vc_grad_mwind = var_cost_grad[:,:,:,:,0]
+            vc_grad_costh = var_cost_grad[:,:,:,:,1]
+            vc_grad_sinth = var_cost_grad[:,:,:,:,2]
             
-        #     try:
-        #         hidden_mwind = hidden[:,:,:,:,0]; cell_mwind = cell[:,:,:,:,0]
-        #         hidden_costh = hidden[:,:,:,:,1]; cell_costh = cell[:,:,:,:,1]
-        #         hidden_sinth = hidden[:,:,:,:,2]; cell_sinth = cell[:,:,:,:,2]
-        #     except:
-        #         hidden_mwind = None; cell_mwind = None
-        #         hidden_costh = None; cell_costh = None
-        #         hidden_sinth = None; cell_sinth = None
-        #     #end
+            try:
+                hidden_mwind = hidden[:,:,:,:,0]; cell_mwind = cell[:,:,:,:,0]
+                hidden_costh = hidden[:,:,:,:,1]; cell_costh = cell[:,:,:,:,1]
+                hidden_sinth = hidden[:,:,:,:,2]; cell_sinth = cell[:,:,:,:,2]
+            except:
+                hidden_mwind = None; cell_mwind = None
+                hidden_costh = None; cell_costh = None
+                hidden_sinth = None; cell_sinth = None
+            #end
             
-        #     grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
-        #     grad_costh, hidden_costh, cell_sinth = self.model_Grad(hidden_costh, cell_costh, vc_grad_costh, normgrad_)
-        #     grad_sinth, hidden_sinth, cell_sinth = self.model_Grad(hidden_sinth, cell_sinth, vc_grad_sinth, normgrad_)
+            grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
+            grad_costh, hidden_costh, cell_sinth = self.model_Grad(hidden_costh, cell_costh, vc_grad_costh, normgrad_)
+            grad_sinth, hidden_sinth, cell_sinth = self.model_Grad(hidden_sinth, cell_sinth, vc_grad_sinth, normgrad_)
             
-        #     grad = torch.stack([grad_mwind, grad_costh, grad_sinth], dim = -1)
-        #     hidden = torch.stack([hidden_mwind, hidden_costh, hidden_sinth], dim = -1)
+            grad = torch.stack([grad_mwind, grad_costh, grad_sinth], dim = -1)
+            hidden = torch.stack([hidden_mwind, hidden_costh, hidden_sinth], dim = -1)
             
-        #     try:
-        #         cell = torch.stack([cell_mwind, cell_costh, cell_sinth], dim = -1)
-        #     except:
-        #         pass
-        #     #end
-        # else:
-        grad, hidden, cell = self.model_Grad(hidden, cell, var_cost_grad, normgrad_)
+            try:
+                cell = torch.stack([cell_mwind, cell_costh, cell_sinth], dim = -1)
+            except:
+                pass
+            #end
+        else:
+            grad, hidden, cell = self.model_Grad(hidden, cell, var_cost_grad, normgrad_)
         #end
         
         grad *= 1./ self.n_grad
@@ -575,24 +575,24 @@ class Solver_Grad_4DVarNN(nn.Module):
     
     def var_cost(self, x, yobs, mask):
         
-        # qui poi ci metto self.model_H([x, x_situ], [yobs, ysitu], [mask, mask_situ])
-        if self.model_H.dim_obs == 1:
-            data_fidelty = self.model_H(x, yobs, mask[2])
-        elif self.model_H.dim_obs > 1:
-            x_lr = x[:,:24,:,:];    x_an = x[:,24:48,:,:]
-            y_lr = yobs[:,:24,:,:]; y_an = yobs[:,24:48,:,:]
-            data_fidelty = self.model_H([x_lr, x_an], [y_lr, y_an], mask)
-        #end
-        # data_fidelty = self.model_H(x, yobs, mask)
+        # # qui poi ci metto self.model_H([x, x_situ], [yobs, ysitu], [mask, mask_situ])
+        # if self.model_H.dim_obs == 1:
+        #     data_fidelty = self.model_H(x, yobs, mask[2])
+        # elif self.model_H.dim_obs > 1:
+        #     x_lr = x[:,:24,:,:];    x_an = x[:,24:48,:,:]
+        #     y_lr = yobs[:,:24,:,:]; y_an = yobs[:,24:48,:,:]
+        #     data_fidelty = self.model_H([x_lr, x_an], [y_lr, y_an], mask)
+        # #end
+        data_fidelty = self.model_H(x, yobs, mask)
         
-        # if self.Phi.__class__ is list:
+        if self.Phi.__class__ is list:
             
-        #     regularization = torch.zeros(x.shape)
-        #     for i, phi in enumerate(self.Phi):
-        #         regularization[:,:,:,:,i] = x[:,:,:,:,i] - phi(x[:,:,:,:,i])
-        #     #end
-        # else:
-        regularization = x - self.Phi(x)
+            regularization = torch.zeros(x.shape)
+            for i, phi in enumerate(self.Phi):
+                regularization[:,:,:,:,i] = x[:,:,:,:,i] - phi(x[:,:,:,:,i])
+            #end
+        else:
+            regularization = x - self.Phi(x)
         #end
         
         var_cost = self.model_VarCost(data_fidelty, regularization)
