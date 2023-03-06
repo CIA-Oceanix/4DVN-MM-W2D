@@ -497,13 +497,13 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # Temporal interpolation
         # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
         
-        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs
+        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs
     #end
     
-    def get_input_data_state(self, data_lr, data_an, init_state = None):
+    def get_input_data_state(self, data_lr, data_an, data_hr, init_state = None):
         
         # Prepare observations
-        input_data = torch.cat([data_lr, data_an, data_an], dim = 1)
+        input_data = torch.cat([data_lr, data_hr, data_hr], dim = 1)
         
         # Prepare state variable
         if init_state is not None:
@@ -518,8 +518,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Get and manipulate the data as desidered
-        data_lr, data_lr_obs, data_hr, data_an = self.prepare_batch(data)
-        input_data, input_state = self.get_input_data_state(data_lr_obs, data_an, init_state)
+        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data)
+        input_data, input_state = self.get_input_data_state(data_lr_obs, data_an, data_hr_obs, init_state)
         
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(data_hr.shape)
