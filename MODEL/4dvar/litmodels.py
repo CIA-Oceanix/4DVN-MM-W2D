@@ -145,37 +145,62 @@ class LitModel_Base(pl.LightningModule):
     
     def configure_optimizers(self):
         
-        params = list()
+        # params = list()
         
-        if self.hparams.inversion == 'gs':
-            params.append(
-                {'params'       : self.model.model_Grad.parameters(),
-                 'lr'           : self.hparams.mgrad_lr,
-                 'weight_decay' : self.hparams.mgrad_wd}
-                )
-            params.append(
-                {'params'       : self.model.model_VarCost.parameters(),
-                 'lr'           : self.hparams.varcost_lr,
-                 'weight_decay' : self.hparams.varcost_wd}
-            )
-        #end
+        # if self.hparams.inversion == 'gs':
+        #     params.append(
+        #         {'params'       : self.model.model_Grad.parameters(),
+        #          'lr'           : self.hparams.mgrad_lr,
+        #          'weight_decay' : self.hparams.mgrad_wd}
+        #         )
+        #     params.append(
+        #         {'params'       : self.model.model_VarCost.parameters(),
+        #          'lr'           : self.hparams.varcost_lr,
+        #          'weight_decay' : self.hparams.varcost_wd}
+        #     )
+        # #end
         
-        if self.model.Phi.__class__ is list:
-            for phi in self.model.Phi:
-                params.append(
-                    {'params'       : phi.parameters(),
-                     'lr'           : self.hparams.prior_lr,
-                     'weight_decay' : self.hparams.prior_wd}
-                )
-            #end
-        else:
-            params.append(
-                {'params'       : self.model.Phi.parameters(),
-                 'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd}    
-            )
-        #end
+        # if self.model.Phi.__class__ is list:
+        #     for phi in self.model.Phi:
+        #         params.append(
+        #             {'params'       : phi.parameters(),
+        #              'lr'           : self.hparams.prior_lr,
+        #              'weight_decay' : self.hparams.prior_wd}
+        #         )
+        #     #end
+        # else:
+        #     params.append(
+        #         {'params'       : self.model.Phi.parameters(),
+        #          'lr'           : self.hparams.prior_lr,
+        #          'weight_decay' : self.hparams.prior_wd}    
+        #     )
+        # #end
         
+        # if self.hparams.mm_obsmodel:
+        #     print('Multi-modal obs model')
+        #     params.append(
+        #         {'params'       : self.model.model_H.parameters(),
+        #          'lr'           : self.hparams.mod_h_lr,
+        #          'weight_decay' : self.hparams.mod_h_wd}
+        #     )
+        # else:
+        #     print('Single-modal obs model')
+        # #end
+        
+        # optimizers = torch.optim.Adam(params)
+        # return optimizers
+        
+        params = [
+            {'params'       : self.model.model_Grad.parameters(),
+             'lr'           : self.hparams.mgrad_lr,
+             'weight_decay' : self.hparams.mgrad_wd},
+            {'params'       : self.model.Phi.parameters(),
+             'lr'           : self.hparams.prior_lr,
+             'weight_decay' : self.hparams.prior_wd},
+            {'params'       : self.model.model_VarCost.parameters(),
+             'lr'           : self.hparams.varcost_lr,
+             'weight_decay' : self.hparams.varcost_wd}
+        ]
         if self.hparams.mm_obsmodel:
             print('Multi-modal obs model')
             params.append(
@@ -430,7 +455,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         #end
         
         # Alternative : persistence models
-        if True:
+        if False:
             data_lr_obs = data_lr_obs.clone()
             data_hr_obs = data_hr_gt.clone()
         else:
