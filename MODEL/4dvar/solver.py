@@ -577,7 +577,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         # qui poi ci metto self.model_H([x, x_situ], [yobs, ysitu], [mask, mask_situ])
         if self.model_H.dim_obs == 1:
-            data_fidelty = self.model_H(x, yobs, mask)
+            data_fidelty = self.model_H(x, yobs, mask[2])
         elif self.model_H.dim_obs > 1:
             x_lr = x[:,:24,:,:];    x_an = x[:,24:48,:,:]
             y_lr = yobs[:,:24,:,:]; y_an = yobs[:,24:48,:,:]
