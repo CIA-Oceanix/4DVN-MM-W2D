@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), 'utls'))
 sys.path.append(os.path.join(os.getcwd(), '4dvar'))
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:1024'
 
 from dotenv import load_dotenv
 import datetime
