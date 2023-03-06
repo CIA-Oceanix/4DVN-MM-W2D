@@ -503,7 +503,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     def get_input_data_state(self, data_lr, data_an, data_hr, init_state = None):
         
         # Prepare observations
-        input_data = torch.cat([data_lr, data_hr, data_hr], dim = 1)
+        input_data = torch.cat([data_lr, data_an, data_an], dim = 1)
         
         # Prepare state variable
         if init_state is not None:

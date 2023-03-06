@@ -213,6 +213,7 @@ def get_persistency_model(data, frequency):
                 t_next = data.shape[1]
             #end
             for t in range(t_previous, t_next):
+                print(t_previous, t_next)
                 persistence[:,t,:,:] = data[:, frequency[p], :,:]
             #end
             t_previous = t_next
