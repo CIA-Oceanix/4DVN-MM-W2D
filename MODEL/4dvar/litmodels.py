@@ -160,10 +160,10 @@ class LitModel_Base(pl.LightningModule):
             )
         #end
         
-        if self.model.Phi.__class__ is list:
+        if self.model.Phi.__class__ is list or self.model.Phi.__class__ is torch.nn.ModuleList:
             for phi in self.model.Phi:
                 params.append(
-                    {'params'       : self.model.Phi[0].parameters(),
+                    {'params'       : phi.parameters(),
                      'lr'           : self.hparams.prior_lr,
                      'weight_decay' : self.hparams.prior_wd}
                 )

@@ -536,7 +536,7 @@ class Solver_Grad_4DVarNN(nn.Module):
             normgrad_= normgrad
         #end
         
-        if self.Phi.__class__ is list:
+        if self.Phi.__class__ is list or self.Phi.__class__ is nn.ModuleList:
             
             # gradients = list()
             # hiddens   = list()
@@ -609,7 +609,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         # #end
         data_fidelty = self.model_H(x, yobs, mask)
         
-        if self.Phi.__class__ is list:
+        if self.Phi.__class__ is list or self.Phi.__class__ is nn.ModuleList:
             
             regularization = torch.zeros(x.shape)
             for i, phi in enumerate(self.Phi):
