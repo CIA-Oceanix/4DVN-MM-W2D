@@ -538,57 +538,57 @@ class Solver_Grad_4DVarNN(nn.Module):
         
         if self.Phi.__class__ is list or self.Phi.__class__ is nn.ModuleList:
             
-            # gradients = list()
-            # hiddens   = list()
-            # cells     = list()
+            gradients = list()
+            hiddens   = list()
+            cells     = list()
             
-            # for i in range(self.Phi.__len__()):
+            for i in range(self.Phi.__len__()):
                 
-            #     current_var_cost_grad = var_cost_grad[:,:,:,:,i]
-            #     try:
-            #         current_hidden = hidden[:,:,:,:,i]
-            #         current_cell   = cell[:,:,:,:,i]
-            #     except:
-            #         current_hidden = None
-            #         current_cell   = None
-            #     #end
+                current_var_cost_grad = var_cost_grad[:,:,:,:,i]
+                try:
+                    current_hidden = hidden[:,:,:,:,i]
+                    current_cell   = cell[:,:,:,:,i]
+                except:
+                    current_hidden = None
+                    current_cell   = None
+                #end
                 
-            #     g, h, c = self.model_Grad(current_hidden, current_cell, current_var_cost_grad, normgrad_)
-            #     gradients.append(g)
-            #     hiddens.append(h)
-            #     cells.append(c)
-            # #end
-            
-            # grad   = torch.stack(gradients, dim = -1)
-            # hidden = torch.stack(hiddens, dim = -1)
-            # try:
-            #     cells  = torch.stack(cells, dim = -1)
-            # except:
-            #     pass
-            # #end
-            
-            vc_grad_mwind = var_cost_grad[:,:,:,:,0]
-            vc_grad_theta = var_cost_grad[:,:,:,:,1]
-            
-            try:
-                hidden_mwind = hidden[:,:,:,:,0]; cell_mwind = cell[:,:,:,:,0]
-                hidden_theta = hidden[:,:,:,:,1]; cell_theta = cell[:,:,:,:,1]
-            except:
-                hidden_mwind = None; cell_mwind = None
-                hidden_theta = None; cell_theta = None
+                g, h, c = self.model_Grad(hidden[:,:,:,:,i], cell[:,:,:,:,i], var_cost_grad[:,:,:,:,i], normgrad_)
+                gradients.append(g)
+                hiddens.append(h)
+                cells.append(c)
             #end
             
-            grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
-            grad_theta, hidden_theta, cell_theta = self.model_Grad(hidden_theta, cell_theta, vc_grad_theta, normgrad_)
-            
-            grad = torch.stack([grad_mwind, grad_theta], dim = -1)
-            hidden = torch.stack([hidden_mwind, hidden_theta], dim = -1)
-            
+            grad   = torch.stack(gradients, dim = -1)
+            hidden = torch.stack(hiddens, dim = -1)
             try:
-                cell = torch.stack([cell_mwind, cell_theta], dim = -1)
+                cells  = torch.stack(cells, dim = -1)
             except:
                 pass
             #end
+            
+            # vc_grad_mwind = var_cost_grad[:,:,:,:,0]
+            # vc_grad_theta = var_cost_grad[:,:,:,:,1]
+            
+            # try:
+            #     hidden_mwind = hidden[:,:,:,:,0]; cell_mwind = cell[:,:,:,:,0]
+            #     hidden_theta = hidden[:,:,:,:,1]; cell_theta = cell[:,:,:,:,1]
+            # except:
+            #     hidden_mwind = None; cell_mwind = None
+            #     hidden_theta = None; cell_theta = None
+            # #end
+            
+            # grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
+            # grad_theta, hidden_theta, cell_theta = self.model_Grad(hidden_theta, cell_theta, vc_grad_theta, normgrad_)
+            
+            # grad = torch.stack([grad_mwind, grad_theta], dim = -1)
+            # hidden = torch.stack([hidden_mwind, hidden_theta], dim = -1)
+            
+            # try:
+            #     cell = torch.stack([cell_mwind, cell_theta], dim = -1)
+            # except:
+            #     pass
+            # #end
         else:
             grad, hidden, cell = self.model_Grad(hidden, cell, var_cost_grad, normgrad_)
         #end
