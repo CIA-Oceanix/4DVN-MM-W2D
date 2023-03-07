@@ -559,10 +559,10 @@ class Solver_Grad_4DVarNN(nn.Module):
                 cells.append(c)
             #end
             
-            grad   = torch.stack(gradients, dim = -1)
-            hidden = torch.stack(hiddens, dim = -1)
+            grad   = torch.autograd.Variable(torch.stack(gradients, dim = -1))
+            hidden = torch.autograd.Variable(torch.stack(hiddens, dim = -1))
             try:
-                cells  = torch.stack(cells, dim = -1)
+                cells = torch.autograd.Variable(torch.stack(cells, dim = -1))
             except:
                 pass
             #end
