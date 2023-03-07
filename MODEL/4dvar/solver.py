@@ -537,29 +537,53 @@ class Solver_Grad_4DVarNN(nn.Module):
         #end
         
         if self.Phi.__class__ is list:
+            
+            # gradients = list()
+            # hiddens   = list()
+            # cells     = list()
+            
+            # for i in range(self.Phi.__len__()):
+            #     try:
+            #         current_hidden = hidden[:,:,:,:,i]
+            #         current_cell   = cell[:,:,:,:,i]
+            #     except:
+            #         current_hidden = None
+            #         current_cell   = None
+            #     #end
+                
+            #     g, h, c = self.model_Grad(current_hidden, current_cell, var_cost_grad[:,:,:,:,i], normgrad_)
+            #     gradients.append(g)
+            #     hiddens.append(h)
+            #     cells.append(c)
+            # #end
+            
+            # grad   = torch.stack(gradients, dim = -1)
+            # try:
+            #     hidden = torch.stack(hiddens, dim = -1)
+            #     cells  = torch.stack(cells, dim = -1)
+            # except:
+            #     pass
+            # #end
+            
             vc_grad_mwind = var_cost_grad[:,:,:,:,0]
-            vc_grad_costh = var_cost_grad[:,:,:,:,1]
-            vc_grad_sinth = var_cost_grad[:,:,:,:,2]
+            vc_grad_theta = var_cost_grad[:,:,:,:,1]
             
             try:
                 hidden_mwind = hidden[:,:,:,:,0]; cell_mwind = cell[:,:,:,:,0]
-                hidden_costh = hidden[:,:,:,:,1]; cell_costh = cell[:,:,:,:,1]
-                hidden_sinth = hidden[:,:,:,:,2]; cell_sinth = cell[:,:,:,:,2]
+                hidden_theta = hidden[:,:,:,:,1]; cell_theta = cell[:,:,:,:,1]
             except:
                 hidden_mwind = None; cell_mwind = None
-                hidden_costh = None; cell_costh = None
-                hidden_sinth = None; cell_sinth = None
+                hidden_theta = None; cell_theta = None
             #end
             
             grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
-            grad_costh, hidden_costh, cell_sinth = self.model_Grad(hidden_costh, cell_costh, vc_grad_costh, normgrad_)
-            grad_sinth, hidden_sinth, cell_sinth = self.model_Grad(hidden_sinth, cell_sinth, vc_grad_sinth, normgrad_)
+            grad_theta, hidden_theta, cell_theta = self.model_Grad(hidden_theta, cell_theta, vc_grad_theta, normgrad_)
             
-            grad = torch.stack([grad_mwind, grad_costh, grad_sinth], dim = -1)
-            hidden = torch.stack([hidden_mwind, hidden_costh, hidden_sinth], dim = -1)
+            grad = torch.stack([grad_mwind, grad_theta], dim = -1)
+            hidden = torch.stack([hidden_mwind, hidden_theta], dim = -1)
             
             try:
-                cell = torch.stack([cell_mwind, cell_costh, cell_sinth], dim = -1)
+                cell = torch.stack([cell_mwind, cell_theta], dim = -1)
             except:
                 pass
             #end
