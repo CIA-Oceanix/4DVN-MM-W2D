@@ -558,8 +558,8 @@ class Solver_Grad_4DVarNN(nn.Module):
             #end
             
             grad   = torch.stack(gradients, dim = -1)
+            hidden = torch.stack(hiddens, dim = -1)
             try:
-                hidden = torch.stack(hiddens, dim = -1)
                 cells  = torch.stack(cells, dim = -1)
             except:
                 pass
