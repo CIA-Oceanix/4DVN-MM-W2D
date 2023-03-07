@@ -175,6 +175,7 @@ class Gradient_img(torch.nn.Module):
 
         #self.eps=10**-6
         self.eps=0.
+    #end
 
     def forward(self, im):
 
@@ -196,7 +197,11 @@ class Gradient_img(torch.nn.Module):
                     g = ng.view(-1, 1, im.size(2) - 2, im.size(3) - 2)
                 else:
                     g = torch.cat((g, ng.view(-1, 1, im.size(2) - 2, im.size(3) - 2)), dim=1)
+                #end
+            #end
         return g
+    #end
+#end
 
 class ModelLR(torch.nn.Module):
     def __init__(self):
@@ -206,3 +211,5 @@ class ModelLR(torch.nn.Module):
 
     def forward(self, im):
         return self.pool(im)
+    #end
+#end

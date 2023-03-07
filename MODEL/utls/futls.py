@@ -222,6 +222,3 @@ def get_persistency_model(data, frequency):
     return persistence
 #end
 
-
-
-

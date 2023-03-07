@@ -161,12 +161,22 @@ class LitModel_Base(pl.LightningModule):
         #end
         
         if self.model.Phi.__class__ is list:
-            for phi in self.model.Phi:
-                params.append(
-                    {'params'       : phi.parameters(),
-                      'lr'           : self.hparams.prior_lr,
-                      'weight_decay' : self.hparams.prior_wd}
-                )
+            # for phi in self.model.Phi:
+            params.append(
+                {'params'       : self.model.Phi[0].parameters(),
+                 'lr'           : self.hparams.prior_lr,
+                 'weight_decay' : self.hparams.prior_wd}
+            )
+            params.append(
+                {'params'       : self.model.Phi[1].parameters(),
+                 'lr'           : self.hparams.prior_lr,
+                 'weight_decay' : self.hparams.prior_wd}
+            )
+            params.append(
+                {'params'       : self.model.Phi[2].parameters(),
+                 'lr'           : self.hparams.prior_lr,
+                 'weight_decay' : self.hparams.prior_wd}
+            )
             #end
         else:
             params.append(
@@ -189,31 +199,6 @@ class LitModel_Base(pl.LightningModule):
         
         optimizers = torch.optim.Adam(params)
         return optimizers
-        
-    #     params = [
-    #         {'params'       : self.model.model_Grad.parameters(),
-    #          'lr'           : self.hparams.mgrad_lr,
-    #          'weight_decay' : self.hparams.mgrad_wd},
-    #         {'params'       : self.model.Phi.parameters(),
-    #          'lr'           : self.hparams.prior_lr,
-    #          'weight_decay' : self.hparams.prior_wd},
-    #         {'params'       : self.model.model_VarCost.parameters(),
-    #          'lr'           : self.hparams.varcost_lr,
-    #          'weight_decay' : self.hparams.varcost_wd}
-    #     ]
-    #     if self.hparams.mm_obsmodel:
-    #         print('Multi-modal obs model')
-    #         params.append(
-    #             {'params'       : self.model.model_H.parameters(),
-    #              'lr'           : self.hparams.mod_h_lr,
-    #              'weight_decay' : self.hparams.mod_h_wd}
-    #         )
-    #     else:
-    #         print('Single-modal obs model')
-    #     #end
-        
-    #     optimizers = torch.optim.Adam(params)
-    #     return optimizers
     # #end
     
     def training_step(self, batch, batch_idx):
@@ -843,6 +828,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_mwind_hr_gt  = prepared_batch['mwind_hr_gt']    # HR ground truth modulus
         data_theta_hr_gt  = prepared_batch['theta_hr_gt']    # HR ground truth angle
         
+        # TIP
+        # No ricostruire cos / sen, ma direttamente l'angolo
+        # * meno memoria
+        # * spiegazione più logica
         data_costh_lr_obs = torch.cos(data_theta_lr_obs)
         data_sinth_lr_obs = torch.sin(data_theta_lr_obs)
         data_costh_an_obs = torch.cos(data_theta_an_obs)
@@ -988,4 +977,3 @@ class LitModel_OSSE2_Distribution(LitModel_Base):
         pass
     #end
 #end
-
