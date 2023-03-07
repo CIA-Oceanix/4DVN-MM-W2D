@@ -543,6 +543,8 @@ class Solver_Grad_4DVarNN(nn.Module):
             cells     = list()
             
             for i in range(self.Phi.__len__()):
+                
+                current_var_cost_grad = var_cost_grad[:,:,:,:,i]
                 try:
                     current_hidden = hidden[:,:,:,:,i]
                     current_cell   = cell[:,:,:,:,i]
@@ -551,7 +553,7 @@ class Solver_Grad_4DVarNN(nn.Module):
                     current_cell   = None
                 #end
                 
-                g, h, c = self.model_Grad(current_hidden, current_cell, var_cost_grad[:,:,:,:,i], normgrad_)
+                g, h, c = self.model_Grad(current_hidden, current_cell, current_var_cost_grad, normgrad_)
                 gradients.append(g)
                 hiddens.append(h)
                 cells.append(c)
