@@ -888,8 +888,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_mwind_hr = self.loss_fn((data_mwind_hr_gt - reco_mwind_hr))
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
-        loss_theta_lr = self.loss_fn((data_theta_lr_gt - reco_theta_lr)) * self.hparams.weight_lres
-        loss_theta_hr = self.loss_fn((data_theta_hr_gt - reco_theta_hr)) * self.hparams.weight_hres
+        loss_theta_lr = self.loss_fn((data_theta_lr_gt - reco_theta_lr)) * 10
+        loss_theta_hr = self.loss_fn((data_theta_hr_gt - reco_theta_hr)) * 10
         loss += ( loss_theta_lr + loss_theta_hr )
         
         ## Gradient loss
