@@ -193,8 +193,8 @@ class ConvNet_angle_sincos(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 32, (5,5), padding = 2),
-            nn.Conv2d(32, ts_length, (5,5), padding = 2)
+            nn.Conv2d(ts_length, 64, (3,3), padding = 1),
+            nn.Conv2d(64, ts_length, (3,3), padding = 1)
         )
         self.sigmoid = nn.Sigmoid()
     #end
@@ -336,7 +336,7 @@ class UNet1(nn.Module):
 #end
 
 
-
+# TIP
 ###############################################################################
 ##### 4DVARNET OBSERVATION MODELS #############################################
 ###############################################################################
