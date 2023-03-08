@@ -185,10 +185,10 @@ class ConvNet(nn.Module):
     #end
 #end
 
-class ConvNet_angle(nn.Module):
+class ConvNet_angle_sincos(nn.Module):
     
     def __init__(self, shape_data, config_params):
-        super(ConvNet_angle, self).__init__()
+        super(ConvNet_angle_sincos, self).__init__()
         
         ts_length = shape_data[1] * 3
         
@@ -196,12 +196,13 @@ class ConvNet_angle(nn.Module):
             nn.Conv2d(ts_length, 32, (5,5), padding = 2),
             nn.Conv2d(32, ts_length, (5,5), padding = 2)
         )
+        self.sigmoid = nn.Sigmoid()
     #end
     
     def forward(self, data):
         
         output = self.net(data)
-        return output
+        return self.sigmoid(output)
     #end
 #end
     
@@ -709,7 +710,7 @@ def model_selection(shape_data, config_params, components = False):
         if not components:
             return ConvNet(shape_data, config_params)
         else:
-            return ConvNet_angle(shape_data, config_params)
+            return ConvNet_angle_sincos(shape_data, config_params)
         #end
     #end
     

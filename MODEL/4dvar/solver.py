@@ -537,57 +537,29 @@ class Solver_Grad_4DVarNN(nn.Module):
         #end
         
         if self.Phi.__class__ is list or self.Phi.__class__ is nn.ModuleList:
-            
-            # ???
-            # why the fuck gives different results?
-            # gradients = list()
-            # hiddens   = list()
-            # cells     = list()
-            
-            # for i in range(self.Phi.__len__()):
-                
-            #     current_var_cost_grad = var_cost_grad[:,:,:,:,i]
-            #     try:
-            #         current_hidden = hidden[:,:,:,:,i]
-            #         current_cell   = cell[:,:,:,:,i]
-            #     except:
-            #         current_hidden = None
-            #         current_cell   = None
-            #     #end
-                
-            #     g, h, c = self.model_Grad(current_hidden, current_cell, current_var_cost_grad, normgrad_)
-            #     gradients.append(g)
-            #     hiddens.append(h)
-            #     cells.append(c)
-            # #end
-            
-            # grad   = torch.stack(gradients, dim = -1)
-            # hidden = torch.stack(hiddens, dim = -1)
-            # try:
-            #     cells  = torch.stack(cells, dim = -1)
-            # except:
-            #     pass
-            # #end
-            
             vc_grad_mwind = var_cost_grad[:,:,:,:,0]
-            vc_grad_theta = var_cost_grad[:,:,:,:,1]
+            vc_grad_costh = var_cost_grad[:,:,:,:,1]
+            vc_grad_sinth = var_cost_grad[:,:,:,:,2]
             
             try:
                 hidden_mwind = hidden[:,:,:,:,0]; cell_mwind = cell[:,:,:,:,0]
-                hidden_theta = hidden[:,:,:,:,1]; cell_theta = cell[:,:,:,:,1]
+                hidden_costh = hidden[:,:,:,:,1]; cell_costh = cell[:,:,:,:,1]
+                hidden_sinth = hidden[:,:,:,:,2]; cell_sinth = cell[:,:,:,:,2]
             except:
                 hidden_mwind = None; cell_mwind = None
-                hidden_theta = None; cell_theta = None
+                hidden_costh = None; cell_costh = None
+                hidden_sinth = None; cell_sinth = None
             #end
             
             grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
-            grad_theta, hidden_theta, cell_theta = self.model_Grad(hidden_theta, cell_theta, vc_grad_theta, normgrad_)
+            grad_costh, hidden_costh, cell_sinth = self.model_Grad(hidden_costh, cell_costh, vc_grad_costh, normgrad_)
+            grad_sinth, hidden_sinth, cell_sinth = self.model_Grad(hidden_sinth, cell_sinth, vc_grad_sinth, normgrad_)
             
-            grad = torch.stack([grad_mwind, grad_theta], dim = -1)
-            hidden = torch.stack([hidden_mwind, hidden_theta], dim = -1)
+            grad = torch.stack([grad_mwind, grad_costh, grad_sinth], dim = -1)
+            hidden = torch.stack([hidden_mwind, hidden_costh, hidden_sinth], dim = -1)
             
             try:
-                cell = torch.stack([cell_mwind, cell_theta], dim = -1)
+                cell = torch.stack([cell_mwind, cell_costh, cell_sinth], dim = -1)
             except:
                 pass
             #end
@@ -613,7 +585,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         # #end
         data_fidelty = self.model_H(x, yobs, mask)
         
-        if self.Phi.__class__ is list or self.Phi.__class__ is nn.ModuleList:
+        if self.Phi.__class__ is list:
             
             regularization = torch.zeros(x.shape)
             for i, phi in enumerate(self.Phi):
@@ -629,4 +601,3 @@ class Solver_Grad_4DVarNN(nn.Module):
         return var_cost, var_cost_grad
     #end
 #end
-
