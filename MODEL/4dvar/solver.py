@@ -552,7 +552,7 @@ class Solver_Grad_4DVarNN(nn.Module):
             #end
             
             grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
-            grad_costh, hidden_costh, cell_sinth = self.model_Grad(hidden_costh, cell_costh, vc_grad_costh, normgrad_)
+            grad_costh, hidden_costh, cell_costh = self.model_Grad(hidden_costh, cell_costh, vc_grad_costh, normgrad_)
             grad_sinth, hidden_sinth, cell_sinth = self.model_Grad(hidden_sinth, cell_sinth, vc_grad_sinth, normgrad_)
             
             grad = torch.stack([grad_mwind, grad_costh, grad_sinth], dim = -1)
