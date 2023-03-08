@@ -57,6 +57,10 @@ class LitModel_Base(pl.LightningModule):
         self.hparams.mgrad_wd               = config_params.SOLVER_WD
         self.hparams.prior_lr               = config_params.PHI_LR
         self.hparams.prior_wd               = config_params.PHI_WD
+        self.hparams.prior_cos_lr           = config_params.PHI_COS_LR
+        self.hparams.prior_cos_wd           = config_params.PHI_COS_WD
+        self.hparams.prior_sin_lr           = config_params.PHI_SIN_LR
+        self.hparams.prior_sin_wd           = config_params.PHI_SIN_WD
         self.hparams.learn_varcost_params   = config_params.LEARN_VC_PARAMS
         self.hparams.varcost_lr             = config_params.VARCOST_LR
         self.hparams.varcost_wd             = config_params.VARCOST_WD
@@ -168,13 +172,13 @@ class LitModel_Base(pl.LightningModule):
             )
             params.append(
                 {'params'       : self.model.Phi[1].parameters(),
-                 'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd}
+                 'lr'           : self.hparams.prior_cos_lr,
+                 'weight_decay' : self.hparams.prior_cos_wd}
             )
             params.append(
                 {'params'       : self.model.Phi[2].parameters(),
-                 'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd}
+                 'lr'           : self.hparams.prior_sin_lr,
+                 'weight_decay' : self.hparams.prior_sin_wd}
             )
             #end
         else:
