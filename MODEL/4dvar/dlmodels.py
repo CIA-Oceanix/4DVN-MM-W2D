@@ -194,7 +194,6 @@ class ConvNet_angle_sincos(nn.Module):
         
         self.net = nn.Sequential(
             nn.Conv2d(ts_length, 64, (3,3), padding = 1),
-            nn.Conv2d(64, 64, (3,3), padding = 1),
             nn.Conv2d(64, ts_length, (3,3), padding = 1)
         )
         self.sigmoid = nn.Sigmoid()
