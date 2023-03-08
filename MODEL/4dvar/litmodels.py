@@ -949,7 +949,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
         loss_u = self.loss_fn((data_wind_u - reco_wind_u))
         loss_v = self.loss_fn((data_wind_v - reco_wind_v))
-        loss += ( loss_u + loss_v ) * 10
+        loss += ( loss_u + loss_v )
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
