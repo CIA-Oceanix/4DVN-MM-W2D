@@ -618,7 +618,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
-        mgrad_shapedata = [ts_length * 3, height, width]
+        mgrad_shapedata = [ts_length * 9, height, width]
         model_shapedata = [batch_size, ts_length, height, width]
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
