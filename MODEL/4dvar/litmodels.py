@@ -810,8 +810,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Prepare observations
         zeros_timeseries = torch.zeros(mwind_lr.shape)
         chunk_mwind = torch.cat([mwind_lr, mwind_an, mwind_an], dim = 1)
-        chunk_costh = torch.cat([costh_lr, costh_an, costh_an], dim = 1)
-        chunk_sinth = torch.cat([sinth_lr, sinth_an, sinth_an], dim = 1)
+        chunk_costh = torch.cat([costh_lr, costh_an * 0, costh_an * 0], dim = 1)
+        chunk_sinth = torch.cat([sinth_lr, sinth_an * 0, sinth_an * 0], dim = 1)
         input_data  = torch.cat([chunk_mwind, chunk_costh, chunk_sinth], dim = 1)
         
         # Prepare state variable
