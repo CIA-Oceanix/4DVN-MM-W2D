@@ -203,7 +203,8 @@ class ConvNet_mwind_angle(nn.Module):
     def forward(self, data):
         
         output = self.net(data)
-        return self.sigmoid(output)
+        output[:,72:,:,:] = self.sigmoid(output[:,72:,:,:])
+        return output
     #end
 #end
     

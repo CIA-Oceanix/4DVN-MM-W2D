@@ -729,17 +729,17 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         theta_lr_gt = self.get_angle(mwind_lr_gt, wind_lr_gt_u, wind_lr_gt_v)
         
         # Delay or bias
-        mwind_lr_gt_join = self.concat_components(wind_lr_gt_u, wind_lr_gt_v)
+        wind_lr_gt_join = self.concat_components(wind_lr_gt_u, wind_lr_gt_v)
         if self.hparams.lr_sampl_delay:
-            mwind_lr_obs = self.get_mwind_lr_delay(mwind_lr_gt_join.clone(), timesteps, timewindow_start)
+            wind_lr_obs = self.get_mwind_lr_delay(wind_lr_gt_join.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
-            mwind_lr_obs = self.get_mwind_lr_alpha(mwind_lr_gt_join.clone(), timesteps, timewindow_start)
+            wind_lr_obs = self.get_mwind_lr_alpha(wind_lr_gt_join.clone(), timesteps, timewindow_start)
         else:
-            mwind_lr_obs = mwind_lr_gt_join.clone()
+            wind_lr_obs = wind_lr_gt_join.clone()
         #end
         
         # Low reso observations
-        wind_lr_obs_u, wind_lr_obs_v = self.split_components(mwind_lr_obs)
+        wind_lr_obs_u, wind_lr_obs_v = self.split_components(wind_lr_obs)
         wind_lr_obs_u = self.get_persistence(wind_lr_obs_u, 'lr', longer_series = True)
         wind_lr_obs_v = self.get_persistence(wind_lr_obs_v, 'lr', longer_series = True)
         mwind_lr_obs  = self.get_modulus(wind_lr_obs_u, wind_lr_obs_v)
@@ -810,8 +810,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Prepare observations
         zeros_timeseries = torch.zeros(mwind_lr.shape)
         chunk_mwind = torch.cat([mwind_lr, mwind_an, mwind_an], dim = 1)
-        chunk_costh = torch.cat([costh_lr, zeros_timeseries, zeros_timeseries], dim = 1)
-        chunk_sinth = torch.cat([sinth_lr, zeros_timeseries, zeros_timeseries], dim = 1)
+        chunk_costh = torch.cat([costh_lr, costh_an, costh_an], dim = 1)
+        chunk_sinth = torch.cat([sinth_lr, sinth_an, sinth_an], dim = 1)
         input_data  = torch.cat([chunk_mwind, chunk_costh, chunk_sinth], dim = 1)
         
         # Prepare state variable
@@ -859,8 +859,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_mwind_lr_obs.shape)
         mask_ones   = torch.ones(mask_lr.shape)
         mask_zeros  = torch.zeros(mask_hr_dx1.shape)
-        mask_theta  = torch.cat([mask_ones, mask_zeros, mask_zeros], dim = 1)
-        mask_global = torch.cat([mask, mask_theta, mask_theta], dim = 1)
+        mask_fangl  = torch.cat([mask_ones, mask_zeros, mask_zeros], dim = 1)
+        mask_global = torch.cat([mask, mask_fangl, mask_fangl], dim = 1)
         
         input_state = input_state * mask_global
         input_data  = input_data * mask_global
