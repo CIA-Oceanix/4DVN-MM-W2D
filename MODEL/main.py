@@ -280,12 +280,8 @@ class Experiment:
                                                    start_time = start_time).to(DEVICE)
         else:
             
-            Phi_mwind = model_selection(shape_data, self.cparams).to(DEVICE)
-            Phi_costh = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
-            Phi_sinth = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
-            
-            Phi_group = torch.nn.ModuleList([Phi_mwind, Phi_costh, Phi_sinth])
-            lit_model = LitModel_OSSE1_WindComponents(Phi_group, 
+            Phi = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
+            lit_model = LitModel_OSSE1_WindComponents(Phi, 
                                                       shape_data, 
                                                       land_buoy_coords, 
                                                       self.cparams, 

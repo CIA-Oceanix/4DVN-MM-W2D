@@ -46,6 +46,7 @@ class LitModel_Base(pl.LightningModule):
         self.hparams.lr_intensity           = config_params.LR_INTENSITY
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.wind_modulus           = config_params.WIND_MODULUS
+        self.hparams.base_comps_uv          = config_params.BASE_COMPS_UV
         self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
         self.hparams.reg_coeff              = config_params.REG_COEFF
         self.hparams.grad_coeff             = config_params.GRAD_COEFF
@@ -713,22 +714,22 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         # Import the components
-        mwind_hr_gt_u, mwind_hr_gt_v = batch[0], batch[1]
+        wind_hr_gt_u, wind_hr_gt_v = batch[0], batch[1]
         
         # High reso ground truths
-        mwind_hr_gt = self.get_modulus(mwind_hr_gt_u, mwind_hr_gt_v)
-        theta_hr_gt = self.get_angle(mwind_hr_gt, mwind_hr_gt_u, mwind_hr_gt_v)
+        mwind_hr_gt = self.get_modulus(wind_hr_gt_u, wind_hr_gt_v)
+        theta_hr_gt = self.get_angle(mwind_hr_gt, wind_hr_gt_u, wind_hr_gt_v)
         
         # Downsample to obtain low-resolution
-        mwind_lr_gt_u = self.spatial_downsample_interpolate(mwind_hr_gt_u)
-        mwind_lr_gt_v = self.spatial_downsample_interpolate(mwind_hr_gt_v)
+        wind_lr_gt_u = self.spatial_downsample_interpolate(wind_hr_gt_u)
+        wind_lr_gt_v = self.spatial_downsample_interpolate(wind_hr_gt_v)
         
         # Low reso ground truths
-        mwind_lr_gt = self.get_modulus(mwind_lr_gt_u, mwind_lr_gt_v)
-        theta_lr_gt = self.get_angle(mwind_lr_gt, mwind_lr_gt_u, mwind_lr_gt_v)
+        mwind_lr_gt = self.get_modulus(wind_lr_gt_u, wind_lr_gt_v)
+        theta_lr_gt = self.get_angle(mwind_lr_gt, wind_lr_gt_u, wind_lr_gt_v)
         
         # Delay or bias
-        mwind_lr_gt_join = self.concat_components(mwind_lr_gt_u, mwind_lr_gt_v)
+        mwind_lr_gt_join = self.concat_components(wind_lr_gt_u, wind_lr_gt_v)
         if self.hparams.lr_sampl_delay:
             mwind_lr_obs = self.get_mwind_lr_delay(mwind_lr_gt_join.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
@@ -738,11 +739,11 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         #end
         
         # Low reso observations
-        mwind_lr_obs_u, mwind_lr_obs_v = self.split_components(mwind_lr_obs)
-        mwind_lr_obs_u = self.get_persistence(mwind_lr_obs_u, 'lr', longer_series = True)
-        mwind_lr_obs_v = self.get_persistence(mwind_lr_obs_v, 'lr', longer_series = True)
-        mwind_lr_obs = self.get_modulus(mwind_lr_obs_u, mwind_lr_obs_v)
-        theta_lr_obs = self.get_angle(mwind_lr_obs, mwind_lr_obs_u, mwind_lr_obs_v)
+        wind_lr_obs_u, wind_lr_obs_v = self.split_components(mwind_lr_obs)
+        wind_lr_obs_u = self.get_persistence(wind_lr_obs_u, 'lr', longer_series = True)
+        wind_lr_obs_v = self.get_persistence(wind_lr_obs_v, 'lr', longer_series = True)
+        mwind_lr_obs  = self.get_modulus(wind_lr_obs_u, wind_lr_obs_v)
+        theta_lr_obs  = self.get_angle(mwind_lr_obs, wind_lr_obs_u, wind_lr_obs_v)
         
         # High reso observations
         mwind_hr_obs = self.get_persistence(mwind_hr_gt, 'hr', longer_series = True)
@@ -766,33 +767,39 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         #end
         
         # Isolate the 24 central timesteps
-        mwind_lr_gt  = mwind_lr_gt[:, timewindow_start : timewindow_end, :,:]
-        theta_lr_gt  = theta_lr_gt[:, timewindow_start : timewindow_end, :,:]
-        mwind_hr_gt  = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
-        theta_hr_gt  = theta_hr_gt[:, timewindow_start : timewindow_end, :,:]
-        mwind_lr_obs = mwind_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        theta_lr_obs = theta_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        mwind_an_obs = mwind_an_obs[:, timewindow_start : timewindow_end, :,:]
-        theta_an_obs = theta_an_obs[:, timewindow_start : timewindow_end, :,:]
-        mwind_hr_obs = mwind_hr_obs[:, timewindow_start : timewindow_end, :,:]
-        theta_hr_obs = theta_hr_obs[:, timewindow_start : timewindow_end, :,:]
+        mwind_lr_gt   = mwind_lr_gt[:, timewindow_start : timewindow_end, :,:]
+        theta_lr_gt   = theta_lr_gt[:, timewindow_start : timewindow_end, :,:]
+        mwind_hr_gt   = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        theta_hr_gt   = theta_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        mwind_lr_obs  = mwind_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        wind_lr_obs_u = wind_lr_gt_u[:, timewindow_start : timewindow_end, :,:]
+        wind_lr_obs_v = wind_lr_gt_v[:, timewindow_start : timewindow_end, :,:]
+        theta_lr_obs  = theta_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        mwind_an_obs  = mwind_an_obs[:, timewindow_start : timewindow_end, :,:]
+        theta_an_obs  = theta_an_obs[:, timewindow_start : timewindow_end, :,:]
+        mwind_hr_obs  = mwind_hr_obs[:, timewindow_start : timewindow_end, :,:]
+        theta_hr_obs  = theta_hr_obs[:, timewindow_start : timewindow_end, :,:]
         
         if True:
-            mwind_lr_obs[:,-1,:,:] = mwind_lr_gt[:,-1,:,:]
-            theta_hr_obs[:,-1,:,:] = theta_lr_obs[:,-1,:,:]
+            mwind_lr_obs[:,-1,:,:]  = mwind_lr_gt[:,-1,:,:]
+            wind_lr_obs_u[:,-1,:,:] = wind_lr_gt_u[:,-1,:,:]
+            wind_lr_obs_v[:,-1,:,:] = wind_lr_gt_v[:,-1,:,:]
+            theta_hr_obs[:,-1,:,:]  = theta_lr_obs[:,-1,:,:]
         #end
         
         prepared_batch = {
-            'mwind_lr_gt'  : mwind_lr_gt,
-            'theta_lr_gt'  : theta_lr_gt,
-            'mwind_hr_gt'  : mwind_hr_gt,
-            'theta_hr_gt'  : theta_hr_gt,
-            'mwind_lr_obs' : mwind_lr_obs,
-            'theta_lr_obs' : theta_lr_obs,
-            'mwind_an_obs' : mwind_an_obs,
-            'theta_an_obs' : theta_an_obs,
-            'mwind_hr_obs' : mwind_hr_obs,
-            'theta_hr_obs' : theta_hr_obs
+            'mwind_lr_gt'   : mwind_lr_gt,
+            'theta_lr_gt'   : theta_lr_gt,
+            'mwind_hr_gt'   : mwind_hr_gt,
+            'theta_hr_gt'   : theta_hr_gt,
+            'wind_lr_obs_u' : wind_lr_obs_u,
+            'wind_lr_obs_v' : wind_lr_obs_v,
+            'mwind_lr_obs'  : mwind_lr_obs,
+            'theta_lr_obs'  : theta_lr_obs,
+            'mwind_an_obs'  : mwind_an_obs,
+            'theta_an_obs'  : theta_an_obs,
+            'mwind_hr_obs'  : mwind_hr_obs,
+            'theta_hr_obs'  : theta_hr_obs
         }
         
         return prepared_batch
@@ -801,16 +808,17 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     def get_input_data_state(self, mwind_lr, mwind_an, costh_lr, sinth_lr, costh_an, sinth_an, init_state = None):
         
         # Prepare observations
+        zeros_timeseries = torch.zeros(mwind_lr.shape)
         chunk_mwind = torch.cat([mwind_lr, mwind_an, mwind_an], dim = 1)
-        chunk_costh = torch.cat([costh_lr, costh_an, costh_an], dim = 1)
-        chunk_sinth = torch.cat([sinth_lr, sinth_an, sinth_an], dim = 1)
-        input_data  = torch.stack([chunk_mwind, chunk_costh, chunk_sinth], dim = -1)
+        chunk_costh = torch.cat([costh_lr, zeros_timeseries, zeros_timeseries], dim = 1)
+        chunk_sinth = torch.cat([sinth_lr, zeros_timeseries, zeros_timeseries], dim = 1)
+        input_data  = torch.cat([chunk_mwind, chunk_costh, chunk_sinth], dim = 1)
         
         # Prepare state variable
         if init_state is not None:
             input_state = init_state
         else:
-            input_state = torch.stack([chunk_mwind, chunk_costh, chunk_sinth], dim = -1)
+            input_state = torch.cat([chunk_mwind, chunk_costh, chunk_sinth], dim = 1)
         #end
         
         return input_data, input_state
@@ -822,14 +830,16 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         prepared_batch = self.prepare_batch(data)
         
         # Elements of prepared batch
-        data_mwind_lr_obs = prepared_batch['mwind_lr_obs']   # LR observation modulus
-        data_theta_lr_obs = prepared_batch['theta_lr_obs']   # LR observation angle
-        data_mwind_an_obs = prepared_batch['mwind_an_obs']   # Anomaly observation modulus
-        data_theta_an_obs = prepared_batch['theta_an_obs']   # Anomaly observation angle
-        data_mwind_lr_gt  = prepared_batch['mwind_lr_gt']    # LR ground truth modulus
-        data_theta_lr_gt  = prepared_batch['theta_lr_gt']    # LR ground truth angle
-        data_mwind_hr_gt  = prepared_batch['mwind_hr_gt']    # HR ground truth modulus
-        data_theta_hr_gt  = prepared_batch['theta_hr_gt']    # HR ground truth angle
+        data_wind_lr_obs_u = prepared_batch['wind_lr_obs_u']
+        data_wind_lr_obs_v = prepared_batch['wind_lr_obs_v']
+        data_mwind_lr_obs  = prepared_batch['mwind_lr_obs']   # LR observation modulus
+        data_theta_lr_obs  = prepared_batch['theta_lr_obs']   # LR observation angle
+        data_mwind_an_obs  = prepared_batch['mwind_an_obs']   # Anomaly observation modulus
+        data_theta_an_obs  = prepared_batch['theta_an_obs']   # Anomaly observation angle
+        data_mwind_lr_gt   = prepared_batch['mwind_lr_gt']    # LR ground truth modulus
+        data_theta_lr_gt   = prepared_batch['theta_lr_gt']    # LR ground truth angle
+        data_mwind_hr_gt   = prepared_batch['mwind_hr_gt']    # HR ground truth modulus
+        data_theta_hr_gt   = prepared_batch['theta_hr_gt']    # HR ground truth angle
         
         data_costh_lr_obs = torch.cos(data_theta_lr_obs)
         data_sinth_lr_obs = torch.sin(data_theta_lr_obs)
@@ -847,7 +857,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # Mask data
         mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = self.get_osse_mask(data_mwind_lr_obs.shape)
-        mask_global = torch.stack([mask, mask, mask], dim = -1)
+        mask_ones   = torch.ones(mask_lr.shape)
+        mask_zeros  = torch.zeros(mask_hr_dx1.shape)
+        mask_theta  = torch.cat([mask_ones, mask_zeros, mask_zeros], dim = 1)
+        mask_global = torch.cat([mask, mask_theta, mask_theta], dim = 1)
         
         input_state = input_state * mask_global
         input_data  = input_data * mask_global
@@ -858,9 +871,10 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             
             if self.hparams.inversion == 'fp':
                 
-                reco_mwind = self.model.Phi[0](input_data[:,:,:,:,0])
-                reco_costh = self.model.Phi[1](input_data[:,:,:,:,1])
-                reco_sinth = self.model.Phi[2](input_data[:,:,:,:,2])
+                outputs = self.model.Phi(input_data)
+                reco_mwind = outputs[:, 0:72, :,:]
+                reco_costh = outputs[:, 72:144, :,:]
+                reco_sinth = outputs[:, 144:216, :,:]
                 
                 reco_mwind_lr = self.interpolate_channelwise(data_mwind_lr_obs.mul(mask_lr))
                 reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
@@ -876,9 +890,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             elif self.hparams.inversion == 'gs':
                 
                 outputs, _,_,_ = self.model(input_state, input_data, mask_global)
-                reco_mwind = outputs[:,:,:,:,0]
-                reco_costh = outputs[:,:,:,:,1]
-                reco_sinth = outputs[:,:,:,:,2]
+                reco_mwind = outputs[:, 0:72, :,:]
+                reco_costh = outputs[:, 72:144, :,:]
+                reco_sinth = outputs[:, 144:216, :,:]
                 
                 reco_mwind_lr = reco_mwind[:,:24,:,:]
                 reco_costh_lr = reco_costh[:,:24,:,:]
@@ -893,28 +907,54 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
             elif self.hparams.inversion == 'bl':
                 
-                reco_mwind = self.model.Phi[0](input_data[:,:,:,:,0])
-                reco_costh = self.model.Phi[1](input_data[:,:,:,:,1])
-                reco_sinth = self.model.Phi[2](input_data[:,:,:,:,2])
+                if not self.hparams.base_comps_uv:
+                    
+                    outputs = self.model.Phi(input_data)
+                    reco_mwind = outputs[:, 0:72, :,:]
+                    reco_costh = outputs[:, 72:144, :,:]
+                    reco_sinth = outputs[:, 144:216, :,:]
+                    
+                    reco_mwind_lr = self.interpolate_channelwise(data_mwind_lr_obs.mul(mask_lr))
+                    reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
+                    reco_sinth_lr = self.interpolate_channelwise(data_sinth_lr_obs.mul(mask_lr))
+                    
+                    reco_mwind_lr = self.interpolate_channelwise(data_mwind_lr_obs.mul(mask_lr))
+                    reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
+                    reco_sinth_lr = self.interpolate_channelwise(data_sinth_lr_obs.mul(mask_lr))
+                    reco_mwind_an = reco_mwind[:,48:,:,:]
+                    reco_costh_an = reco_costh[:,48:,:,:]
+                    reco_sinth_an = reco_sinth[:,48:,:,:]
+                    reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                    reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
+                    reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
+                    reco_theta_hr = reco_theta_lr + torch.mul(reco_theta_an, 0.)
                 
-                reco_mwind_lr = self.interpolate_channelwise(data_mwind_lr_obs.mul(mask_lr))
-                reco_costh_lr = self.interpolate_channelwise(data_costh_lr_obs.mul(mask_lr))
-                reco_sinth_lr = self.interpolate_channelwise(data_sinth_lr_obs.mul(mask_lr))
-                reco_mwind_an = reco_mwind[:,48:,:,:]
-                reco_costh_an = reco_costh[:,48:,:,:]
-                reco_sinth_an = reco_sinth[:,48:,:,:]
-                reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
-                reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
-                reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
-                reco_theta_hr = reco_theta_lr + torch.mul(reco_theta_an, 0.)
+                else:
+                    
+                    outputs = self.model.Phi(input_data)
+                    reco_mwind = outputs[:, 0:72, :,:]
+                    
+                    reco_wind_lr_u = self.interpolate_channelwise(data_wind_lr_obs_u.mul(mask_lr))
+                    reco_wind_lr_v = self.interpolate_channelwise(data_wind_lr_obs_v.mul(mask_lr))
+                    reco_wind_lr_u = reco_wind_lr_u + torch.mul(reco_mwind[:,:24,:,:])
+                    reco_wind_lr_v = reco_wind_lr_v + torch.mul(reco_mwind[:,:24,:,:])
             #end
         #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             
+            if self.hparams.inversion == 'bl':
+                if not self.hparams.base_comps_uv:
+                    reco_hr = torch.cat([reco_mwind_hr, reco_theta_hr], dim = -1)
+                else:
+                    reco_hr = torch.cat([reco_wind_lr_u, reco_wind_lr_v], dim = -1)
+                #end
+            else:
+                reco_hr = torch.cat([reco_mwind_hr, reco_theta_hr], dim = -1)
+            #end
+            
             data_hr = torch.cat([data_mwind_hr_gt, data_theta_hr_gt], dim = -1)
-            reco_hr = torch.cat([reco_mwind_hr, reco_theta_hr], dim = -1)
             
             self.save_samples({'data' : data_hr.detach().cpu(),
                                'reco' : reco_hr.detach().cpu()})
@@ -943,13 +983,13 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss += loss_angle
         
         # Reconstruction on components
-        data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
-        data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
-        reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
-        reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
-        loss_u = self.loss_fn((data_wind_u - reco_wind_u))
-        loss_v = self.loss_fn((data_wind_v - reco_wind_v))
-        loss += ( loss_u + loss_v )
+        # data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
+        # data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
+        # reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
+        # reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
+        # loss_u = self.loss_fn((data_wind_u - reco_wind_u))
+        # loss_v = self.loss_fn((data_wind_v - reco_wind_v))
+        # loss += ( loss_u + loss_v )
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
@@ -962,9 +1002,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Regularization term
         if not self.hparams.inversion == 'bl':
             
-            regularization  = self.loss_fn( (reco_mwind - self.model.Phi[0](reco_mwind)) )
-            regularization += self.loss_fn( (reco_costh - self.model.Phi[1](reco_costh)) )
-            regularization += self.loss_fn( (reco_sinth - self.model.Phi[2](reco_sinth)) )
+            regularization  = self.loss_fn( (outputs - self.model.Phi(outputs)) ) 
             loss += regularization * self.hparams.reg_coeff
         #end
         

@@ -536,36 +536,7 @@ class Solver_Grad_4DVarNN(nn.Module):
             normgrad_= normgrad
         #end
         
-        if self.Phi.__class__ is list or self.Phi.__class__ is nn.ModuleList:
-            vc_grad_mwind = var_cost_grad[:,:,:,:,0]
-            vc_grad_costh = var_cost_grad[:,:,:,:,1]
-            vc_grad_sinth = var_cost_grad[:,:,:,:,2]
-            
-            try:
-                hidden_mwind = hidden[:,:,:,:,0]; cell_mwind = cell[:,:,:,:,0]
-                hidden_costh = hidden[:,:,:,:,1]; cell_costh = cell[:,:,:,:,1]
-                hidden_sinth = hidden[:,:,:,:,2]; cell_sinth = cell[:,:,:,:,2]
-            except:
-                hidden_mwind = None; cell_mwind = None
-                hidden_costh = None; cell_costh = None
-                hidden_sinth = None; cell_sinth = None
-            #end
-            
-            grad_mwind, hidden_mwind, cell_mwind = self.model_Grad(hidden_mwind, cell_mwind, vc_grad_mwind, normgrad_)
-            grad_costh, hidden_costh, cell_costh = self.model_Grad(hidden_costh, cell_costh, vc_grad_costh, normgrad_)
-            grad_sinth, hidden_sinth, cell_sinth = self.model_Grad(hidden_sinth, cell_sinth, vc_grad_sinth, normgrad_)
-            
-            grad = torch.stack([grad_mwind, grad_costh, grad_sinth], dim = -1)
-            hidden = torch.stack([hidden_mwind, hidden_costh, hidden_sinth], dim = -1)
-            
-            try:
-                cell = torch.stack([cell_mwind, cell_costh, cell_sinth], dim = -1)
-            except:
-                pass
-            #end
-        else:
-            grad, hidden, cell = self.model_Grad(hidden, cell, var_cost_grad, normgrad_)
-        #end
+        grad, hidden, cell = self.model_Grad(hidden, cell, var_cost_grad, normgrad_)
         
         grad *= 1./ self.n_grad
         x_k_plus_1 = x_k - grad
@@ -585,15 +556,7 @@ class Solver_Grad_4DVarNN(nn.Module):
         # #end
         data_fidelty = self.model_H(x, yobs, mask)
         
-        if self.Phi.__class__ is list:
-            
-            regularization = torch.zeros(x.shape)
-            for i, phi in enumerate(self.Phi):
-                regularization[:,:,:,:,i] = x[:,:,:,:,i] - phi(x[:,:,:,:,i])
-            #end
-        else:
-            regularization = x - self.Phi(x)
-        #end
+        regularization = x - self.Phi(x)
         
         var_cost = self.model_VarCost(data_fidelty, regularization)
         var_cost_grad = torch.autograd.grad(var_cost, x, create_graph = True)[0]

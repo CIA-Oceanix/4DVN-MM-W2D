@@ -185,16 +185,17 @@ class ConvNet(nn.Module):
     #end
 #end
 
-class ConvNet_angle_sincos(nn.Module):
+class ConvNet_mwind_angle(nn.Module):
     
     def __init__(self, shape_data, config_params):
-        super(ConvNet_angle_sincos, self).__init__()
+        super(ConvNet_mwind_angle, self).__init__()
         
         ts_length = shape_data[1] * 3
+        input_planes = ts_length * 3
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 64, (3,3), padding = 1),
-            nn.Conv2d(64, ts_length, (3,3), padding = 1)
+            nn.Conv2d(input_planes, 64, (5,5), padding = 2),
+            nn.Conv2d(64, input_planes, (5,5), padding = 2)
         )
         self.sigmoid = nn.Sigmoid()
     #end
@@ -710,7 +711,7 @@ def model_selection(shape_data, config_params, components = False):
         if not components:
             return ConvNet(shape_data, config_params)
         else:
-            return ConvNet_angle_sincos(shape_data, config_params)
+            return ConvNet_mwind_angle(shape_data, config_params)
         #end
     #end
     
