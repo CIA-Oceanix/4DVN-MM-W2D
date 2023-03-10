@@ -137,11 +137,11 @@ def peak_signal_to_noise_ratio(target, output):
     return np.nanmean(psnr)
 #end
 
-def mse(target, output, mask = None, divide_std = True, divide_nitems = True):
+def mse(target, output, mask = None, divide_variance = True, divide_nitems = True):
     
     mserror = NormLoss(divide_nitems = divide_nitems)((target - output), mask = mask)
-    if divide_std:
-        mserror = mserror / target.std()
+    if divide_variance:
+        mserror = mserror / target.var()
     #end
     
     return mserror
