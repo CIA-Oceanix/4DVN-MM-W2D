@@ -197,13 +197,13 @@ class ConvNet_mwind_angle(nn.Module):
             nn.Conv2d(input_planes, 64, (5,5), padding = 2),
             nn.Conv2d(64, input_planes, (5,5), padding = 2)
         )
-        self.sigmoid = nn.Sigmoid()
+        self.nonlinearity = nn.Tanh()
     #end
     
     def forward(self, data):
         
         output = self.net(data)
-        output[:,72:,:,:] = self.sigmoid(output[:,72:,:,:])
+        output[:,72:,:,:] = self.nonlinearity(output[:,72:,:,:])
         return output
     #end
 #end
