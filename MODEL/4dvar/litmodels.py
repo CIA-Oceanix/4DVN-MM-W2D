@@ -935,7 +935,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                     
                     reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
                     reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
-                    reco_theta_hr = reco_theta_lr + torch.mul(reco_theta_hr, 0.)
+                    reco_theta_hr = reco_theta_lr + torch.mul(reco_costh_hr, 0.)
                 
                 else:
                     
