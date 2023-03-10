@@ -934,7 +934,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                     reco_sinth_hr = reco_sinth[:,48:,:,:]
                     
                     reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
-                    reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
                     reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
                     reco_theta_hr = reco_theta_lr + torch.mul(reco_theta_hr, 0.)
                 
@@ -981,11 +980,11 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
         loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
-        loss_costh_hr = self.loss_fn((data_costh_hr_gt - torch.cos(reco_theta_hr)))
+        loss_costh_hr = self.loss_fn((data_costh_hr_gt - torch.cos(reco_theta_hr))) * 10
         loss += ( loss_costh_lr + loss_costh_hr )
         
         loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
-        loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr)))
+        loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * 10
         loss += ( loss_sinth_lr + loss_sinth_hr )
         
         loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
