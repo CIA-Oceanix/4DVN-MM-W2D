@@ -926,8 +926,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                     reco_sinth = outputs[:, 144:216, :,:]
                     
                     reco_mwind_lr = self.get_baseline(data_mwind_lr_obs.mul(mask_lr))
-                    reco_costh_lr = self.get_baseline(data_costh_lr_obs.mul(mask_lr), sigmoidize = True)
-                    reco_sinth_lr = self.get_baseline(data_sinth_lr_obs.mul(mask_lr), sigmoidize = True)
+                    reco_costh_lr = self.get_baseline(data_costh_lr_obs.mul(mask_lr), apply_tanh = True)
+                    reco_sinth_lr = self.get_baseline(data_sinth_lr_obs.mul(mask_lr), apply_tanh = True)
                     
                     reco_mwind_an = reco_mwind[:,48:,:,:]
                     reco_costh_hr = reco_costh[:,48:,:,:]
