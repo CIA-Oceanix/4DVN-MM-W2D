@@ -1015,7 +1015,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             loss += regularization * self.hparams.reg_coeff
         #end
         
-        return dict({'loss' : loss}), torch.stack([reco_mwind, reco_costh, reco_sinth])
+        return dict({'loss' : loss}), torch.stack([reco_mwind])#, reco_costh, reco_sinth])
     #end
 #end
 
