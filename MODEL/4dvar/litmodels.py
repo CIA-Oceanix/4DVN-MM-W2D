@@ -943,6 +943,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                     reco_wind_lr_v = self.interpolate_channelwise(data_wind_lr_obs_v.mul(mask_lr))
                     reco_wind_lr_u = reco_wind_lr_u + torch.mul(reco_mwind[:,:24,:,:], 0.)
                     reco_wind_lr_v = reco_wind_lr_v + torch.mul(reco_mwind[:,:24,:,:], 0.)
+                    
+                    reco_mwind_lr = (reco_wind_lr_u.pow(2) + reco_wind_lr_v.pow(2)).sqrt()
+                    reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind, 0.)
                 #end
             #end
         #end
@@ -977,25 +980,25 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_mwind_hr = self.loss_fn((data_mwind_hr_gt - reco_mwind_hr))
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
-        loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
-        loss_costh_hr = self.loss_fn((data_costh_hr_gt - torch.cos(reco_theta_hr))) * 10
-        loss += ( loss_costh_lr + loss_costh_hr )
+        # loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
+        # loss_costh_hr = self.loss_fn((data_costh_hr_gt - torch.cos(reco_theta_hr))) * 10
+        # loss += ( loss_costh_lr + loss_costh_hr )
         
-        loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
-        loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * 10
-        loss += ( loss_sinth_lr + loss_sinth_hr )
+        # loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
+        # loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * 10
+        # loss += ( loss_sinth_lr + loss_sinth_hr )
         
-        loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
-        loss += loss_angle
+        # loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
+        # loss += loss_angle
         
-        # Reconstruction on components
-        data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
-        data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
-        reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
-        reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
-        loss_u = self.loss_fn((data_wind_u - reco_wind_u))
-        loss_v = self.loss_fn((data_wind_v - reco_wind_v))
-        loss += ( loss_u + loss_v )
+        # # Reconstruction on components
+        # data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
+        # data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
+        # reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
+        # reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
+        # loss_u = self.loss_fn((data_wind_u - reco_wind_u))
+        # loss_v = self.loss_fn((data_wind_v - reco_wind_v))
+        # loss += ( loss_u + loss_v )
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
