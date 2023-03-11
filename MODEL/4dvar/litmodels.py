@@ -933,7 +933,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                     reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
                     reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
                     reco_theta_hr = reco_theta_lr + torch.mul(reco_costh_hr, 0.)
-                
+                    
                 else:
                     
                     outputs = self.model.Phi(input_data)
@@ -941,8 +941,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                     
                     reco_wind_lr_u = self.interpolate_channelwise(data_wind_lr_obs_u.mul(mask_lr))
                     reco_wind_lr_v = self.interpolate_channelwise(data_wind_lr_obs_v.mul(mask_lr))
-                    reco_wind_lr_u = reco_wind_lr_u + torch.mul(reco_mwind[:,:24,:,:])
-                    reco_wind_lr_v = reco_wind_lr_v + torch.mul(reco_mwind[:,:24,:,:])
+                    reco_wind_lr_u = reco_wind_lr_u + torch.mul(reco_mwind[:,:24,:,:], 0.)
+                    reco_wind_lr_v = reco_wind_lr_v + torch.mul(reco_mwind[:,:24,:,:], 0.)
+                #end
             #end
         #end
         
