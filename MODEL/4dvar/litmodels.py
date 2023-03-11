@@ -945,7 +945,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                     reco_wind_lr_v = reco_wind_lr_v + torch.mul(reco_mwind[:,:24,:,:], 0.)
                     
                     reco_mwind_lr = (reco_wind_lr_u.pow(2) + reco_wind_lr_v.pow(2)).sqrt()
-                    reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind, 0.)
+                    reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_lr, 0.)
                 #end
             #end
         #end
