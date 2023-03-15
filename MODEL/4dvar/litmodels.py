@@ -906,54 +906,29 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 
             elif self.hparams.inversion == 'bl':
                 
-                if not self.hparams.base_comps_uv:
-                    
-                    outputs = self.model.Phi(input_data)
-                    reco_mwind = outputs[:, 0:72, :,:]
-                    reco_costh = outputs[:, 72:144, :,:]
-                    reco_sinth = outputs[:, 144:216, :,:]
-                    
-                    reco_mwind_lr = self.get_baseline(data_mwind_lr_obs.mul(mask_lr))
-                    reco_costh_lr = self.get_baseline(data_costh_lr_obs.mul(mask_lr), apply_tanh = True)
-                    reco_sinth_lr = self.get_baseline(data_sinth_lr_obs.mul(mask_lr), apply_tanh = True)
-                    
-                    reco_mwind_an = reco_mwind[:,48:,:,:]
-                    reco_costh_hr = reco_costh[:,48:,:,:]
-                    reco_sinth_hr = reco_sinth[:,48:,:,:]
-                    
-                    reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
-                    reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
-                    reco_theta_hr = reco_theta_lr + torch.mul(reco_costh_hr, 0.)
-                    
-                else:
-                    
-                    outputs = self.model.Phi(input_data)
-                    reco_mwind = outputs[:, 0:72, :,:]
-                    
-                    reco_wind_lr_u = self.interpolate_channelwise(data_wind_lr_obs_u.mul(mask_lr))
-                    reco_wind_lr_v = self.interpolate_channelwise(data_wind_lr_obs_v.mul(mask_lr))
-                    reco_wind_lr_u = reco_wind_lr_u + torch.mul(reco_mwind[:,:24,:,:], 0.)
-                    reco_wind_lr_v = reco_wind_lr_v + torch.mul(reco_mwind[:,:24,:,:], 0.)
-                    
-                    reco_mwind_lr = (reco_wind_lr_u.pow(2) + reco_wind_lr_v.pow(2)).sqrt()
-                    reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_lr, 0.)
-                #end
+                outputs = self.model.Phi(input_data)
+                reco_mwind = outputs[:, 0:72, :,:]
+                reco_costh = outputs[:, 72:144, :,:]
+                reco_sinth = outputs[:, 144:216, :,:]
+                
+                reco_mwind_lr = self.get_baseline(data_mwind_lr_obs.mul(mask_lr))
+                reco_costh_lr = self.get_baseline(data_costh_lr_obs.mul(mask_lr), apply_tanh = True)
+                reco_sinth_lr = self.get_baseline(data_sinth_lr_obs.mul(mask_lr), apply_tanh = True)
+                
+                reco_mwind_an = reco_mwind[:,48:,:,:]
+                reco_costh_hr = reco_costh[:,48:,:,:]
+                reco_sinth_hr = reco_sinth[:,48:,:,:]
+                
+                reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
+                reco_theta_hr = reco_theta_lr + torch.mul(reco_costh_hr, 0.)
             #end
         #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             
-            if self.hparams.inversion == 'bl':
-                if not self.hparams.base_comps_uv:
-                    reco_hr = torch.cat([reco_mwind_hr, reco_theta_hr], dim = -1)
-                else:
-                    reco_hr = torch.cat([reco_wind_lr_u, reco_wind_lr_v], dim = -1)
-                #end
-            else:
-                reco_hr = torch.cat([reco_mwind_hr, reco_theta_hr], dim = -1)
-            #end
-            
+            reco_hr = torch.cat([reco_mwind_hr, reco_theta_hr], dim = -1)
             data_hr = torch.cat([data_mwind_hr_gt, data_theta_hr_gt], dim = -1)
             
             self.save_samples({'data' : data_hr.detach().cpu(),
