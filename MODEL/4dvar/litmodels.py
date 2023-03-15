@@ -831,8 +831,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         prepared_batch = self.prepare_batch(data)
         
         # Elements of prepared batch
-        data_wind_lr_obs_u = prepared_batch['wind_lr_obs_u']  # LR observation component u
-        data_wind_lr_obs_v = prepared_batch['wind_lr_obs_v']  # LR observation component u
         data_mwind_lr_obs  = prepared_batch['mwind_lr_obs']   # LR observation modulus
         data_theta_lr_obs  = prepared_batch['theta_lr_obs']   # LR observation angle
         data_mwind_an_obs  = prepared_batch['mwind_an_obs']   # Anomaly observation modulus
@@ -881,10 +879,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_costh_hr = reco_costh[:,48:,:,:]
                 reco_sinth_hr = reco_sinth[:,48:,:,:]
                 
-                reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                # reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
                 reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an * self.hparams.anomaly_coeff
-                # reco_theta_hr = reco_theta_lr + reco_theta_an * self.hparams.anomaly_coeff
                 
             elif self.hparams.inversion == 'gs':
                 
@@ -902,7 +899,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
                 reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an * self.hparams.anomaly_coeff
-                # reco_theta_hr = reco_theta_lr + reco_theta_an * self.hparams.anomaly_coeff
                 
             elif self.hparams.inversion == 'bl':
                 
@@ -948,11 +944,11 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
         loss_costh_hr = self.loss_fn((data_costh_hr_gt - torch.cos(reco_theta_hr))) * self.hparams.weight_angle_hr
-        loss += ( loss_costh_lr + loss_costh_hr )
+        loss += ( loss_costh_lr * 0 + loss_costh_hr )
         
         loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
         loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
-        loss += ( loss_sinth_lr + loss_sinth_hr )
+        loss += ( loss_sinth_lr * 0 + loss_sinth_hr )
         
         loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
         loss += loss_angle
