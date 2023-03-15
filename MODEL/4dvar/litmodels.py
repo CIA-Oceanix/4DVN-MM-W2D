@@ -953,7 +953,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
         loss += loss_angle
         
-        loss_cos = torch.mean( torch.cos( data_theta_hr_gt - reco_theta_hr ) )
+        loss_cos = torch.mean( 1 - torch.cos( data_theta_hr_gt - reco_theta_hr ) )
         loss += loss_cos
         
         # Reconstruction on components
