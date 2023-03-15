@@ -252,11 +252,6 @@ class LitModel_Base(pl.LightningModule):
             self.log('test_loss', test_loss.item())
         #end
         
-        # if self.hparams.wind_modulus:
-        #     batch_size = batch.shape[0]
-        # else:
-        #     batch_size = batch[0].shape[0]
-        # #end
         batch_size = batch[0].shape[0]
         
         self.save_test_loss(test_loss, batch_size)
@@ -278,7 +273,6 @@ class LitModel_Base(pl.LightningModule):
                                                                    self.hparams.hr_mask_mode, 
                                                                    self.buoy_position, 
                                                                    self.hparams.mm_obsmodel)
-        
         if True:
             # Assume that u(23h day0) = u(0h day1)
             mask_lr[:,-1,:,:] = 1.
@@ -700,8 +694,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
     
     def get_angle(self, w_mod, comp_u, comp_v, cos_sin = False):
         
-        cos_theta = comp_v / w_mod
-        sin_theta = comp_u / w_mod
+        cos_theta = comp_u / w_mod
+        sin_theta = comp_v / w_mod
         
         if torch.any(cos_theta > 1.) or torch.any(cos_theta < -1.):
             raise ValueError('COS > 1 or < -1')
