@@ -722,15 +722,23 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         theta_hr_gt = self.get_angle(mwind_hr_gt, wind_hr_gt_u, wind_hr_gt_v)
         
         # Downsample to obtain low-resolution
+        ## GT LR COMPONENTS
         wind_lr_gt_u = self.spatial_downsample_interpolate(wind_hr_gt_u)
         wind_lr_gt_v = self.spatial_downsample_interpolate(wind_hr_gt_v)
         
         # Low reso ground truths
+        ## GT LR MODULUS AND ANGLE
         mwind_lr_gt = self.get_modulus(wind_lr_gt_u, wind_lr_gt_v)
         theta_lr_gt = self.get_angle(mwind_lr_gt, wind_lr_gt_u, wind_lr_gt_v)
         
         # Delay or bias
+        ## THIS IS APPLIED TO GT LR COMPONENTS
+        ### Join them so to bias consistently (it makes no sense to shift the two 
+        ### components independently. In reality we have the NWP of (u,v) and if there
+        ### is a bias in the prediction then it affects both components)
         wind_lr_gt_join = self.concat_components(wind_lr_gt_u, wind_lr_gt_v)
+        
+        ### Proper bias
         if self.hparams.lr_sampl_delay:
             wind_lr_obs = self.get_mwind_lr_delay(wind_lr_gt_join.clone(), timesteps, timewindow_start)
         elif self.hparams.lr_intensity:
@@ -740,9 +748,22 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         #end
         
         # Low reso observations
+        ## Concatenate
         wind_lr_obs_u, wind_lr_obs_v = self.split_components(wind_lr_obs)
+        
+        ## Obtain persistences. NOTE: persistences affect those timesteps selected by
+        ## our handy-candy list/integer specifying the sampling regimen. The timestep
+        ## affected by bias IS THE SAME SELECTED FOR THE PERSISTENCE MODEL
+        ## Like this: 
+        ##      // Bias
+        ##      data_lr[tt] = data_lr=[tt + Delta t]                  // data at timestep tt has swapped of Delta t (random delay)
+        ##      // Persistence
+        ##      data_lr[tt : tt + sampling_freq_rule] = data_lr[tt]   // persistence model takes the value previously modified
+        ## That's it
         wind_lr_obs_u = self.get_persistence(wind_lr_obs_u, 'lr', longer_series = True)
         wind_lr_obs_v = self.get_persistence(wind_lr_obs_v, 'lr', longer_series = True)
+        
+        ## Get modulus and angle out of the persistenced models
         mwind_lr_obs  = self.get_modulus(wind_lr_obs_u, wind_lr_obs_v)
         theta_lr_obs  = self.get_angle(mwind_lr_obs, wind_lr_obs_u, wind_lr_obs_v)
         
@@ -752,6 +773,9 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         
         # NOTE: is in-situ time series are actually measured, these positions
         # in the persistence model must be filled with in-situ time series
+        # NOTE 2: This makes sense, it is a DESIGN CHOICE. Since the data are multi-modal,
+        # then this next step is a RAW MULTI-MODAL FUSION. The series are attached so 
+        # to MATCH the physical locations of observations. This will come handy later on
         if self.hparams.hr_mask_mode == 'buoys':
             xp_buoys, yp_buoys = self.buoy_position[:,0], self.buoy_position[:,1]
             mwind_hr_obs[:,:, xp_buoys, yp_buoys] = mwind_hr_gt[:,:, xp_buoys, yp_buoys]
@@ -773,8 +797,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         mwind_hr_gt   = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
         theta_hr_gt   = theta_hr_gt[:, timewindow_start : timewindow_end, :,:]
         mwind_lr_obs  = mwind_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        wind_lr_obs_u = wind_lr_gt_u[:, timewindow_start : timewindow_end, :,:]
-        wind_lr_obs_v = wind_lr_gt_v[:, timewindow_start : timewindow_end, :,:]
         theta_lr_obs  = theta_lr_obs[:, timewindow_start : timewindow_end, :,:]
         mwind_an_obs  = mwind_an_obs[:, timewindow_start : timewindow_end, :,:]
         theta_an_obs  = theta_an_obs[:, timewindow_start : timewindow_end, :,:]
@@ -793,8 +815,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             'theta_lr_gt'   : theta_lr_gt,
             'mwind_hr_gt'   : mwind_hr_gt,
             'theta_hr_gt'   : theta_hr_gt,
-            'wind_lr_obs_u' : wind_lr_obs_u,
-            'wind_lr_obs_v' : wind_lr_obs_v,
             'mwind_lr_obs'  : mwind_lr_obs,
             'theta_lr_obs'  : theta_lr_obs,
             'mwind_an_obs'  : mwind_an_obs,
@@ -876,11 +896,13 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_sinth_lr = self.get_baseline(data_sinth_lr_obs.mul(mask_lr), apply_tanh = True)
                 
                 reco_mwind_an = reco_mwind[:,48:,:,:]
-                reco_costh_hr = reco_costh[:,48:,:,:]
-                reco_sinth_hr = reco_sinth[:,48:,:,:]
+                reco_costh_an = reco_costh[:,48:,:,:]
+                reco_sinth_an = reco_sinth[:,48:,:,:]
                 
                 # reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
-                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
+                reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
+                reco_theta_hr = reco_theta_lr + reco_theta_an * self.hparams.anomaly_coeff
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an * self.hparams.anomaly_coeff
                 
             elif self.hparams.inversion == 'gs':
@@ -953,17 +975,14 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
         loss += loss_angle
         
-        loss_cos = torch.mean( 1 - torch.cos( data_theta_hr_gt - reco_theta_hr ) )
-        loss += loss_cos
-        
         # Reconstruction on components
-        # data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
-        # data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
-        # reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
-        # reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
-        # loss_u = self.loss_fn((data_wind_u - reco_wind_u))
-        # loss_v = self.loss_fn((data_wind_v - reco_wind_v))
-        # loss += ( loss_u + loss_v )
+        data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
+        data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
+        reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
+        reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
+        loss_u = self.loss_fn((data_wind_u - reco_wind_u))
+        loss_v = self.loss_fn((data_wind_v - reco_wind_v))
+        loss += ( loss_u + loss_v )
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))

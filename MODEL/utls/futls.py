@@ -48,15 +48,7 @@ def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_
     
     # High-reso dx1 : get according to spatial sampling regime.
     # This gives time series of local observations in specified points
-    # ONLY IF THERE IS NO TRAINABLE OBS MODEL! 
-    # Because if there is, the time series of in-situ observations, 
-    # are isolated thanks to the buoys positions
-    # High-reso dx2 : all zeroes
-    if not mm_obsmodel:
-        mask_hr_dx1 = get_mask_HR_observation_points(shape_data, hr_obs_points, buoys_positions)
-    else:
-        mask_hr_dx1 = torch.zeros(shape_data)
-    #end
+    mask_hr_dx1 = get_mask_HR_observation_points(shape_data, hr_obs_points, buoys_positions)
     mask_hr_dx2 = torch.zeros(shape_data)
     
     mask_lr = get_resolution_mask(lr_sampling_freq, mask_lr, mask_land, 'lr')
