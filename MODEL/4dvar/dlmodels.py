@@ -450,7 +450,7 @@ class ModelObs_MM_mod(ModelObs_MM):
         
         # || h_situ(x) - g_situ(y_situ) ||²
         y_spatial = y_obs[:,:24] + y_obs[:,24:48]
-        y_situ = y_spatial[:,24:48][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        y_situ = y_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
         x_spatial = x[:,:24] + x[:,24:48]
         
         feat_state_situ = self.extract_feat_state_situ(x_spatial)
@@ -541,7 +541,9 @@ class ModelObs_MM2d_mod(ModelObs_MM2d):
         
         # || h(x) - g(y) ||²
         x_spatial = x[:,:24] + x[:,24:48]
-        feat_data = self.extract_feat_data(y_obs[:,24:48].mul(mask[:,24:48]))
+        y_spatial = y_obs[:,:24] + y_obs[:,24:48]
+        y_spatial = y_spatial.mul(mask[:,24:48])
+        feat_data = self.extract_feat_data(y_spatial)
         feat_state = self.extract_feat_state(x_spatial)
         
         dy_spatial = (feat_state - feat_data)
@@ -609,10 +611,11 @@ class ModelObs_MM1d_mod(ModelObs_MM1d):
         
         dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
         
-        y_situ = y_obs[:,24:48][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        x_hr_spatial = x[:,:24] + x[1:,24:48]
+        y_spatial = y_obs[:,:24] + y_obs[:,24:48]
+        y_situ = y_spatial[:,24:48][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_spatial = x[:,:24] + x[:,24:48]
         
-        feat_state = self.extract_feat_state(x_hr_spatial)
+        feat_state = self.extract_feat_state(x_spatial)
         feat_data = self.extract_feat_data(y_situ)
         
         dy_situ = (feat_state - feat_data)
