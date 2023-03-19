@@ -343,23 +343,12 @@ class UNet1(nn.Module):
 ##### 4DVARNET OBSERVATION MODELS #############################################
 ###############################################################################
 
-class ModelObs_base(nn.Module):
-    def __init__(self, shape_data, dim_obs):
-        super(ModelObs_base, self).__init__()
-        
-        self.shape_data = shape_data
-        self.dim_obs    = dim_obs
-    #end
-#end
-
 
 class ModelObs_SM(nn.Module):
-    ''' Observation model '''
     
     def __init__(self, shape_data, wind_modulus, dim_obs):
         super(ModelObs_SM, self).__init__()
         
-        # NOTE : chennels == time series length
         self.shape_data = shape_data
         self.dim_obs = dim_obs
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
@@ -375,19 +364,16 @@ class ModelObs_SM(nn.Module):
 
 
 class ModelObs_MM(nn.Module):
-    def __init__(self, shape_data, buoys_coords, wind_modulus, dim_obs):
+    def __init__(self, shape_data, buoys_coords, dim_obs):
         super(ModelObs_MM, self).__init__()
         
-        self.dim_obs    = dim_obs
         self.shape_data = shape_data
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
         self.buoys_coords = buoys_coords
-        self.wind_modulus = wind_modulus
-        timesteps       = shape_data[1]
-        in_channels     = timesteps
+        in_channels = shape_data[1]
         
         # H situ state: same structure. The state is a 2D tensor either way
-        self.net_state_Hhr = nn.Sequential(
+        self.net_state_spatial = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
@@ -397,7 +383,7 @@ class ModelObs_MM(nn.Module):
             nn.Linear(25,11)
         )
         
-        self.net_state_Hsitu = nn.Sequential(
+        self.net_state_situ = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
@@ -408,13 +394,13 @@ class ModelObs_MM(nn.Module):
         )
         
         # H situ obs: treating time series (local) so it is Conv1d
-        self.net_data_Hsitu = nn.Sequential(
+        self.net_data_situ = nn.Sequential(
             nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1)
         )
         
         # H hr obs: take the (rare) 2D fields so shares the same structure as for Hmm2d
-        self.net_data_Hhr = nn.Sequential(
+        self.net_data_spatial = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
@@ -426,100 +412,81 @@ class ModelObs_MM(nn.Module):
         )
     #end
     
-    def extract_feat_state_Hhr(self, state):
+    def extract_feat_state_spatial(self, state):
         
-        feat_state = self.net_state_Hhr(state)
+        feat_state = self.net_state_spatial(state)
         return feat_state
     #end
     
-    def extract_feat_state_Hsitu(self, state):
+    def extract_feat_state_situ(self, state):
         
-        feat_state = self.net_state_Hsitu(state)
+        feat_state = self.net_state_situ(state)
         return feat_state
     #end
     
-    def extract_feat_data_Hhr(self, data):
+    def extract_feat_data_spatial(self, data):
         
-        feat_data = self.net_data_Hhr(data)
+        feat_data = self.net_data_spatial(data)
         return feat_data
     #end
     
-    def extract_feat_data_Hsitu(self, data):
+    def extract_feat_data_situ(self, data):
         
-        feat_data = self.net_data_Hsitu(data)
+        feat_data = self.net_data_situ(data)
         return feat_data
+    #end
+#end
+
+class ModelObs_MM_mod(ModelObs_MM):
+    def __init__(self, shape_data, buoys_coords, dim_obs):
+        super(ModelObs_MM_mod, self).__init__(shape_data, buoys_coords, dim_obs)
+        
+        self.dim_obs = dim_obs
     #end
     
     def forward(self, x, y_obs, mask):
         
-        if self.wind_modulus:
-            # || x - y ||²
-            dy_complete = (x[0] - y_obs[0]).mul(mask[0])
-            
-            # || h_situ(x) - g_situ(y_situ) ||²
-            y_situ = y_obs[1][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-            x_situ = x[0] + x[1]
-            
-            feat_state_situ = self.extract_feat_state_Hsitu(x_situ)
-            feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
-            dy_situ         = (feat_state_situ - feat_data_situ)
-            
-            # || g_hr(x) - h_hr(y_hr) ||²
-            y_spatial = y_obs[1].mul(mask[1])
-            feat_state_spatial = self.extract_feat_state_Hhr(x[1])
-            feat_data_spatial  = self.extract_feat_data_Hhr(y_spatial)
-            dy_spatial         = (feat_state_spatial - feat_data_spatial)
-            
-            return [dy_complete, dy_situ, dy_spatial]
-            
-        else:
-            
-            data_dim = self.shape_data[-2:]
-            
-            # || x - y ||² (two components, low-resolution)            
-            dy_lr_u = (x[0][:,:,:, :data_dim[1]] - y_obs[0][:,:,:, :data_dim[1]]).mul(mask[0])
-            dy_lr_v = (x[0][:,:,:, -data_dim[1]:] - y_obs[0][:,:,:, -data_dim[1]:]).mul(mask[0])
-            
-            # || g(x) - h(y) ||²
-            
-            ## Spatial
-            ## Here we need the wind modulus of y and x
-            ## x (high-reso) = x (low-reso) + anomaly du
-            mask_hr = mask[1]
-            
-            x_hr_u = x[0][:,:,:, :data_dim[1]] + x[1][:,:,:, :data_dim[1]]
-            x_hr_v = x[0][:,:,:, -data_dim[1]:] + x[1][:,:,:, -data_dim[1]:]
-            y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
-            y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
-            
-            x_hr_spatial = torch.autograd.Variable((x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt())
-            y_hr_spatial = torch.autograd.Variable((y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr))
-            
-            feat_state_spatial = self.extract_feat_state_Hhr(x_hr_spatial)
-            feat_data_spatial  = self.extract_feat_data_Hhr(y_hr_spatial)
-            dy_hr_spatial      = (feat_state_spatial - feat_data_spatial)
-            
-            ## Situ
-            ## Here we isolate the in-situ time series from the hr fields
-            y_situ = y_hr_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-            feat_state_situ = self.extract_feat_state_Hsitu(x_hr_spatial)
-            feat_data_situ  = self.extract_feat_data_Hsitu(y_situ)
-            dy_hr_situ      = (feat_state_situ - feat_data_situ)
-            
-            return [dy_lr_u, dy_lr_v, dy_hr_spatial, dy_hr_situ]
-        #end
+        # || x - y ||²
+        dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
+        
+        # || h_situ(x) - g_situ(y_situ) ||²
+        y_situ = y_obs[:,24:48][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_situ = x[:,:24] + x[:,24:48]
+        
+        feat_state_situ = self.extract_feat_state_situ(x_situ)
+        feat_data_situ  = self.extract_feat_data_situ(y_situ)
+        dy_situ         = (feat_state_situ - feat_data_situ)
+        
+        # || g_hr(x) - h_hr(y_hr) ||²
+        y_spatial = y_obs[:,24:48].mul(mask[:,24:48])
+        feat_state_spatial = self.extract_feat_state_spatial(x[1])
+        feat_data_spatial  = self.extract_feat_data_spatial(y_spatial)
+        dy_spatial         = (feat_state_spatial - feat_data_spatial)
+        
+        return [dy_complete, dy_situ, dy_spatial]
+    #end
+#end
+
+class ModelObs_MM_uv(ModelObs_MM):
+    def __init__(self, shape_data, buoys_positions, dim_obs):
+        super(ModelObs_MM_uv, self).__init__(shape_data, buoys_positions, dim_obs)
+        
+        self.net_state_angle = None
+        self.net_data_angle  = None
+    #end
+    
+    def forward(self, x, y_obs, mask):
+        pass
     #end
 #end
 
 
 class ModelObs_MM2d(nn.Module):
-    def __init__(self, shape_data, wind_modulus, dim_obs):
+    def __init__(self, shape_data, dim_obs):
         super(ModelObs_MM2d, self).__init__()
         
-        self.dim_obs = dim_obs
         self.shape_data = shape_data
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
-        self.wind_modulus = wind_modulus
         timesteps = shape_data[1]
         
         self.net_state = nn.Sequential(
@@ -529,8 +496,6 @@ class ModelObs_MM2d(nn.Module):
             nn.Conv2d(64, 128, kernel_size = (5,5)),
             nn.MaxPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            # nn.Conv2d(128, 64, kernel_size = (3,3)),
-            # Squeeze(-1)
         )
         
         self.net_data = nn.Sequential(
@@ -540,8 +505,6 @@ class ModelObs_MM2d(nn.Module):
             nn.Conv2d(64, 128, kernel_size = (5,5)),
             nn.MaxPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            # nn.Conv2d(128, 64, kernel_size = (3,3)),
-            # Squeeze(-1)
         )
     #end
     
@@ -556,66 +519,50 @@ class ModelObs_MM2d(nn.Module):
         feat_data = self.net_data(data)
         return feat_data
     #end
+#end
+
+class ModelObs_MM2d_mod(ModelObs_MM2d):
+    def __init__(self, shape_data, dim_obs):
+        super(ModelObs_MM2d_mod, self).__init__(shape_data, dim_obs)
+        
+        self.dim_obs = dim_obs
+    #end
     
     def forward(self, x, y_obs, mask):
         
-        if self.wind_modulus:
-            # || x - y ||²
-            dy_complete = (x[0] - y_obs[0]).mul(mask[0])
-            
-            # || h(x) - g(y) ||²
-            x_spatial = x[0] + x[1]
-            feat_data = self.extract_feat_data(y_obs[1].mul(mask[1]))
-            feat_state = self.extract_feat_state(x_spatial)
-            
-            dy_spatial = (feat_state - feat_data)
-            
-            return [dy_complete, dy_spatial]
+        # || x - y ||²
+        dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
         
-        else:
-            
-            data_dim = self.shape_data[-2:]
-            
-            # || x - y ||² (two components, low-resolution)           
-            dy_lr_u = (x[0][:,:,:, :data_dim[1]] - y_obs[0][:,:,:, :data_dim[1]]).mul(mask[0])
-            dy_lr_v = (x[0][:,:,:, -data_dim[1]:] - y_obs[0][:,:,:, -data_dim[1]:]).mul(mask[0])
-            
-            # || g(x) - h(y) ||²
-            
-            ## Spatial
-            ## Here we need the wind modulus of y and x
-            ## x (high-reso) = x (low-reso) + anomaly du
-            mask_hr = mask[1]
-            
-            x_hr_u = x[0][:,:,:, :data_dim[1]] + x[1][:,:,:, :data_dim[1]]
-            x_hr_v = x[0][:,:,:, -data_dim[1]:] + x[1][:,:,:, -data_dim[1]:]
-            y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
-            y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
-            
-            x_hr_spatial = torch.autograd.Variable((x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt())
-            y_hr_spatial = torch.autograd.Variable((y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr))
-            
-            feat_state_spatial = self.extract_feat_state(x_hr_spatial)
-            feat_data_spatial  = self.extract_feat_data(y_hr_spatial)
-            dy_hr_spatial      = (feat_state_spatial - feat_data_spatial)
-            
-            return [dy_lr_u, dy_lr_v, dy_hr_spatial]
-        #end
+        # || h(x) - g(y) ||²
+        x_spatial = x[:,:24] + x[:,24:48]
+        feat_data = self.extract_feat_data(y_obs[:,24:48].mul(mask[:,24:48]))
+        feat_state = self.extract_feat_state(x_spatial)
+        
+        dy_spatial = (feat_state - feat_data)
+        
+        return [dy_complete, dy_spatial]
     #end
 #end
 
+class ModelObs_MM2d_uv(ModelObs_MM2d):
+    def __init__(self, shape_data, dim_obs):
+        super(ModelObs_MM2d_uv, self).__init__(shape_data, dim_obs)
+    #end
+    
+    def forward(self, x, y_obs, mask):
+        pass
+    #end
+#end
 
 class ModelObs_MM1d(nn.Module):
-    def __init__(self, shape_data, buoys_coords, wind_modulus, dim_obs):
+    def __init__(self, shape_data, buoys_coords, dim_obs):
         super(ModelObs_MM1d, self).__init__()
         
         self.dim_obs = dim_obs
         self.shape_data = shape_data
         self.buoys_coords = buoys_coords
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
-        self.wind_modulus = wind_modulus
-        timesteps = shape_data[1]
-        in_channels = timesteps
+        in_channels = shape_data[1]
         
         self.net_state = torch.nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
@@ -640,64 +587,38 @@ class ModelObs_MM1d(nn.Module):
     def extract_feat_data(self, data):
         return self.net_data(data)
     #end
+#end
+
+class ModelObs_MM1d_mod(ModelObs_MM1d):
+    def __init__(self, shape_data, buoys_coords, dim_obs):
+        super(ModelObs_MM1d_mod, self).__init__(shape_data, buoys_coords, dim_obs)
+        
+        self.dim_obs = dim_obs
+    #end
     
     def forward(self, x, y_obs, mask):
         
-        if self.wind_modulus:
-            dy_complete = (x[0] - y_obs[0]).mul(mask[0])
-            
-            y_situ = y_obs[1][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-            x_hr_spatial = x[0] + x[1]
-            
-            feat_state = self.extract_feat_state(x_hr_spatial)
-            feat_data = self.extract_feat_data(y_situ)
-            
-            dy_situ = (feat_state - feat_data)
-            
-            return [dy_complete, dy_situ]
+        dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
         
-        else:
-            
-            data_dim = self.shape_data[-2:]
-            
-            # || x - y ||² (two components, low-resolution)
-            
-            mask_lr = mask[0]
-            
-            y_lr_u = y_obs[0][:,:,:, :data_dim[1]]
-            y_lr_v = y_obs[0][:,:,:, -data_dim[1]:]
-            x_lr_u = x[0][:,:,:, :data_dim[1]]
-            x_lr_v = x[0][:,:,:, -data_dim[1]:]
-            
-            dy_lr_u = (x_lr_u - y_lr_u).mul(mask_lr)
-            dy_lr_v = (x_lr_v - y_lr_v).mul(mask_lr)
-            
-            # || g(x) - h(y) ||²
-            
-            ## Spatial
-            ## Here we need the wind modulus of y and x
-            ## x (high-reso) = x (low-reso) + anomaly du
-            mask_hr = mask[1]
-            
-            x_hr_u = x_lr_u + x[1][:,:,:, :data_dim[1]]
-            x_hr_v = x_lr_v + x[1][:,:,:, -data_dim[1]:]
-            y_hr_u = y_obs[1][:,:,:, :data_dim[1]]
-            y_hr_v = y_obs[1][:,:,:, -data_dim[1]:]
-            
-            x_hr_spatial = torch.autograd.Variable((x_hr_u.pow(2) + x_hr_v.pow(2)).sqrt())
-            y_hr_spatial = torch.autograd.Variable((y_hr_u.pow(2) + y_hr_v.pow(2)).sqrt().mul(mask_hr))
-            
-            # x[1] = torch.cat([x_hr_u, x_hr_v], dim = -1)
-            
-            ## Situ
-            ## Here we isolate the in-situ time series from the hr fields
-            y_situ = y_hr_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-            feat_state_situ = self.extract_feat_state(x_hr_spatial)
-            feat_data_situ  = self.extract_feat_data(y_situ)
-            dy_hr_situ      = (feat_state_situ - feat_data_situ)
-            
-            return [dy_lr_u, dy_lr_v, dy_hr_situ]
-        #end
+        y_situ = y_obs[:,24:48][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_hr_spatial = x[:,:24] + x[1:,24:48]
+        
+        feat_state = self.extract_feat_state(x_hr_spatial)
+        feat_data = self.extract_feat_data(y_situ)
+        
+        dy_situ = (feat_state - feat_data)
+        
+        return [dy_complete, dy_situ]
+    #end
+#end
+
+class ModelObs_MM1d_uv(ModelObs_MM1d):
+    def __init__(self, shape_data, buoys_coords, dim_obs):
+        super(ModelObs_MM1d_uv, self).__init__(shape_data, buoys_coords, dim_obs)
+    #end
+    
+    def forward(self, x, y_obs, mask):
+        pass
     #end
 #end
 

@@ -8,7 +8,7 @@ import numpy as np
 import datetime
 
 from metrics import NormLoss
-from dlmodels import ModelObs_MM, ModelObs_MM1d, ModelObs_MM2d, ModelObs_SM
+import dlmodels as dlm
 import solver as NN_4DVar
 import futls as fs
 
@@ -356,19 +356,19 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, trainable obs term of 1d features
-            observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 3)    
+            observation_model = dlm.ModelObs_MM_mod(shape_data, self.buoy_position, dim_obs = 3)    
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, trainable obs term of 2D features
-            observation_model = ModelObs_MM2d(shape_data, wind_modulus = True, dim_obs = 2)
+            observation_model = dlm.ModelObs_MM2d_mod(shape_data, dim_obs = 2)
             
         elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
             # Case only time series, trainable obs term for in-situ data
-            observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = True, dim_obs = 2)
+            observation_model = dlm.ModelObs_MM1d_mod(shape_data, self.buoy_position, dim_obs = 2)
         
         else:
             # Case default. No trainable obs term at all
-            observation_model = ModelObs_SM(shape_data, wind_modulus = True, dim_obs = 1)
+            observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
         #end
         
         # Instantiation of the gradient solver
@@ -621,19 +621,19 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, trainable obs term of 1d features
-            observation_model = ModelObs_MM(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 4)
+            observation_model = dlm.ModelObs_MM_uv(shape_data, self.buoy_position, dim_obs = 4)
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, trainable obs term of 2D features
-            observation_model = ModelObs_MM2d(shape_data, wind_modulus = False, dim_obs = 3)
+            observation_model = dlm.ModelObs_MM2d_uv(shape_data, dim_obs = 3)
             
         elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
             # Case only time series, trainable obs term for in-situ data
-            observation_model = ModelObs_MM1d(shape_data, self.buoy_position, wind_modulus = False, dim_obs = 3)
+            observation_model = dlm.ModelObs_MM1d_uv(shape_data, self.buoy_position, dim_obs = 3)
             
         else:
             # Case default. No trainable obs term at all
-            observation_model = ModelObs_SM(shape_data, wind_modulus = False, dim_obs = 1)
+            observation_model = dlm.ModelObs_SM_uv(shape_data, dim_obs = 1)
         #end
         
         # Instantiation of the gradient solver
@@ -899,7 +899,6 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_costh_an = reco_costh[:,48:,:,:]
                 reco_sinth_an = reco_sinth[:,48:,:,:]
                 
-                # reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
                 reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
                 reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
                 reco_theta_hr = reco_theta_lr + reco_theta_an * self.hparams.anomaly_coeff
