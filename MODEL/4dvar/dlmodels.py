@@ -449,16 +449,17 @@ class ModelObs_MM_mod(ModelObs_MM):
         dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
         
         # || h_situ(x) - g_situ(y_situ) ||²
-        y_situ = y_obs[:,24:48][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        x_situ = x[:,:24] + x[:,24:48]
+        y_spatial = y_obs[:,:24] + y_obs[:,24:48]
+        y_situ = y_spatial[:,24:48][:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        x_spatial = x[:,:24] + x[:,24:48]
         
-        feat_state_situ = self.extract_feat_state_situ(x_situ)
+        feat_state_situ = self.extract_feat_state_situ(x_spatial)
         feat_data_situ  = self.extract_feat_data_situ(y_situ)
         dy_situ         = (feat_state_situ - feat_data_situ)
         
         # || g_hr(x) - h_hr(y_hr) ||²
-        y_spatial = y_obs[:,24:48].mul(mask[:,24:48])
-        feat_state_spatial = self.extract_feat_state_spatial(x[1])
+        y_spatial = y_spatial.mul(mask[:,24:48])
+        feat_state_spatial = self.extract_feat_state_spatial(x_spatial)
         feat_data_spatial  = self.extract_feat_data_spatial(y_spatial)
         dy_spatial         = (feat_state_spatial - feat_data_spatial)
         
