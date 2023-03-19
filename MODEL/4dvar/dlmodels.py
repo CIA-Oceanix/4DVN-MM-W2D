@@ -346,13 +346,12 @@ class UNet1(nn.Module):
 
 class ModelObs_SM(nn.Module):
     
-    def __init__(self, shape_data, wind_modulus, dim_obs):
+    def __init__(self, shape_data, dim_obs):
         super(ModelObs_SM, self).__init__()
         
         self.shape_data = shape_data
         self.dim_obs = dim_obs
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
-        self.wind_modulus = wind_modulus
     #end
     
     def forward(self, x, y_obs, mask):
@@ -468,6 +467,12 @@ class ModelObs_MM_mod(ModelObs_MM):
 #end
 
 class ModelObs_MM_uv(ModelObs_MM):
+    '''
+    Variational cost:
+        U(...) = lr_wind + lr_costh + lr_sinth + 
+                 hr_wind_spatial + hr_wind_situ + 
+                 hr_theta_spatial
+    '''
     def __init__(self, shape_data, buoys_positions, dim_obs):
         super(ModelObs_MM_uv, self).__init__(shape_data, buoys_positions, dim_obs)
         
@@ -547,6 +552,9 @@ class ModelObs_MM2d_mod(ModelObs_MM2d):
 class ModelObs_MM2d_uv(ModelObs_MM2d):
     def __init__(self, shape_data, dim_obs):
         super(ModelObs_MM2d_uv, self).__init__(shape_data, dim_obs)
+        
+        self.net_state_angle = None
+        self.net_data_angle = None
     #end
     
     def forward(self, x, y_obs, mask):
@@ -613,6 +621,10 @@ class ModelObs_MM1d_mod(ModelObs_MM1d):
 #end
 
 class ModelObs_MM1d_uv(ModelObs_MM1d):
+    '''
+    Note: no angle term here. 
+    Only in situ time series with no angle
+    '''
     def __init__(self, shape_data, buoys_coords, dim_obs):
         super(ModelObs_MM1d_uv, self).__init__(shape_data, buoys_coords, dim_obs)
     #end
