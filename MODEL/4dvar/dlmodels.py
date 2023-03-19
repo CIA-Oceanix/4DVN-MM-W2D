@@ -477,7 +477,7 @@ class ModelObs_MM_uv(ModelObs_MM):
         super(ModelObs_MM_uv, self).__init__(shape_data, buoys_positions, dim_obs)
         
         self.net_state_angle = None
-        self.net_data_angle  = None
+        self.net_data_angle = None
     #end
     
     def forward(self, x, y_obs, mask):
