@@ -633,7 +633,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             
         else:
             # Case default. No trainable obs term at all
-            observation_model = dlm.ModelObs_SM_uv(shape_data, dim_obs = 1)
+            observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
         #end
         
         # Instantiation of the gradient solver

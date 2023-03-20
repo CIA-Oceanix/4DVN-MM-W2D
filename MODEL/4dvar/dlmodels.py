@@ -448,9 +448,11 @@ class ModelObs_MM_mod(ModelObs_MM):
         dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
         
         # || h_situ(x) - g_situ(y_situ) ||²
-        y_spatial = y_obs[:,:24] + y_obs[:,24:48]
+        # y_spatial = y_obs[:,:24] + y_obs[:,24:48]
+        y_spatial = y_obs[:,24:48]
         y_situ = y_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        x_spatial = x[:,:24] + x[:,24:48]
+        # x_spatial = x[:,:24] + x[:,24:48]
+        x_spatial = x[:,24:48]
         
         feat_state_situ = self.extract_feat_state_situ(x_spatial)
         feat_data_situ  = self.extract_feat_data_situ(y_situ)
@@ -466,7 +468,7 @@ class ModelObs_MM_mod(ModelObs_MM):
     #end
 #end
 
-class ModelObs_MM_uv(ModelObs_MM):
+class ModelObs_MM_uv(ModelObs_MM_mod):
     '''
     Variational cost:
         U(...) = lr_wind + lr_costh + lr_sinth + 
@@ -481,7 +483,7 @@ class ModelObs_MM_uv(ModelObs_MM):
     #end
     
     def forward(self, x, y_obs, mask):
-        pass
+        dy_modulus = ModelObs_MM_mod.forward(self, x[:,:72], y_obs[:,:72], mask[:,:72])
     #end
 #end
 
