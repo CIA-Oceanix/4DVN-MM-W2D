@@ -361,7 +361,6 @@ class ModelObs_SM(nn.Module):
     #end
 #end
 
-
 class ModelObs_MM(nn.Module):
     def __init__(self, shape_data, buoys_coords, dim_obs):
         super(ModelObs_MM, self).__init__()
@@ -485,7 +484,6 @@ class ModelObs_MM_uv(ModelObs_MM):
         pass
     #end
 #end
-
 
 class ModelObs_MM2d(nn.Module):
     def __init__(self, shape_data, dim_obs):
@@ -612,7 +610,7 @@ class ModelObs_MM1d_mod(ModelObs_MM1d):
         dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
         
         y_spatial = y_obs[:,:24] + y_obs[:,24:48]
-        y_situ = y_spatial[:,24:48][:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
+        y_situ = y_spatial[:, :, self.buoys_coords[:,0], self.buoys_coords[:,1]]
         x_spatial = x[:,:24] + x[:,24:48]
         
         feat_state = self.extract_feat_state(x_spatial)
