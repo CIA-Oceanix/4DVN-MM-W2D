@@ -372,14 +372,22 @@ class ModelObs_MM(nn.Module):
         in_channels = shape_data[1]
         
         # H situ state: same structure. The state is a 2D tensor either way
+        # self.net_state_spatial = nn.Sequential(
+        #     nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+        #     nn.AvgPool2d((7,7)),
+        #     nn.LeakyReLU(0.1),
+        #     nn.Conv2d(64, 64, kernel_size = (3,3)),
+        #     nn.AvgPool2d((5,5)),
+        #     FlattenSpatialDim(),
+        #     nn.Linear(25,11)
+        # )
         self.net_state_spatial = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(64, 64, kernel_size = (3,3)),
-            nn.AvgPool2d((5,5)),
-            FlattenSpatialDim(),
-            nn.Linear(25,11)
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
+            nn.LeakyReLU(0.1),
         )
         
         self.net_state_situ = nn.Sequential(
@@ -399,15 +407,23 @@ class ModelObs_MM(nn.Module):
         )
         
         # H hr obs: take the (rare) 2D fields so shares the same structure as for Hmm2d
-        self.net_data_spatial = nn.Sequential(
+        # self.net_data_spatial = nn.Sequential(
+        #     nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+        #     nn.AvgPool2d((7,7)),
+        #     nn.LeakyReLU(0.1),
+        #     nn.Conv2d(64, 64, kernel_size = (3,3)),
+        #     nn.MaxPool2d((5,5)),
+        #     nn.LeakyReLU(0.1),
+        #     FlattenSpatialDim(),
+        #     nn.Linear(25,11)
+        # )
+        self.net_state = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(64, 64, kernel_size = (3,3)),
-            nn.MaxPool2d((5,5)),
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
             nn.LeakyReLU(0.1),
-            FlattenSpatialDim(),
-            nn.Linear(25,11)
         )
     #end
     
