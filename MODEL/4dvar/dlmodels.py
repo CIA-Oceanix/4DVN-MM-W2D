@@ -368,6 +368,7 @@ class ModelObs_MM(nn.Module):
         self.shape_data = shape_data
         self.dim_obs_channel = np.array([shape_data[1], dim_obs])
         self.buoys_coords = buoys_coords
+        self.dim_obs = dim_obs
         in_channels = shape_data[1]
         
         # H situ state: same structure. The state is a 2D tensor either way
