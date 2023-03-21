@@ -356,7 +356,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, trainable obs term of 1d features
-            observation_model = dlm.ModelObs_MM(shape_data, self.buoy_position, dim_obs = 3)    
+            observation_model = dlm.ModelObs_MM_mod(shape_data, self.buoy_position, dim_obs = 3)    
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, trainable obs term of 2D features
@@ -970,10 +970,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
         loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_sinth_lr + loss_sinth_hr )
-        
-        loss_angle = self.loss_fn((reco_theta_hr - data_theta_hr_gt))
-        loss += loss_angle
-        
+                
         # Reconstruction on components
         data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
         data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
