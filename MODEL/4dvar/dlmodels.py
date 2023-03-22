@@ -483,8 +483,10 @@ class ModelObs_MM_uv(ModelObs_MM_mod):
         # Inclusion of angle data/state
         try:
             x_theta_spatial = torch.atan2(x[:,144:168], x[:,72:96]) + torch.atan2(x[:,168:192], x[:,96:120])
+            print('In try : x theta spatial mean : ', x_theta_spatial.mean())
         except:
             x_theta_spatial = torch.atan2(x[:,144:168], x[:,72:96])
+            print('In except : x theta spatial mean : ', x_theta_spatial.mean())
         #end
         
         y_mwind_spatial = (y_obs[:,:24] + y_obs[:,24:48]).mul(mask[:,24:48])
