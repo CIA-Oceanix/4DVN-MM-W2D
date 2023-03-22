@@ -484,6 +484,7 @@ class ModelObs_MM_uv(ModelObs_MM_mod):
         x_theta_spatial = torch.atan2(x[:,144:216], x[:,72:96]) + torch.atan2(x[:,168:192], x[:,96:120])
         y_mwind_spatial = (y_obs[:,:24] + y_obs[:,24:48]).mul(mask[:,24:48])
         
+        # feature maps
         feat_theta = self.net_state_angle(x_theta_spatial)
         feat_mwind = self.net_data_wind(y_mwind_spatial)
         
