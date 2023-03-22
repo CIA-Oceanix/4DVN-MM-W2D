@@ -15,7 +15,6 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-# from pytorch_lightning.loggers import CSVLogger
 
 from pathmng import PathManager
 from litmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents
@@ -24,8 +23,6 @@ from dutls import W2DSimuDataModule
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
-    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    # torch.set_default_dtype('torch.cuda.DoubleTensor')
     print('Program runs using device : {}\n'.format(DEVICE))
 else:
     DEVICE = torch.device('cpu')

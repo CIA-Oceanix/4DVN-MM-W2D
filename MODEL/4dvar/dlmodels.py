@@ -371,16 +371,7 @@ class ModelObs_MM(nn.Module):
         self.dim_obs = dim_obs
         in_channels = shape_data[1]
         
-        # H situ state: same structure. The state is a 2D tensor either way
-        # self.net_state_spatial = nn.Sequential(
-        #     nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
-        #     nn.AvgPool2d((7,7)),
-        #     nn.LeakyReLU(0.1),
-        #     nn.Conv2d(64, 64, kernel_size = (3,3)),
-        #     nn.AvgPool2d((5,5)),
-        #     FlattenSpatialDim(),
-        #     nn.Linear(25,11)
-        # )
+        # Conv2d net to produce a lower-dim feature map for latent state
         self.net_state_spatial = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
@@ -390,6 +381,19 @@ class ModelObs_MM(nn.Module):
             nn.LeakyReLU(0.1),
         )
         
+        # Same for observations
+        self.net_data_spatial = nn.Sequential(
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+        )
+        
+        # Since latent state is a spatial field whatsoever, this model
+        # produces a feature map and transforms it in a multi-variate time series
+        # to compare with the feature space of the in-situ time series
         self.net_state_situ = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
             nn.AvgPool2d((7,7)),
@@ -404,26 +408,6 @@ class ModelObs_MM(nn.Module):
         self.net_data_situ = nn.Sequential(
             nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1)
-        )
-        
-        # H hr obs: take the (rare) 2D fields so shares the same structure as for Hmm2d
-        # self.net_data_spatial = nn.Sequential(
-        #     nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
-        #     nn.AvgPool2d((7,7)),
-        #     nn.LeakyReLU(0.1),
-        #     nn.Conv2d(64, 64, kernel_size = (3,3)),
-        #     nn.MaxPool2d((5,5)),
-        #     nn.LeakyReLU(0.1),
-        #     FlattenSpatialDim(),
-        #     nn.Linear(25,11)
-        # )
-        self.net_data_spatial = nn.Sequential(
-            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
-            nn.AvgPool2d((7,7)),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(64, 128, kernel_size = (5,5)),
-            nn.MaxPool2d((7,7)),
-            nn.LeakyReLU(0.1),
         )
     #end
     
@@ -450,29 +434,6 @@ class ModelObs_MM(nn.Module):
         feat_data = self.net_data_situ(data)
         return feat_data
     #end
-    
-    # def forward(self, x, y_obs, mask):
-        
-    #     # || x - y ||²
-    #     dy_complete = (x[:,:24] - y_obs[:,:24]).mul(mask[:,:24])
-        
-    #     # || h_situ(x) - g_situ(y_situ) ||²
-    #     x_spatial = x[:,:24] + x[:,24:48]
-    #     y_spatial = y_obs[:,:24] + y_obs[:,24:48]
-    #     y_situ = y_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        
-    #     feat_state_situ = self.extract_feat_state_situ(x_spatial)
-    #     feat_data_situ  = self.extract_feat_data_situ(y_situ)
-    #     dy_situ         = (feat_state_situ - feat_data_situ)
-        
-    #     # || g_hr(x) - h_hr(y_hr) ||²
-    #     y_spatial = y_spatial.mul(mask[:,24:48])
-    #     feat_state_spatial = self.extract_feat_state_spatial(x_spatial)
-    #     feat_data_spatial  = self.extract_feat_data_spatial(y_spatial)
-    #     dy_spatial         = (feat_state_spatial - feat_data_spatial)
-        
-    #     return [dy_complete, dy_situ, dy_spatial]
-    # #end
 #end
 
 class ModelObs_MM_mod(ModelObs_MM):
@@ -516,12 +477,43 @@ class ModelObs_MM_uv(ModelObs_MM_mod):
     def __init__(self, shape_data, buoys_positions, dim_obs):
         super(ModelObs_MM_uv, self).__init__(shape_data, buoys_positions, dim_obs)
         
-        self.net_state_angle = None
-        self.net_data_angle = None
+        self.dim_obs = dim_obs
+        in_channels = self.shape_data[1]
+        
+        self.net_state_angle = nn.Sequential(
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+        )
+        
+        self.net_data_wind = nn.Sequential(
+            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
+            nn.AvgPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(64, 128, kernel_size = (5,5)),
+            nn.MaxPool2d((7,7)),
+            nn.LeakyReLU(0.1),
+        )
     #end
     
     def forward(self, x, y_obs, mask):
+        
+        # Part of wind modulus
         dy_modulus = ModelObs_MM_mod.forward(self, x[:,:72], y_obs[:,:72], mask[:,:72])
+        
+        # Inclusion of angle data/state
+        x_theta_spatial = torch.atan2(x[:,144:216], x[:,72:96]) + torch.atan2(x[:,168:192], x[:,96:120])
+        y_mwind_spatial = (y_obs[:,:24] + y_obs[:,24:48]).mul(mask[:,24:48])
+        
+        feat_theta = self.net_state_angle(x_theta_spatial)
+        feat_mwind = self.net_data_wind(y_mwind_spatial)
+        
+        dy_theta_mwind = (feat_theta - feat_mwind)
+        
+        return [*dy_modulus, dy_theta_mwind]
     #end
 #end
 
