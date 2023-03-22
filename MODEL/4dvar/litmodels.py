@@ -914,11 +914,14 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_mwind_lr = reco_mwind[:,:24,:,:]
                 reco_costh_lr = reco_costh[:,:24,:,:]
                 reco_sinth_lr = reco_sinth[:,:24,:,:]
+                
                 reco_mwind_an = reco_mwind[:,48:,:,:]
-                reco_costh_hr = reco_costh[:,48:,:,:]
-                reco_sinth_hr = reco_sinth[:,48:,:,:]
+                reco_costh_an = reco_costh[:,48:,:,:]
+                reco_sinth_an = reco_sinth[:,48:,:,:]
+                
                 reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
-                reco_theta_hr = torch.atan2(reco_sinth_hr, reco_costh_hr)
+                reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
+                reco_theta_hr = reco_theta_lr + reco_theta_an * self.hparams.anomaly_coeff
                 reco_mwind_hr = reco_mwind_lr + reco_mwind_an * self.hparams.anomaly_coeff
                 
             elif self.hparams.inversion == 'bl':
@@ -933,12 +936,13 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 reco_sinth_lr = self.get_baseline(data_sinth_lr_obs.mul(mask_lr), apply_tanh = True)
                 
                 reco_mwind_an = reco_mwind[:,48:,:,:]
-                reco_costh_hr = reco_costh[:,48:,:,:]
-                reco_sinth_hr = reco_sinth[:,48:,:,:]
+                reco_costh_an = reco_costh[:,48:,:,:]
+                reco_sinth_an = reco_sinth[:,48:,:,:]
                 
                 reco_theta_lr = torch.atan2(reco_sinth_lr, reco_costh_lr)
+                reco_theta_an = torch.atan2(reco_sinth_an, reco_costh_an)
                 reco_mwind_hr = reco_mwind_lr + torch.mul(reco_mwind_an, 0.)
-                reco_theta_hr = reco_theta_lr + torch.mul(reco_costh_hr, 0.)
+                reco_theta_hr = reco_theta_lr + torch.mul(reco_costh_an, 0.)
             #end
         #end
         
