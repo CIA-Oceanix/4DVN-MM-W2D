@@ -410,30 +410,6 @@ class ModelObs_MM(nn.Module):
             nn.LeakyReLU(0.1)
         )
     #end
-    
-    def extract_feat_state_spatial(self, state):
-        
-        feat_state = self.net_state_spatial(state)
-        return feat_state
-    #end
-    
-    def extract_feat_state_situ(self, state):
-        
-        feat_state = self.net_state_situ(state)
-        return feat_state
-    #end
-    
-    def extract_feat_data_spatial(self, data):
-        
-        feat_data = self.net_data_spatial(data)
-        return feat_data
-    #end
-    
-    def extract_feat_data_situ(self, data):
-        
-        feat_data = self.net_data_situ(data)
-        return feat_data
-    #end
 #end
 
 class ModelObs_MM_mod(ModelObs_MM):
