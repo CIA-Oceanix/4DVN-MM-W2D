@@ -967,12 +967,12 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_mwind_hr = self.l2_loss((data_mwind_hr_gt - reco_mwind_hr))
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
-        loss_costh_lr = self.l2_loss((data_costh_lr_gt - reco_costh_lr))
-        loss_costh_hr = self.l2_loss((data_costh_hr_gt - torch.cos(reco_theta_hr))) * self.hparams.weight_angle_hr
+        loss_costh_lr = self.l1_loss((data_costh_lr_gt - reco_costh_lr))
+        loss_costh_hr = self.l1_loss((data_costh_hr_gt - torch.cos(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_costh_lr + loss_costh_hr )
         
-        loss_sinth_lr = self.l2_loss((data_sinth_lr_gt - reco_sinth_lr))
-        loss_sinth_hr = self.l2_loss((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
+        loss_sinth_lr = self.l1_loss((data_sinth_lr_gt - reco_sinth_lr))
+        loss_sinth_hr = self.l1_loss((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_sinth_lr + loss_sinth_hr )
         
         # Reconstruction on components
@@ -980,8 +980,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
         reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
         reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
-        loss_u = self.l2_loss((data_wind_u - reco_wind_u))
-        loss_v = self.l2_loss((data_wind_v - reco_wind_v))
+        loss_u = self.l1_loss((data_wind_u - reco_wind_u))
+        loss_v = self.l1_loss((data_wind_v - reco_wind_v))
         loss += ( loss_u + loss_v )
         
         ## Gradient loss
@@ -995,7 +995,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Regularization term
         if not self.hparams.inversion == 'bl':
             
-            regularization  = self.l2_loss( (outputs - self.model.Phi(outputs)) ) 
+            regularization  = self.l1_loss( (outputs - self.model.Phi(outputs)) ) 
             loss += regularization * self.hparams.reg_coeff
         #end
         
