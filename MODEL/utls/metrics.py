@@ -186,7 +186,7 @@ class _NormLoss(nn.Module):
 class L2_Loss(nn.Module):
     
     def __init__(self, divide_nitems = False):
-        super(NormLoss, self).__init__()
+        super(L2_Loss, self).__init__()
         
         self.divide_nitems = divide_nitems
     #end
