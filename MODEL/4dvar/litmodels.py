@@ -963,8 +963,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Loss
         ## Reconstruction loss
         ## both mod and angle
-        loss_mwind_lr = self.l2_loss((data_mwind_lr_gt - reco_mwind_lr))
-        loss_mwind_hr = self.l2_loss((data_mwind_hr_gt - reco_mwind_hr))
+        loss_mwind_lr = self.l1_loss((data_mwind_lr_gt - reco_mwind_lr))
+        loss_mwind_hr = self.l1_loss((data_mwind_hr_gt - reco_mwind_hr))
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
         loss_costh_lr = self.l1_loss((data_costh_lr_gt - reco_costh_lr))
@@ -980,16 +980,16 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
         reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
         reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
-        loss_u = self.l2_loss((data_wind_u - reco_wind_u))
-        loss_v = self.l2_loss((data_wind_v - reco_wind_v))
+        loss_u = self.l1_loss((data_wind_u - reco_wind_u))
+        loss_v = self.l1_loss((data_wind_v - reco_wind_v))
         loss += ( loss_u + loss_v )
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
         grad_reco_mwind = torch.gradient(reco_mwind_hr,    dim = (3,2))
         
-        loss_grad_x = self.l2_loss((grad_data_mwind[1] - grad_reco_mwind[1]))
-        loss_grad_y = self.l2_loss((grad_data_mwind[0] - grad_reco_mwind[0]))
+        loss_grad_x = self.l1_loss((grad_data_mwind[1] - grad_reco_mwind[1]))
+        loss_grad_y = self.l1_loss((grad_data_mwind[0] - grad_reco_mwind[0]))
         loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
         
         # Regularization term
