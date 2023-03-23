@@ -138,7 +138,7 @@ def peak_signal_to_noise_ratio(target, output):
 
 def mse(target, output, mask = None, divide_variance = True, divide_nitems = True):
     
-    mserror = NormLoss(divide_nitems = divide_nitems)((target - output), mask = mask)
+    mserror = L2_Loss(divide_nitems = divide_nitems)((target - output), mask = mask)
     if divide_variance:
         mserror = mserror / target.var()
     #end
