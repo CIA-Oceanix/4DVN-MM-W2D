@@ -7,14 +7,13 @@ import pytorch_lightning as pl
 import numpy as np
 import datetime
 
-from metrics import NormLoss
+from metrics import L2_Loss, L1_Loss
 import dlmodels as dlm
 import solver as NN_4DVar
 import futls as fs
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
-    # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
 else:
     DEVICE = torch.device('cpu')
 #end
@@ -338,7 +337,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
-        self.loss_fn = NormLoss()
+        self.loss_fn = L2_Loss()
         
         # Case-specific cparams
         self.run = run
@@ -381,8 +380,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
                 self.hparams.dropout,                                         # m_Grad : Dropout
             ),
-            NormLoss(),                                                     # Norm Observation
-            NormLoss(),                                                     # Norm Prior
+            L2_Loss(),                                                      # Norm Observation
+            L2_Loss(),                                                      # Norm Prior
             model_shapedata,                                                # Shape data
             self.hparams.n_solver_iter,                                     # Solver iterations
             alphaObs = alpha_obs,                                           # alpha observations
@@ -603,7 +602,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
-        self.loss_fn = NormLoss()
+        self.l2_loss = L2_Loss()
+        self.l1_loss = L1_Loss()
         
         # Case-specific cparams
         self.run = run
@@ -646,8 +646,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
                 self.hparams.dropout,                                         # m_Grad : Dropout
             ),
-            NormLoss(),                                                     # Norm Observation
-            NormLoss(),                                                     # Norm Prior
+            L2_Loss(),                                                     # Norm Observation
+            L2_Loss(),                                                     # Norm Prior
             model_shapedata,                                                # Shape data
             self.hparams.n_solver_iter,                                     # Solver iterations
             alphaObs = alpha_obs,                                           # alpha observations
@@ -963,39 +963,39 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Loss
         ## Reconstruction loss
         ## both mod and angle
-        loss_mwind_lr = self.loss_fn((data_mwind_lr_gt - reco_mwind_lr))
-        loss_mwind_hr = self.loss_fn((data_mwind_hr_gt - reco_mwind_hr))
+        loss_mwind_lr = self.l2_loss((data_mwind_lr_gt - reco_mwind_lr))
+        loss_mwind_hr = self.l2_loss((data_mwind_hr_gt - reco_mwind_hr))
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
-        loss_costh_lr = self.loss_fn((data_costh_lr_gt - reco_costh_lr))
-        loss_costh_hr = self.loss_fn((data_costh_hr_gt - torch.cos(reco_theta_hr))) * self.hparams.weight_angle_hr
+        loss_costh_lr = self.l2_loss((data_costh_lr_gt - reco_costh_lr))
+        loss_costh_hr = self.l2_loss((data_costh_hr_gt - torch.cos(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_costh_lr + loss_costh_hr )
         
-        loss_sinth_lr = self.loss_fn((data_sinth_lr_gt - reco_sinth_lr))
-        loss_sinth_hr = self.loss_fn((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
+        loss_sinth_lr = self.l2_loss((data_sinth_lr_gt - reco_sinth_lr))
+        loss_sinth_hr = self.l2_loss((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_sinth_lr + loss_sinth_hr )
-                
+        
         # Reconstruction on components
         data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
         data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
         reco_wind_u = reco_mwind_hr * torch.cos(reco_theta_hr)
         reco_wind_v = reco_mwind_hr * torch.sin(reco_theta_hr)
-        loss_u = self.loss_fn((data_wind_u - reco_wind_u))
-        loss_v = self.loss_fn((data_wind_v - reco_wind_v))
+        loss_u = self.l2_loss((data_wind_u - reco_wind_u))
+        loss_v = self.l2_loss((data_wind_v - reco_wind_v))
         loss += ( loss_u + loss_v )
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
         grad_reco_mwind = torch.gradient(reco_mwind_hr,    dim = (3,2))
         
-        loss_grad_x = self.loss_fn((grad_data_mwind[1] - grad_reco_mwind[1]))
-        loss_grad_y = self.loss_fn((grad_data_mwind[0] - grad_reco_mwind[0]))
+        loss_grad_x = self.l2_loss((grad_data_mwind[1] - grad_reco_mwind[1]))
+        loss_grad_y = self.l2_loss((grad_data_mwind[0] - grad_reco_mwind[0]))
         loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
         
         # Regularization term
         if not self.hparams.inversion == 'bl':
             
-            regularization  = self.loss_fn( (outputs - self.model.Phi(outputs)) ) 
+            regularization  = self.l2_loss( (outputs - self.model.Phi(outputs)) ) 
             loss += regularization * self.hparams.reg_coeff
         #end
         

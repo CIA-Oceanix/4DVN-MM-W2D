@@ -10,7 +10,6 @@ from unet import UNet4
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
 else:
     DEVICE = torch.device('cpu')
 #end
@@ -481,6 +480,11 @@ class ModelObs_MM_uv(ModelObs_MM_mod):
         dy_modulus = ModelObs_MM_mod.forward(self, x[:,:72], y_obs[:,:72], mask[:,:72])
         
         # Inclusion of angle data/state
+        ## costh_lr = x[:,72:96]
+        ## senth_lr = x[:,144:168]
+        ## costh_an = x[:,96:120]
+        ## senth_an = x[:,168:192]
+        
         if torch.all(x[:,168:192] == 0) and torch.all(x[:,96:120] == 0):
             x_theta_spatial = torch.atan2(x[:,144:168], x[:,72:96])
         else:

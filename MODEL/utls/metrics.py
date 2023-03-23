@@ -7,7 +7,6 @@ from skimage.metrics import structural_similarity
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
-    # torch.set_default_tensor_type(torch.cuda.DoubleTensor)
 else:
     DEVICE = torch.device('cpu')
 #end
@@ -184,7 +183,7 @@ class _NormLoss(nn.Module):
 #end
 
 
-class NormLoss(nn.Module):
+class L2_Loss(nn.Module):
     
     def __init__(self, divide_nitems = False):
         super(NormLoss, self).__init__()
@@ -233,3 +232,57 @@ class NormLoss(nn.Module):
         return loss
     #end
 #end
+
+class L1_Loss(nn.Module):
+    
+    def __init__(self, epsilon = 1e-5, divide_nitems = False):
+        super(L1_Loss, self).__init__()
+        
+        self.epsilon = torch.Tensor([epsilon])
+        self.divide_nitems = divide_nitems
+    #end
+    
+    def forward(self, item, mask = None):
+        
+        if item.__class__ is not torch.Tensor:
+            item = torch.Tensor(item)
+        #end
+        
+        if item.shape.__len__() <= 3:
+            item = item.unsqueeze(-1)
+        #end
+        
+        if mask is None:
+            mask = torch.ones_like(item)
+        elif mask.__class__ is not torch.Tensor:
+            mask = torch.Tensor(mask)
+        #end
+        
+        argument = torch.sqrt( self.epsilon.pow(2) + item.pow(2) )
+        argument = argument.mul(mask)
+        
+        if self.divide_nitems:
+            
+            if mask.sum() < 1:
+                n_items = 1.
+            else:
+                n_items = mask.sum()
+            #end
+            
+            if n_items < 1:
+                raise ValueError('NO DIVISION BY 0 !!!')
+            #end
+            
+            loss = argument.div(n_items)
+            loss = torch.sum(loss, dim = (2,3))
+            loss = torch.sum(loss, dim = (1,0))
+        else:
+            loss = argument.mean()
+        #end
+                
+        return loss
+    #end
+#end
+
+
+
