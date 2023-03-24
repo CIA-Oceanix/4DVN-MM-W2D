@@ -967,12 +967,12 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_mwind_hr = self.l2_loss((data_mwind_hr_gt - reco_mwind_hr))
         loss = self.hparams.weight_lres * loss_mwind_lr + self.hparams.weight_hres * loss_mwind_hr
         
-        loss_costh_lr = self.l1_loss((data_costh_lr_gt - reco_costh_lr))
-        loss_costh_hr = self.l1_loss((data_costh_hr_gt - torch.cos(reco_theta_hr))) * self.hparams.weight_angle_hr
+        loss_costh_lr = self.l2_loss((data_costh_lr_gt - reco_costh_lr))
+        loss_costh_hr = self.l2_loss((data_costh_hr_gt - torch.cos(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_costh_lr + loss_costh_hr )
         
-        loss_sinth_lr = self.l1_loss((data_sinth_lr_gt - reco_sinth_lr))
-        loss_sinth_hr = self.l1_loss((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
+        loss_sinth_lr = self.l2_loss((data_sinth_lr_gt - reco_sinth_lr))
+        loss_sinth_hr = self.l2_loss((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_sinth_lr + loss_sinth_hr )
         
         # Reconstruction on components
