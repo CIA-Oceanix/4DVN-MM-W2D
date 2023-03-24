@@ -337,7 +337,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
-        self.loss_fn = L2_Loss()
+        self.loss_fn = L1_Loss()
         
         # Case-specific cparams
         self.run = run
@@ -995,7 +995,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Regularization term
         if not self.hparams.inversion == 'bl':
             
-            regularization  = self.l1_loss( (outputs - self.model.Phi(outputs)) ) 
+            regularization  = self.l2_loss( (outputs - self.model.Phi(outputs)) ) 
             loss += regularization * self.hparams.reg_coeff
         #end
         
