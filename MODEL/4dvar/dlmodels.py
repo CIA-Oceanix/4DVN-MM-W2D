@@ -500,7 +500,7 @@ class ModelObs_MM_uv(ModelObs_MM_mod):
         # feature maps
         feat_theta = self.net_state_angle(x_theta_spatial)
         feat_mwind = self.net_data_wind(y_mwind_spatial)
-        dy_theta_mwind = (feat_theta - feat_mwind)
+        dy_theta_mwind = (feat_theta - feat_mwind) * 0.
         
         return [*dy_modulus, dy_theta_mwind, dy_costh_lr, dy_sinth_lr]
     #end
