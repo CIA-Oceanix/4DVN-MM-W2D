@@ -45,7 +45,6 @@ class LitModel_Base(pl.LightningModule):
         self.hparams.lr_intensity           = config_params.LR_INTENSITY
         self.hparams.patch_extent           = config_params.PATCH_EXTENT
         self.hparams.wind_modulus           = config_params.WIND_MODULUS
-        self.hparams.base_comps_uv          = config_params.BASE_COMPS_UV
         self.hparams.anomaly_coeff          = config_params.ANOMALY_COEFF
         self.hparams.reg_coeff              = config_params.REG_COEFF
         self.hparams.grad_coeff             = config_params.GRAD_COEFF
@@ -621,7 +620,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # Choice of observation model
         if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, trainable obs term of 1d features
-            observation_model = dlm.ModelObs_MM_uv(shape_data, self.buoy_position, dim_obs = 4)
+            observation_model = dlm.ModelObs_MM_uv(shape_data, self.buoy_position, dim_obs = 6)
             
         elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
             # Case obs HR, trainable obs term of 2D features

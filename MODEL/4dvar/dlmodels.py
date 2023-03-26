@@ -493,12 +493,16 @@ class ModelObs_MM_uv(ModelObs_MM_mod):
         
         y_mwind_spatial = (y_obs[:,:24] + y_obs[:,24:48]).mul(mask[:,24:48])
         
+        # || x_costh_lr - y_costh_lr ||² + || x_sinth_lr - y_sinth_lr ||²
+        dy_costh_lr = (x[:,72:96] - y_obs[:,72:96]).mul(mask[:,:24])
+        dy_sinth_lr = (x[:,144:168] - y_obs[:,144:168]).mul(mask[:,:24])
+        
         # feature maps
         feat_theta = self.net_state_angle(x_theta_spatial)
         feat_mwind = self.net_data_wind(y_mwind_spatial)
         dy_theta_mwind = (feat_theta - feat_mwind)
         
-        return [*dy_modulus, dy_theta_mwind]
+        return [*dy_modulus, dy_theta_mwind, dy_costh_lr, dy_sinth_lr]
     #end
 #end
 
