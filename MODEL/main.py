@@ -1,4 +1,6 @@
 
+# test git pull jean-zay
+
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), 'utls'))
@@ -9,11 +11,9 @@ import datetime
 import glob
 import gc
 import json
-import argparse
 from collections import namedtuple
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathmng import PathManager
@@ -31,68 +31,6 @@ else:
 torch.autograd.set_detect_anomaly(True)
 torch.manual_seed(161020)
 
-
-
-class LoadCkpt(Callback):
-    def __init__(self, path_ckpt, model_name):
-        super(LoadCkpt, self).__init__()
-        
-        self.path_ckpt = path_ckpt
-        self.model_name = model_name
-        self.last_epoch = None
-    #end
-    
-    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
-        pass
-    #end
-    
-    def on_train_epoch_start(self, trainer, pl_module):
-        pass
-    #end
-    
-    def on_train_epoch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        
-        nans = False
-        for params in pl_module.parameters():
-            if torch.any(torch.isnan(params)):
-                nans = True
-            #end
-        #end
-        
-        if nans:
-            # print('\nNAN FOUND IN PL MODEL')
-            # print('Loading ckpt ...')
-            checkpoint_name = os.path.join(self.path_ckpt, f'run{pl_module.run}-' + self.model_name + '-epoch=*.ckpt')
-            path_last_ckpt = glob.glob(checkpoint_name)[0]
-            model_state_dict = torch.load(path_last_ckpt)['state_dict']
-            pl_module.load_state_dict(model_state_dict)
-        #end
-        
-        nans = False
-        for params in pl_module.parameters():
-            if torch.any(torch.isnan(params)):
-                nans = True
-            #end
-        #end 
-        
-        if nans:
-            print('STILL NANS!!!')
-        #end
-    #end
-    
-    def get_last_epoch(self):
-        return self.last_epoch
-    #end
-    
-    def on_after_backward(self, trainer, pl_module):
-        pass
-    #end
-    
-    def on_before_zero_grad(self, trainer, pl_module, optimizer):
-        pass
-    #end
-    
-#end
 
 class Experiment:
     
@@ -355,7 +293,6 @@ class Experiment:
                                                 *lit_model.get_learning_curves(),
                                                 run)
             lit_model.remove_saved_outputs()
-            # self.path_manager.save_litmodel_trainer(lit_model, trainer)
             
             print('\nTraining and test successful')
             print('Returning ...')
@@ -372,13 +309,6 @@ class Experiment:
 
 
 if __name__ == '__main__':
-    
-    # Argparse
-    # parser = argparse.ArgumentParser()
-    
-    # args = parser.parse_args()
-    # versioning  = args.vr
-    # tabula_rasa = args.tr
     
     exp = Experiment()
     exp.run_simulation()
