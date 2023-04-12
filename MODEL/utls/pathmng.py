@@ -117,7 +117,7 @@ def get_model_name(cparams):
     # Include in further version to name the model
     lr_dim = np.floor( (cparams.REGION_EXTENT_PX - cparams.LR_KERNELSIZE) / cparams.LR_KERNELSIZE + 1 )
     reso = np.int32( 3 * cparams.REGION_EXTENT_PX / lr_dim )
-    model_name += f'-{reso}km'
+    model_name += f'-lr{reso}km'
     
     return model_name, model_source
 #end
