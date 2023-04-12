@@ -22,7 +22,7 @@ def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_
                     mask[:, freq, :,:] = 1.
                 elif wfreq == 'hr':
                     mask_land = mask_land.to(mask.device)
-                    mask[:, freq, :,:] = mask_land #self.mask_land
+                    mask[:, freq, :,:] = mask_land
                 #end
                 
             elif freq.__class__ is int:
@@ -32,7 +32,7 @@ def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_
                             mask[:,t,:,:] = 1.
                         elif wfreq == 'hr':
                             mask_land = mask_land.to(mask.device)
-                            mask[:,t,:,:] = mask_land #self.mask_land
+                            mask[:,t,:,:] = mask_land
                         #end
                     #end
                 #end
@@ -48,15 +48,19 @@ def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_
     # High-reso dx1 : get according to spatial sampling regime.
     # This gives time series of local observations in specified points
     mask_hr_dx1 = get_mask_HR_observation_points(shape_data, hr_obs_points, buoys_positions)
+    mask_hr_dx1 = get_resolution_mask(hr_sampling_freq, mask_hr_dx1, mask_land, 'hr')
+    
     mask_hr_dx2 = torch.zeros(shape_data)
     
     mask_lr = get_resolution_mask(lr_sampling_freq, mask_lr, mask_land, 'lr')
     
     if True:
+        # Artificially the last observation is set equal to the 
+        # first of the next day, so to have a last datum in the timeseries
         mask_lr[:,-1,:,:] = 1.
     #end
     
-    mask_hr_dx1 = get_resolution_mask(hr_sampling_freq, mask_hr_dx1, mask_land, 'hr')
+    
     
     mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
     return mask, mask_lr, mask_hr_dx1, mask_hr_dx2
@@ -211,5 +215,10 @@ def get_persistency_model(data, frequency):
     #end
 
     return persistence
+#end
+
+def get_histogram(data, to_beaufort_scale = True):
+    
+    pass
 #end
 

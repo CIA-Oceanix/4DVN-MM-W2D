@@ -164,7 +164,7 @@ class LitModel_Base(pl.LightningModule):
         #end
         
         if self.model.Phi.__class__ is list or self.model.Phi.__class__ is torch.nn.ModuleList:
-            # for phi in self.model.Phi:
+            
             params.append(
                 {'params'       : self.model.Phi[0].parameters(),
                  'lr'           : self.hparams.prior_lr,
@@ -202,7 +202,7 @@ class LitModel_Base(pl.LightningModule):
         
         optimizers = torch.optim.Adam(params)
         return optimizers
-    # #end
+    #end
     
     def training_step(self, batch, batch_idx):
         
@@ -522,10 +522,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
                 
             elif self.hparams.inversion == 'gs':
                 
-                # mask_4DVarNet = [mask_lr, mask_hr_dx1, mask]
-                
                 outputs, _,_,_ = self.model(input_state, input_data, mask)
-                # reco_lr = outputs[:,:24,:,:]
                 reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_an = outputs[:,48:,:,:]
                 reco_hr = reco_lr + self.hparams.anomaly_coeff * reco_an
@@ -533,7 +530,6 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             elif self.hparams.inversion == 'bl':
                 
                 outputs = self.model.Phi(input_data)
-                # reco_lr = data_lr_obs.clone()
                 reco_lr = self.get_baseline(data_lr_obs.mul(mask_lr))
                 reco_hr = reco_lr + torch.mul(outputs[:,48:,:,:], 0.)
             #end
@@ -646,8 +642,8 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
                 self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
                 self.hparams.dropout,                                         # m_Grad : Dropout
             ),
-            L2_Loss(),                                                     # Norm Observation
-            L2_Loss(),                                                     # Norm Prior
+            L2_Loss(),                                                      # Norm Observation
+            L2_Loss(),                                                      # Norm Prior
             model_shapedata,                                                # Shape data
             self.hparams.n_solver_iter,                                     # Solver iterations
             alphaObs = alpha_obs,                                           # alpha observations
@@ -975,6 +971,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         loss_sinth_hr = self.l1_loss((data_sinth_hr_gt - torch.sin(reco_theta_hr))) * self.hparams.weight_angle_hr
         loss += ( loss_sinth_lr + loss_sinth_hr )
         
+        ''' Remove this part ??
         # Reconstruction on components
         # data_wind_u = data_mwind_hr_gt * torch.cos(data_theta_hr_gt)
         # data_wind_v = data_mwind_hr_gt * torch.sin(data_theta_hr_gt)
@@ -983,6 +980,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
         # loss_u = self.l1_loss((data_wind_u - reco_wind_u))
         # loss_v = self.l1_loss((data_wind_v - reco_wind_v))
         # loss += ( loss_u + loss_v )
+        '''
         
         ## Gradient loss
         grad_data_mwind = torch.gradient(data_mwind_hr_gt, dim = (3,2))
@@ -1004,15 +1002,81 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
 #end
 
 
-class LitModel_OSSE2_Distribution(LitModel_Base):
+class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
-    def __init__(self, cparams):
-        super(LitModel_OSSE2_Distribution, self).__init__(cparams)
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
+        super(LitModel_OSSE2_Distribution, self).__init__(Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)
+        
+        self.start_time = start_time
+        
+        # Mask for land/sea locations and buoys positions
+        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
+        self.buoy_position = land_buoy_coordinates[1]
+        
+        # Loss function — parameters optimization
+        self.l2_loss = L2_Loss()
+        self.l1_loss = L1_Loss()
+        
+        # Case-specific cparams
+        self.run = run
+        self.automatic_optimization = True
+        self.has_any_nan = False
+        self.shape_data = shape_data
+        
+        # Initialize gradient solver (LSTM)
+        batch_size, ts_length, height, width = shape_data
+        mgrad_shapedata = [ts_length * 9, height, width]
+        model_shapedata = [batch_size, ts_length, height, width]
+        alpha_obs = config_params.ALPHA_OBS
+        alpha_reg = config_params.ALPHA_REG
+        
+        # TIP next modify dim_obs
+        # Choice of observation model
+        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
+            # Case time series plus obs HR, trainable obs term of 1d features
+            observation_model = dlm.ModelObs_MM_mod(shape_data, self.buoy_position, dim_obs = 4)
+            
+        elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
+            # Case obs HR, trainable obs term of 2D features
+            observation_model = dlm.ModelObs_MM2d_mod(shape_data, dim_obs = 3)
+            
+        elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
+            # Case only time series, trainable obs term for in-situ data
+            observation_model = dlm.ModelObs_MM1d_mod(shape_data, self.buoy_position, dim_obs = 3)
+            
+        else:
+            # Case default. No trainable obs term at all
+            observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
+        #end
+        
+        # Instantiation of the gradient solver
+        self.model = NN_4DVar.Solver_Grad_4DVarNN(
+            Phi,                                                            # Prior
+            observation_model,                                              # Observation model
+            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
+                mgrad_shapedata,                                              # m_Grad : Shape data
+                False,                                                        # m_Grad : Periodic BCs
+                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
+                self.hparams.dropout,                                         # m_Grad : Dropout
+            ),
+            L2_Loss(),                                                      # Norm Observation
+            L2_Loss(),                                                      # Norm Prior
+            model_shapedata,                                                # Shape data
+            self.hparams.n_solver_iter,                                     # Solver iterations
+            alphaObs = alpha_obs,                                           # alpha observations
+            alphaReg = alpha_reg,                                           # alpha regularization
+            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
+        )
         
     #end
     
-    def compute_loss(self, batch, batch_idx, phase = 'train'):
+    def prepare_batch(self, batch):
         
         pass
+    #end
+    
+    def compute_loss(self, data, batch_idx, phase = 'train'):
+        
+        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data)
     #end
 #end

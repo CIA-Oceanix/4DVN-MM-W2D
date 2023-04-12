@@ -87,51 +87,6 @@ class MLP(nn.Module):
     #end
 #end
 
-class dw_conv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, padding, stride, groups, bias):
-        super(dw_conv2d, self).__init__()
-        
-        self.conv_depthwise = nn.Conv2d(in_channels, in_channels,
-                                        kernel_size = kernel_size,
-                                        padding = padding,
-                                        stride = stride,
-                                        groups = in_channels,
-                                        bias = bias)
-        self.conv_pointwise = nn.Conv2d(in_channels, out_channels,
-                                        kernel_size = 1,
-                                        bias = bias)
-    #end
-    
-    def forward(self, data):
-        
-        spatial_out = self.conv_depthwise(data)
-        output = self.conv_pointwise(spatial_out)
-        return output
-    #end
-#end
-
-class RBlock(nn.Module):
-    
-    def __init__(self):
-        super(RBlock, self).__init__()
-        
-        self.block = nn.Sequential(
-            nn.Conv2d(72, 50, (3,3), padding = 1, stride = 1, bias = False),
-            nn.BatchNorm2d(50),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(50, 72, (3,3), padding = 1, stride = 1),
-        )
-        
-        self.shortcut = nn.Identity()
-    #end
-    
-    def forward(self, data):
-        
-        out = self.block(data)
-        out = out.add(self.shortcut(data))
-        return out
-    #end
-#end
 
 class ResNet(nn.Module):
     
@@ -139,13 +94,20 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         
         self.rnet = nn.Sequential(
-            RBlock()
+            nn.Conv2d(72, 50, (3,3), padding = 1, stride = 1, bias = False),
+            nn.BatchNorm2d(50),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(50, 72, (3,3), padding = 1, stride = 1)
         )
+        
+        self.shortcut = nn.Identity()
     #end
     
     def forward(self, data):
         
-        return self.rnet(data)
+        out = self.rnet(data)
+        out = out.add(self.shortcut(data))
+        return out
     #end
 #end
 
@@ -157,7 +119,6 @@ class CBlock(nn.Sequential):
                        padding = 'same',
                        padding_mode = 'reflect',
                       bias = True),
-            # nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.1)
         )
     #end
@@ -171,9 +132,8 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            # CBlock(ts_length, 32, 5, 2),
-            nn.Conv2d(ts_length, 32, (5,5), padding = 2), # 'same', padding_mode = 'reflect', bias = True),
-            nn.Conv2d(32, ts_length, (5,5), padding = 2) # 'same', padding_mode = 'reflect', bias = True)
+            nn.Conv2d(ts_length, 32, (5,5), padding = 2),
+            nn.Conv2d(32, ts_length, (5,5), padding = 2)
         )
     #end
     

@@ -73,7 +73,6 @@ def Hellinger_distance(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
     #end
     
     eps = 1e-5
-    # b_coefficient = torch.sum((h_target * h_output).sqrt(), dim = reduction_dim)
     b_coefficient = (torch.sqrt(h_target * h_output)).sum(dim = reduction_dim)
     if torch.any(b_coefficient > 1) or torch.any(b_coefficient < 0):
         raise ValueError('BC can not be > 1 or < 0')

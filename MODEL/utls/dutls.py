@@ -17,54 +17,6 @@ else:
 #end
 
 
-class W2DSimuDataset_WindModulus(Dataset):
-    
-    def __init__(self, data, normalize):
-        
-        # normalize
-        wind2D = self.normalize(data)
-        self.wind2D = np.array(wind2D, dtype = np.float32)
-        
-        self.numitems = np.int32(self.wind2D.__len__())
-        # self.to_tensor()
-    #end
-    
-    def __len__(self):
-        return self.numitems
-    #end
-    
-    def __getitem__(self, idx):
-        return self.wind2D[idx]
-    #end
-    
-    def normalize(self, data):
-        
-        normparams = dict()
-        
-        # data_min = data.min(); normparams.update({'min' : data_min})
-        # data_max = data.max(); normparams.update({'max' : data_max})
-        
-        # data = (data - data_min) / (data_max - data_min)
-        
-        data_std  = data.std()
-        data = data / data_std
-        
-        normparams.update({'std' : data_std})
-        
-        self.normparams = normparams
-        return data
-    #end
-        
-    def to_tensor(self):
-        self.wind2D = torch.Tensor(self.wind2D).type(torch.float32).to(DEVICE)
-    #end
-    
-    def get_normparams(self):
-        return self.normparams
-    #end
-#end
-
-
 class W2DSimuDataset_WindComponents(Dataset):
     
     def __init__(self, data, normalize, case_wmod):
@@ -125,11 +77,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.data_name     = cparams.DATASET_NAME
         self.shapeData     = None
         self.wind_modulus  = cparams.WIND_MODULUS
-        # if cparams.WIND_MODULUS:
-        #     self.Dataset_class = W2DSimuDataset_WindModulus
-        # else:
-        #     self.Dataset_class = W2DSimuDataset_WindComponents
-        # #end
         self.Dataset_class = W2DSimuDataset_WindComponents
         
         self.setup()
@@ -191,12 +138,6 @@ class W2DSimuDataModule(pl.LightningDataModule):
         train_set = self.extract_time_series(train_set, 36, n_train // 24)
         val_set   = self.extract_time_series(val_set, 36, n_val // 24)
         test_set  = self.extract_time_series(test_set, 36, self.test_days)
-        
-        # if self.wind_modulus:
-        #     train_set = np.sqrt(train_set[:,:,:,:,0]**2 + train_set[:,:,:,:,1]**2)
-        #     val_set   = np.sqrt(val_set[:,:,:,:,0]**2 + val_set[:,:,:,:,1]**2)
-        #     test_set  = np.sqrt(test_set[:,:,:,:,0]**2 + test_set[:,:,:,:,1]**2)
-        # #end
         
         print('Train dataset shape : ', train_set.shape)
         print('Val   dataset shape : ', val_set.shape)

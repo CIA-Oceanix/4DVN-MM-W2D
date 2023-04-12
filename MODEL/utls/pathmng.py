@@ -113,6 +113,12 @@ def get_model_name(cparams):
     else:
         model_name += f'-{inversion}-{exp_osse_1_specs}-{cparams.PRIOR}'
     #end
+    
+    # Include in further version to name the model
+    lr_dim = np.floor( (cparams.REGION_EXTENT_PX - cparams.LR_KERNELSIZE) / cparams.LR_KERNELSIZE + 1 )
+    reso = np.int32( 3 * cparams.REGION_EXTENT_PX / lr_dim )
+    model_name += f'-{reso}km'
+    
     return model_name, model_source
 #end
 
@@ -292,13 +298,11 @@ class PathManager:
     
     def save_litmodel_trainer(self, lit_model, trainer):
         
-        # with open(os.path.join(self.path_litmodel_trainer, 'lit_model.pkl'), 'wb') as f:
-        #     torch.save(lit_model.cpu(), f)
-        # f.close()
-        
-        # with open(os.path.join(self.path_litmodel_trainer, 'trainer.pkl'), 'wb') as f:
-        #     pickle.dump(trainer, f)
-        # #end
+        '''DEPRECATED
+        Model checkpoint is always saved, that comprehends lit model. 
+        Trainer can be re-instantiated at no cost.
+        Will remove this method in next version
+        '''
         pass
     #end
     
