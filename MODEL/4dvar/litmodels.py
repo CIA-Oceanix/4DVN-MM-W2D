@@ -336,7 +336,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.buoy_position = land_buoy_coordinates[1]
         
         # Loss function — parameters optimization
-        self.loss_fn = L1_Loss()
+        self.loss_fn = L2_Loss()
         
         # Case-specific cparams
         self.run = run
