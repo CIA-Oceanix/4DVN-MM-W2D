@@ -1,6 +1,4 @@
 
-# test git pull jean-zay
-
 import os
 import sys
 sys.path.append(os.path.join(os.getcwd(), 'utls'))
@@ -29,7 +27,7 @@ else:
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
 torch.autograd.set_detect_anomaly(True)
-torch.manual_seed(161020)
+# torch.manual_seed(161020)
 
 
 class Experiment:
