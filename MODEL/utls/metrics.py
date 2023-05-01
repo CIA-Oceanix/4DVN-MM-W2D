@@ -145,6 +145,15 @@ def mse(target, output, mask = None, divide_variance = True, divide_nitems = Tru
     return mserror
 #end
 
+def L1_norm(target, output, mask = None, divide_variance = True, divide_nitems = True):
+    
+    L1error = L1_Loss(divide_nitems = divide_nitems)((target - output), mask = mask)
+    if divide_variance:
+        L1error = L1error / target.var()
+    #end
+    
+    return L1error
+#end
 
 class _NormLoss(nn.Module):
     
