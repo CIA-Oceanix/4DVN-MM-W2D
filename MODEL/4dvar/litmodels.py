@@ -562,6 +562,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         loss_hr = self.loss_fn( (reco_hr - data_hr), mask = None )
         loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
         
+        print('QUI : ', data_hr.shape)
         ## Loss on gradients
         grad_data = torch.gradient(data_hr, dim = (3,2))
         grad_reco = torch.gradient(reco_hr, dim = (3,2))
