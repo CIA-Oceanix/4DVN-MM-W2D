@@ -651,7 +651,7 @@ class LitModel_OSSE1_WindComponents(LitModel_Base):
             varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
         )
     #end
-        
+    
     def forward(self, batch, batch_idx, phase = 'train'):
         
         state_init = None
@@ -1022,6 +1022,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.automatic_optimization = True
         self.has_any_nan = False
         self.shape_data = shape_data
+        self.wind_bins = config_params.WIND_BINS
         
         # Initialize gradient solver (LSTM)
         batch_size, ts_length, height, width = shape_data
@@ -1030,24 +1031,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         alpha_obs = config_params.ALPHA_OBS
         alpha_reg = config_params.ALPHA_REG
         
-        # TIP next modify dim_obs
         # Choice of observation model
-        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
-            # Case time series plus obs HR, trainable obs term of 1d features
-            observation_model = dlm.ModelObs_MM_mod(shape_data, self.buoy_position, dim_obs = 4)
-            
-        elif self.hparams.hr_mask_mode == 'zeroes' and self.hparams.mm_obsmodel:
-            # Case obs HR, trainable obs term of 2D features
-            observation_model = dlm.ModelObs_MM2d_mod(shape_data, dim_obs = 3)
-            
-        elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
-            # Case only time series, trainable obs term for in-situ data
-            observation_model = dlm.ModelObs_MM1d_mod(shape_data, self.buoy_position, dim_obs = 3)
-            
-        else:
-            # Case default. No trainable obs term at all
-            observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
-        #end
+        observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
         
         # Instantiation of the gradient solver
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
@@ -1070,13 +1055,140 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
     #end
     
-    def prepare_batch(self, batch):
+    def forward(self, batch, batch_idx, phase = 'train'):
         
-        pass
+        state_init = None
+        for n in range(self.hparams.n_fourdvar_iter):
+            
+            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
+            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
+                state_init = outs.detach()
+            #end
+        #end
+        
+        return loss, outs
     #end
     
-    def compute_loss(self, data, batch_idx, phase = 'train'):
+    def make_histograms_from_fields(self, data_fields, bins, resolution):
         
-        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data)
+        if resolution == 'hr':
+            data_hist = fs.fieldsHR2hist(data_fields, kernel_size = self.hparams.lr_kernel_size, bins = bins)
+        elif resolution == 'lr':
+            data_hist = fs.fieldsLR2hist(data_fields, bins)
+        #end
+        
+        return data_hist
+    #end
+    
+    def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
+        
+        # bins = [0.0, 2.45, 4.5, 6.75]
+        
+        wind_hr_gt_u, wind_hr_gt_v = batch[0], batch[1]
+        mwind_hr_gt = torch.sqrt( wind_hr_gt_u.pow(2) + wind_hr_gt_v.pow(2) )
+        mwind_lr_gt = torch.nn.functional.avg_pool2d(mwind_hr_gt, kernel_size = self.hparams.lr_kernel_size)
+        batch_size, timesteps, height, width = mwind_lr_gt.shape
+        
+        # Persistences !!!
+        data_hr_obs = self.get_persistence(mwind_hr_gt, 'lr', longer_series = True)
+        data_lr_obs = self.get_persistence(mwind_lr_gt, 'hr', longer_series = True)
+        
+        # Histograms
+        hwind_hr = self.make_histograms_from_fields(data_hr_obs, self.wind_bins, 'hr')
+        hwind_lr = self.make_histograms_from_fields(data_lr_obs, self.wind_bins, 'lr')
+        
+        hwind_gt = self.make_histograms_from_fields(mwind_hr_gt, self.wind_bins, 'hr')
+        
+        # Join LR and HR observations
+        batch_input = torch.zeros((batch_size, timesteps, height, width, self.wind_bins.__len__() - 1))
+        for t in range(timesteps):
+            if self.hparams.lr_mask_sfreq.__class__ is int:
+                if t % self.hparams.lr_mask_sfreq == 0:
+                    batch_input[:,t,:,:,:] = hwind_lr[:,t,:,:,:]
+                #end
+            elif self.hparams.lr_mask_sfreq.__class__ is list:
+                batch_input[:, self.hparams.lr_mask_sfreq,:,:,:] = hwind_lr[:, self.hparams.lr_mask_sfreq, :,:,:]
+            #end
+            if self.hparams.hr_mask_sfreq.__class__ is int:
+                if t % self.hparams.hr_mask_sfreq == 0:
+                    batch_input[:,t,:,:,:] = hwind_hr[:,t,:,:,:]
+                #end
+            elif self.hparams.hr_mask_sfreq.__class__ is list:
+                batch_input[:, self.hparams.hr_mask_sfreq,:,:,:] = hwind_hr[:, self.hparams.hr_mask_sfreq, :,:,:]
+            #end
+        #end
+        
+        hwind_hr    = hwind_hr[:, timewindow_start : timewindow_end, :,:,:]
+        hwind_lr    = hwind_lr[:, timewindow_start : timewindow_end, :,:,:]
+        batch_input = batch_input[:, timewindow_start : timewindow_end, :,:,:]
+        mwind_hr_gt = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        mwind_lr_gt = mwind_lr_gt[:, timewindow_start : timewindow_end, :,:]
+        
+        return hwind_hr, hwind_lr, batch_input, mwind_hr_gt, mwind_lr_gt, hwind_gt
+    #end
+    
+    def get_mask(self, shape_data, shape_hist_lr):
+        
+        _, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(shape_data)
+        mask_lr = torch.nn.functional.avg_pool2d(mask_lr, kernel_size = self.hparams.lr_kernel_size)
+        mask_hr_dx1 = torch.nn.functional.avg_pool2d(mask_hr_dx1, kernel_size = self.hparams.lr_kernel_size)
+        mask_lr[mask_lr < 0.5]  = 0.
+        mask_lr[mask_lr >= 0.5] = 1.
+        mask_hr_dx1[mask_hr_dx1 < 0.5]  = 0.
+        mask_hr_dx1[mask_hr_dx1 >= 0.5] = 1.
+        
+        mask_slr = torch.zeros(shape_hist_lr)
+        for t in range(shape_hist_lr[1]):
+            if self.hparams.lr_mask_sfreq.__class__ is int:
+                if t % self.hparams.lr_mask_sfreq == 0:
+                    for n in range(shape_hist_lr[-1]):
+                        mask_slr[:,t,:,:,n] = mask_lr[:,t,:,:]
+                    #end
+                #end
+            elif self.hparams.lr_mask_sfreq.__class__ is list:
+                for n in range(shape_hist_lr[-1]):
+                    mask_slr[:,self.hparams.lr_mask_sfreq,:,:,n] = mask_lr[:, self.hparams.lr_mask_sfreq, :,:]
+                #end
+            #end
+            if self.hparams.hr_mask_sfreq.__class__ is int:
+                if t % self.hparams.hr_mask_sfreq == 0:
+                    for n in range(shape_hist_lr[-1]):
+                        mask_slr[:,t,:,:,n] = mask_hr_dx1[:,t,:,:]
+                    #end
+                #end
+            elif self.hparams.hr_mask_sfreq.__class__ is list:
+                for n in range(shape_hist_lr[-1]):
+                    mask_slr[:,self.hparams.hr_mask_sfreq,:,:,n] = mask_hr_dx1[:, self.hparams.hr_mask_sfreq, :,:]
+                #end
+            #end
+        #end
+        
+        return mask_slr
+    #end
+    
+    def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
+        
+        hwind_hr, hwind_lr, batch_input, mwind_hr_gt, mwind_lr_gt, hwind_gt = self.prepare_batch(data)
+        hwind_gt = self.make_histograms_from_fields(mwind_hr_gt, self.wind_bins, 'hr')
+        
+        # Mask data
+        mask = self.get_mask(mwind_hr_gt.shape, hwind_lr.shape)
+        
+        batch_input = batch_input * mask
+        outputs = self.model.Phi(batch_input)
+        
+        # Save reconstructions
+        if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
+            self.save_samples({'data' : hwind_gt.detach().cpu(),
+                               'reco' : outputs.detach().cpu()})
+            
+            if self.hparams.inversion == 'gs':
+                self.save_var_cost_values(self.model.var_cost_values)
+            #end
+        #end
+        
+        loss = self.l2_loss((outputs - hwind_gt), mask = None)
+        
+        return dict({'loss' : loss}), outputs
     #end
 #end

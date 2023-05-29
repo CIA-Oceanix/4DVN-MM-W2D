@@ -222,3 +222,82 @@ def get_histogram(data, to_beaufort_scale = True):
     pass
 #end
 
+def make_hist(data_, bins, normalized = True):
+    
+    if bins.__class__ is not torch.Tensor:
+        bins = torch.Tensor(bins)
+    #end
+    
+    h = torch.histogram(data_, bins = bins)
+    
+    if normalized:
+        return h[0].div(h[0].sum())
+    else:
+        return h[0]
+    #end
+#end
+
+def fieldsHR2hist(data_field, kernel_size, bins):
+    
+    def lr_dim(dim, ks_):
+        return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
+    #end
+    
+    batch_size, timesteps, heigth, width = data_field.shape
+    height_lr, width_lr = lr_dim(heigth, kernel_size), lr_dim(width, kernel_size)
+    data_hist = torch.zeros((batch_size, timesteps, height_lr, width_lr, bins.__len__() - 1))
+    
+    # loop to prepare histogram data
+    for m in range(batch_size):
+        for t in range(timesteps):
+            
+            i_start = 0
+            for i in range(height_lr):
+                
+                j_start = 0
+                for j in range(width_lr):
+                    
+                    i_end = i_start + kernel_size
+                    j_end = j_start + kernel_size
+                    
+                    try:
+                        this_wind_pixel = data_field[m,t, i_start:i_end ,j_start:j_end]
+                    except:
+                        this_wind_pixel = data_field[m,t, i_start:, j_start:]
+                    #end
+                    
+                    hist = make_hist(this_wind_pixel, bins)
+                    data_hist[m,t,i,j,:] = hist
+                    
+                    j_start = j_end
+                #end
+                
+                i_start = i_end
+            #end
+        #end
+    #end
+    
+    return data_hist
+#end
+
+def fieldsLR2hist(data_field, bins):
+    
+    batch_size, timesteps, height, width = data_field.shape
+    data_hist = torch.zeros((batch_size, timesteps, height, width,  bins.__len__() - 1))
+    
+    for m in range(batch_size):
+        for t in range(timesteps):
+            
+            for i in range(height):
+                for j in range(width):
+                    
+                    hist = make_hist(data_field[m,t,i,j], bins)
+                    data_hist[m,t,i,j,:] = hist
+                #end
+            #end
+        #end
+    #end
+    
+    return data_hist
+#end
+

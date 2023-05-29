@@ -15,7 +15,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathmng import PathManager
-from litmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents
+from litmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents, LitModel_OSSE2_Distribution
 from dlmodels import model_selection
 from dutls import W2DSimuDataModule
 
@@ -99,6 +99,10 @@ class Experiment:
         
         if (self.cparams.INVERSION == 'fp' or self.cparams.INVERSION == 'bl') and self.cparams.MM_OBSMODEL:
             raise ValueError('Trainable observation operator is to be used only with "gs" inversion')
+        #end
+        
+        if self.cparams.VNAME == '4DVN-PDF' and self.cparams.PRIOR != 'FPN':
+            raise ValueError('Select FPN prior with 4DVN-PDF case')
         #end
         
     #end
@@ -202,24 +206,35 @@ class Experiment:
         land_buoy_coords = self.w2d_dm.get_land_and_buoy_positions()
         
         ## Instantiate dynamical prior and lit model
-        if self.cparams.WIND_MODULUS:
+        if self.cparams.VNAME == '4DVN-W2D':
+            if self.cparams.WIND_MODULUS:
+                
+                Phi = model_selection(shape_data, self.cparams).to(DEVICE)
+                lit_model = LitModel_OSSE1_WindModulus(Phi,
+                                                       shape_data,
+                                                       land_buoy_coords,
+                                                       self.cparams,
+                                                       real_run,
+                                                       start_time = start_time).to(DEVICE)
+            else:
+                
+                Phi = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
+                lit_model = LitModel_OSSE1_WindComponents(Phi, 
+                                                          shape_data, 
+                                                          land_buoy_coords, 
+                                                          self.cparams, 
+                                                          real_run, 
+                                                          start_time = start_time).to(DEVICE)
+            #end
+        elif self.cparams.VNAME == '4DVN-PDF':
             
             Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-            lit_model = LitModel_OSSE1_WindModulus(Phi,
-                                                   shape_data,
-                                                   land_buoy_coords,
-                                                   self.cparams,
-                                                   real_run,
-                                                   start_time = start_time).to(DEVICE)
-        else:
-            
-            Phi = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
-            lit_model = LitModel_OSSE1_WindComponents(Phi, 
-                                                      shape_data, 
-                                                      land_buoy_coords, 
-                                                      self.cparams, 
-                                                      real_run, 
-                                                      start_time = start_time).to(DEVICE)
+            lit_model = LitModel_OSSE2_Distribution(Phi,
+                                                    shape_data,
+                                                    land_buoy_coords,
+                                                    self.cparams,
+                                                    real_run,
+                                                    start_time = start_time).to(DEVICE)
         #end
         
         ## Get checkpoint, if needed

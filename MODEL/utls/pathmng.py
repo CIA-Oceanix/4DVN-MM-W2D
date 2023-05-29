@@ -191,7 +191,7 @@ class PathManager:
         self.nrun = None
         
         self.remove_checkpoints()
-        self.initialize_netCDF4_dataset(cparams.REGION_EXTENT_PX, cparams.RUNS, cparams.WIND_MODULUS)
+        self.initialize_netCDF4_dataset(cparams)
     #end
     
     def get_model_name(self):
@@ -218,29 +218,40 @@ class PathManager:
         #end
     #end
     
-    def initialize_netCDF4_dataset(self, region_extent, runs, wind_modulus):
+    def initialize_netCDF4_dataset(self, cparams):
         
         if os.path.exists(os.path.join(self.path_modeloutput, 'reconstructions.nc')):
             os.remove(os.path.join(self.path_modeloutput, 'reconstructions.nc'))
             print('Old dataset.nc removed ...')
         #end
         
-        if wind_modulus:
-            extent_EW = 1 * region_extent
+        if cparams.WIND_MODULUS:
+            extent_EW = 1 * cparams.REGION_EXTENT_PX
         else:
-            extent_EW = 2 * region_extent
+            extent_EW = 2 * cparams.REGION_EXTENT_PX
         #end
         
+        extent_lr = np.int32(np.floor( (cparams.REGION_EXTENT_PX - cparams.LR_KERNELSIZE) / (cparams.LR_KERNELSIZE) + 1 ))
+        
         dataset = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'w', format = 'NETCDF4_CLASSIC')
-        dataset.createDimension('extent_NS', region_extent)
+        dataset.createDimension('extent_NS', cparams.REGION_EXTENT_PX)
         dataset.createDimension('extent_EW', extent_EW)
+        dataset.createDimension('extent_lr', extent_lr)
         dataset.createDimension('time', 24)
         dataset.createDimension('one', 1)
-        dataset.createDimension('run', runs)
+        dataset.createDimension('run', cparams.RUNS)
         dataset.createDimension('batch', None)
         
-        dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_NS', 'extent_EW'))
-        dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent_NS', 'extent_EW'))
+        if cparams.VNAME == '4DVN-W2D':
+            dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_NS', 'extent_EW'))
+            dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent_NS', 'extent_EW'))
+        elif cparams.VNAME == '4DVN-PDF':
+            nbins = cparams.WIND_BINS.__len__() - 1
+            dataset.createDimension('nbins', nbins)
+            dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_lr', 'extent_lr', 'nbins'))
+            dataset.createVariable('data', np.float32, ('run', 'batch', 'time', 'extent_lr', 'extent_lr', 'nbins'))
+        #end
+        
         dataset.createVariable('mask', np.float32, ('one', 'extent_NS', 'extent_NS')) # SQUARE MASK!!!
         dataset.close()
         print('Dataset.nc initialized and closed ...')
@@ -310,6 +321,8 @@ class PathManager:
         
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
+        print(data.shape)
+        print(reco.shape)
         
         reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
         if run == 0:

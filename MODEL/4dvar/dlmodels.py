@@ -297,6 +297,53 @@ class UNet1(nn.Module):
 #end
 
 
+class FokkerPlankNet(nn.Module):
+    def __init__(self, shape_data, config_params):
+        super(FokkerPlankNet, self).__init__()
+        
+        batch_size, timesteps, height, width = shape_data
+        nbins = config_params.WIND_BINS.__len__() - 1
+        self.conv_1d = nn.Conv1d(timesteps, timesteps, kernel_size = 5, padding = 2)
+        self.dense_ae = nn.Sequential(
+            nn.Linear(nbins, 5), nn.LeakyReLU(0.1),
+            nn.Linear(5, nbins), nn.Softmax(dim = -1)
+        )
+        self.conv_2d = nn.Conv2d(nbins, nbins, kernel_size = 3, padding = 1)
+    #end
+    
+    def forward(self, x):
+        # x.shape : (m, T, H, W, B)
+        batch_size, timesteps, height, width, nbins = x.shape
+        
+        # Model computations
+        ## Block 1: Conv1d on timesteps
+        x_ = x.reshape(batch_size, timesteps, height * width * nbins)
+        x_ = self.conv_1d(x_)
+        
+        ## Reshape
+        x_ = x_.reshape(batch_size, timesteps, height, width, nbins)
+        
+        ## Block 2: Conv2d on spatial dimensions (number of bins treated as channels)
+        ## Timesteps treated independently
+        
+        # x_ = x_.transpose(2,4)
+        # for t in range(timesteps):
+        #     x_[:,t,:,:,:] = self.conv_2d(x_[:,t,:,:,:])
+        # #end
+        # x_ = x_.transpose(2,4)
+        
+        ## Block 3: Dense on histogram bins
+        x_ = x_.reshape(batch_size, timesteps, height, width, nbins)
+        x_ = x_.reshape(batch_size, timesteps, height * width, nbins)
+        x_ = self.dense_ae(x_)
+        x_ = x_.reshape(batch_size, timesteps, height, width, nbins)
+        
+        # Return
+        return x_
+    #end
+#end
+
+
 # TIP
 ###############################################################################
 ##### 4DVARNET OBSERVATION MODELS #############################################
@@ -564,7 +611,7 @@ class ModelObs_MM1d(nn.Module):
             nn.Linear(25, 11)
         )
         
-        self.net_data = nn.Sequential(
+        self.net_data = nn.Sequentbatch_inputial(
             nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1)
         )
@@ -646,6 +693,9 @@ def model_selection(shape_data, config_params, components = False):
     
     elif config_params.PRIOR == 'MLP':
         return MLP(config_params, shape_data)
+    
+    elif config_params.PRIOR == 'FPN':
+        return FokkerPlankNet(shape_data, config_params)
     
     else:
         raise NotImplementedError('No valid prior')
