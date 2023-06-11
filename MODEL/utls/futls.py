@@ -217,9 +217,14 @@ def get_persistency_model(data, frequency):
     return persistence
 #end
 
-def get_histogram(data, to_beaufort_scale = True):
+def get_histogram(data, bins, to_beaufort_scale = False):
     
-    pass
+    histogram = torch.zeros(bins.shape[0] - 1)
+    for eidx in range(bins.__len__() - 1):
+        histogram[eidx] = torch.numel(data[(data > bins[eidx]) & (data <= bins[eidx + 1])])
+    #end
+    
+    return histogram
 #end
 
 def make_hist(data_, bins, normalized = True):
@@ -228,13 +233,14 @@ def make_hist(data_, bins, normalized = True):
         bins = torch.Tensor(bins)
     #end
     
-    h = torch.histogram(data_, bins = bins)
-    h[0] = torch.autograd.Variable(h[0])
+    # h = torch.histogram(data_, bins = bins)
+    h = get_histogram(data_, bins = bins)
+    h = torch.autograd.Variable(h)
     
     if normalized:
-        return h[0].div(h[0].sum())
+        return h.div(h.sum())
     else:
-        return h[0]
+        return h
     #end
 #end
 
