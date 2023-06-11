@@ -229,6 +229,7 @@ def make_hist(data_, bins, normalized = True):
     #end
     
     h = torch.histogram(data_, bins = bins)
+    h[0] = torch.autograd.Variable(h[0])
     
     if normalized:
         return h[0].div(h[0].sum())
