@@ -1176,7 +1176,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         batch_input = batch_input * mask
         # outputs = self.model.Phi(batch_input)
-        outputs = torch.autograd.Variable(batch_input * torch.normal(0, 0.01, batch_input.shape))
+        outputs = torch.autograd.Variable(batch_input) * torch.normal(0, 0.01, batch_input.shape)
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
