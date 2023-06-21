@@ -91,7 +91,7 @@ def get_mask_HR_observation_points(shape_data, mode, buoys_positions):
         raise ValueError('Mask mode not impletemented.')
     #end
     
-    return mask
+    return mask.to(DEVICE)
 #end
 
 def downsample_and_interpolate_spatially(data, lr_kernel_size):
