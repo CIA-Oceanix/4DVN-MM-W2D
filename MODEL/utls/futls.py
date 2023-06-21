@@ -77,6 +77,7 @@ def get_mask_HR_observation_points(shape_data, mode, buoys_positions):
         
         # ugly as fuck but whatever works
         for i in range(buoy_coords.shape[0]):
+            print(buoy_coords[i])
             if buoy_coords[i,0] > 0 and buoy_coords[i,1] > 0:
                 mask[:,:, buoy_coords[i,0], buoy_coords[i,1]] = 1.
             else:
