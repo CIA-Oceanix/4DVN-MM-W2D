@@ -213,7 +213,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
             
             buoy_positions = np.array(lcoords)
             logical_flag = np.ones(buoy_positions.shape[0]).reshape(-1,1)
-            buoy_positions = np.concatenate((buoy_positions, logical_flag), axis = 0)
+            buoy_positions = np.concatenate((buoy_positions, logical_flag), axis = 1)
             
         else:
             return None
