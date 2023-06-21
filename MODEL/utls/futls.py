@@ -76,7 +76,7 @@ def get_mask_HR_observation_points(shape_data, mode, buoys_positions):
         mask = torch.zeros(shape_data)
         
         for i in range(buoy_coords.shape[0]):
-            if not np.all(np.isnan(buoy_coords[i])):
+            if not np.all(buoy_coords[i] < 0):
                 mask[:,:, buoy_coords[i,0], buoy_coords[i,1]] = 1.
             else:
                 mask[:,:, buoy_coords[i,0], buoy_coords[i,1]] = 0.
