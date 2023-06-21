@@ -434,7 +434,7 @@ class ModelObs_MM_mod(ModelObs_MM):
         x_spatial = x[:,:24] + x[:,24:48]
         y_spatial = y_obs[:,:24] + y_obs[:,24:48]
         y_situ = y_spatial[:,:, self.buoys_coords[:,0], self.buoys_coords[:,1]]
-        
+        print(y_situ.shape)
         # Silence the buoys that are in panne
         for i in range(self.buoys_coords.shape[0]):
             if self.buoys_coords[i,2] == 0:
