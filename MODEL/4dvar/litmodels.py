@@ -449,9 +449,9 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # in the persistence model must be filled with in-situ time series
         # These loops are ugly as fuck but necessary for the experiment on buoys shuffling
         if self.hparams.hr_mask_mode == 'buoys':
-            xp_buoys, yp_buoys = self.buoy_position[:,0], self.buoy_position[:,1]
+            xp_buoys, yp_buoys, logical_flag = self.buoy_position[:,0], self.buoy_position[:,1], self.buoy_position[:,2]
             for i in range(xp_buoys.shape[0]):
-                if xp_buoys[i] > 0 and yp_buoys[i] > 0:
+                if logical_flag == 1:
                     data_hr_obs[:,:, xp_buoys[i], yp_buoys[i]] = data_hr_gt[:,:, xp_buoys[i], yp_buoys[i]]
                 #end
             #end
