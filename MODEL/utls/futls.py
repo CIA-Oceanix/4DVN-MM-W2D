@@ -60,8 +60,6 @@ def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_
         mask_lr[:,-1,:,:] = 1.
     #end
     
-    
-    
     mask = torch.cat([mask_lr, mask_hr_dx1, mask_hr_dx2], dim = 1)
     return mask, mask_lr, mask_hr_dx1, mask_hr_dx2
 #end
@@ -76,7 +74,14 @@ def get_mask_HR_observation_points(shape_data, mode, buoys_positions):
         
         buoy_coords = buoys_positions
         mask = torch.zeros(shape_data)
-        mask[:,:, buoy_coords[:,0], buoy_coords[:,1]] = 1.
+        
+        for i in range(buoy_coords.shape[0]):
+            if not np.all(np.isnan(buoy_coords[i])):
+                mask[:,:, buoy_coords[i,0], buoy_coords[i,1]] = 1.
+            else:
+                mask[:,:, buoy_coords[i,0], buoy_coords[i,1]] = 0.
+            #end
+        #end
         
     elif mode == 'zeroes':
         
