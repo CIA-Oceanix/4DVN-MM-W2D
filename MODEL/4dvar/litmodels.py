@@ -450,7 +450,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         if self.hparams.hr_mask_mode == 'buoys':
             xp_buoys, yp_buoys = self.buoy_position[:,0], self.buoy_position[:,1]
             for i in range(xp_buoys.shape[0]):
-                if xp_buoys[i,0] > 0 and yp_buoys[i,1] > 0:
+                if xp_buoys[i] > 0 and yp_buoys[i] > 0:
                     data_hr_obs[:,:, xp_buoys[i], yp_buoys[i]] = data_hr_gt[:,:, xp_buoys[i], yp_buoys[i]]
                 #end
             #end
