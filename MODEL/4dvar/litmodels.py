@@ -449,6 +449,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # in the persistence model must be filled with in-situ time series
         if self.hparams.hr_mask_mode == 'buoys':
             xp_buoys, yp_buoys = self.buoy_position[:,0], self.buoy_position[:,1]
+            print(data_hr_obs[:,:, xp_buoys, yp_buoys].device)
+            print(data_hr_gt[:,:, xp_buoys, yp_buoys].device)
             data_hr_obs[:,:, xp_buoys, yp_buoys] = data_hr_gt[:,:, xp_buoys, yp_buoys]
         #end
         
