@@ -257,6 +257,8 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
         (batch_size, timesteps, height, width)
     '''
     
+    import time
+    
     def lr_dim(dim, ks_):
         return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
     #end
@@ -283,9 +285,11 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
         for t in progbar_timesteps:
             
             i_start = 0
+            time.sleep(0.2)
             for i in progbar_height:
                 
                 j_start = 0
+                time.sleep(0.2)
                 for j in progbar_width:
                     
                     i_end = i_start + kernel_size
@@ -301,6 +305,7 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
                     data_hist[m,t,i,j,:] = hist
                     
                     j_start = j_end
+                    time.sleep(0.2)
                 #end
                 
                 i_start = i_end
