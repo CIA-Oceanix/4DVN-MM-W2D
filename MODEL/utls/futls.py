@@ -268,10 +268,10 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     # loop to prepare histogram data
     
     if progbars:
-        progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ',   leave = True)
-        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', leave = False)
-        progbar_height    = tqdm(range(height_lr),  desc = 'Loop i (lr) ',    leave = False)
-        progbar_width     = tqdm(range(width_lr),   desc = 'Loop j (lr) ',    leave = False)
+        progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ', position = 0, leave = True)
+        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 1, leave = False)
+        progbar_height    = tqdm(range(height_lr),  desc = 'Loop i (lr) ', position = 2, leave = False)
+        progbar_width     = tqdm(range(width_lr),   desc = 'Loop j (lr) ', position = 3, leave = False)
     else:
         progbar_batches   = range(batch_size)
         progbar_timesteps = range(timesteps)
