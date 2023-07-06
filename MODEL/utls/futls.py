@@ -2,6 +2,7 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
+from tqdm import tqdm
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
@@ -250,7 +251,11 @@ def make_hist(data_, bins, normalized = True):
     #end
 #end
 
-def fieldsHR2hist(data_field, kernel_size, bins):
+def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
+    '''
+    Takes as input tensors of dimension
+        (batch_size, timesteps, height, width)
+    '''
     
     def lr_dim(dim, ks_):
         return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
@@ -261,14 +266,27 @@ def fieldsHR2hist(data_field, kernel_size, bins):
     data_hist = torch.zeros((batch_size, timesteps, height_lr, width_lr, bins.__len__() - 1))
     
     # loop to prepare histogram data
-    for m in range(batch_size):
-        for t in range(timesteps):
+    
+    if progbars:
+        progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ',   leave = True)
+        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', leave = False)
+        progbar_height    = tqdm(range(height_lr),  desc = 'Loop i (lr) ',    leave = False)
+        progbar_width     = tqdm(range(width_lr),   desc = 'Loop j (lr) ',    leave = False)
+    else:
+        progbar_batches   = range(batch_size)
+        progbar_timesteps = range(timesteps)
+        progbar_height    = range(height_lr)
+        progbar_width     = range(width_lr)
+    #end
+    
+    for m in progbar_batches:
+        for t in progbar_timesteps:
             
             i_start = 0
-            for i in range(height_lr):
+            for i in progbar_height:
                 
                 j_start = 0
-                for j in range(width_lr):
+                for j in progbar_width:
                     
                     i_end = i_start + kernel_size
                     j_end = j_start + kernel_size
