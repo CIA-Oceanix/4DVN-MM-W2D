@@ -318,9 +318,9 @@ def fieldsLR2hist(data_field, bins):
     
     if True:
         progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ', position = 0, leave = True)
-        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 1, leave = False)
-        progbar_height    = tqdm(range(height),     desc = 'Loop i (lr) ', position = 2, leave = False)
-        progbar_width     = tqdm(range(width),      desc = 'Loop j (lr) ', position = 3, leave = False)
+        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 1, leave = True)
+        progbar_height    = tqdm(range(height),     desc = 'Loop i (lr) ', position = 2, leave = True)
+        progbar_width     = tqdm(range(width),      desc = 'Loop j (lr) ', position = 3, leave = True)
     else:
         progbar_batches   = range(batch_size)
         progbar_timesteps = range(timesteps)
