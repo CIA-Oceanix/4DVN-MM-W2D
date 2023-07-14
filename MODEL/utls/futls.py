@@ -316,11 +316,23 @@ def fieldsLR2hist(data_field, bins):
     batch_size, timesteps, height, width = data_field.shape
     data_hist = torch.zeros((batch_size, timesteps, height, width,  bins.__len__() - 1))
     
-    for m in range(batch_size):
-        for t in range(timesteps):
+    if True:
+        progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ', position = 0, leave = True)
+        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 1, leave = False)
+        progbar_height    = tqdm(range(height),     desc = 'Loop i (lr) ', position = 2, leave = False)
+        progbar_width     = tqdm(range(width),      desc = 'Loop j (lr) ', position = 3, leave = False)
+    else:
+        progbar_batches   = range(batch_size)
+        progbar_timesteps = range(timesteps)
+        progbar_height    = range(height)
+        progbar_width     = range(width)
+    #end
+    
+    for m in progbar_batches:
+        for t in progbar_timesteps:
             
-            for i in range(height):
-                for j in range(width):
+            for i in progbar_height:
+                for j in progbar_width:
                     
                     hist = make_hist(data_field[m,t,i,j], bins)
                     data_hist[m,t,i,j,:] = hist
