@@ -231,7 +231,7 @@ if __name__ == '__main__':
     
     bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32.])
     
-    w_hist = fieldsHR2hist(w_hr, cparams.LR_KERNELSIZE, bins, progbars = True)
+    w_hist = fieldsHR2hist(w_hr[:1000], cparams.LR_KERNELSIZE, bins, progbars = True)
     w_lr   = torch.nn.functional.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0)
     timesteps, height_lr, width_lr = w_lr.shape
    
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     for t in range(timesteps):
         for i in range(height_lr):
             for j in range(width_lr):
-                mean = hist_mean_computation(w_hist[t,i,j], bins)
+                mean = hist_mean_computation(w_hist[t,i,j], xbins)
                 means_hist_computed[t,i,j] = mean
                 errors[t,i,j] = torch.sqrt((mean - w_lr[t,i,j]).pow(2))
             #end
