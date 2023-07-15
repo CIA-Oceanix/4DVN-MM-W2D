@@ -227,7 +227,7 @@ if __name__ == '__main__':
     
     w_hr = np.array(ds['wind'])
     w_hr = np.sqrt(w_hr[:,:,:,0]**2 + w_hr[:,:,:,1]**2)
-    w_hr = torch.Tensor(w_hr)[:200, -cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
+    w_hr = torch.Tensor(w_hr)[:, -cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
     
     bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32.])
     
