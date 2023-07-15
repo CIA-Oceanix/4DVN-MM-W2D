@@ -258,15 +258,24 @@ if __name__ == '__main__':
     ax[1].set_yticks(np.linspace(0, 20, 5))
     ax[1].plot(np.linspace(0, 20, 5), np.linspace(0, 20, 5), c = 'k', ls = '--', lw = 2)
     fig.tight_layout()
-    fig.savefig('./plots/avg_error_means_avgpool_and_histmean.eps', format = 'eps', dpi = 300, bbox_inches = 'tight')
+    fig.savefig('./plots/avg_error_means_avgpool_and_histmean.png', format = 'png', dpi = 300, bbox_inches = 'tight')
     plt.show()
     
     fig, ax = plt.subplots(1,2, figsize = (6,3))
     ax[0] = imshow_cb(ax[0], w_lr[0], 'Mean AvgPool2d [m/s]')
     ax[1] = imshow_cb(ax[1], means_hist_computed[0], 'Mean histogram [m/s]')
     fig.tight_layout()
-    fig.savefig('./plots/fields_means_avgpool_and_histmeans.eps', format = 'eps', dpi = 300, bbox_inches = 'tight')
+    fig.savefig('./plots/fields_means_avgpool_and_histmeans.png', format = 'png', dpi = 300, bbox_inches = 'tight')
     plt.show()
+    
+    data = {
+        'hr_histograms' : w_hist,
+        'lr_average'    : w_lr
+    }
+    
+    with open(os.path.join(PATH_DATA, 'histogram_dataset.pkl'), 'wb') as f:
+        f.dump(data, f)
+    f.close()
 #end
     
 
