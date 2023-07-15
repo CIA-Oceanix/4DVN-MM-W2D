@@ -231,7 +231,7 @@ if __name__ == '__main__':
     
     bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32.])
     
-    w_hist = fieldsHR2hist(w_hr[:500], cparams.LR_KERNELSIZE, bins, progbars = True)
+    w_hist = fieldsHR2hist(w_hr, cparams.LR_KERNELSIZE, bins, progbars = True)
     w_lr   = torch.nn.functional.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0)
     timesteps, height_lr, width_lr = w_lr.shape
    
