@@ -220,11 +220,10 @@ def hist_mean_computation(hist, bins):
 #end
 
 
-
 if __name__ == '__main__':
     
     dataset_name = cparams.DATASET_NAME
-    ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}.nc'))
+    ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}'))
     
     w_hr = np.array(ds['wind'])
     w_hr = np.sqrt(w_hr[:,:,:,0]**2 + w_hr[:,:,:,1]**2)
