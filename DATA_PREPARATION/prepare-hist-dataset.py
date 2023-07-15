@@ -274,7 +274,7 @@ if __name__ == '__main__':
     }
     
     with open(os.path.join(PATH_DATA, 'histogram_dataset.pkl'), 'wb') as f:
-        f.dump(data, f)
+        pickle.dump(data, f)
     f.close()
 #end
     
