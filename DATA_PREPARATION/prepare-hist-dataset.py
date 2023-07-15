@@ -239,7 +239,7 @@ if __name__ == '__main__':
     means_hist_computed = torch.zeros(w_lr.shape)
     errors = torch.zeros(w_lr.shape)
     print(w_hist.shape)
-    for t in range(timesteps):
+    for t in range(wh_hist.shape[0]):
         for i in range(height_lr):
             for j in range(width_lr):
                 mean = hist_mean_computation(w_hist[t,i,j], xbins)
