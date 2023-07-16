@@ -114,10 +114,10 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
                 hist = make_hist(this_wind_pixel, bins)
                 data_hist[t,i,j,:] = hist
                 
-                if torch.any(data_hist.isnan()):
-                    print(this_wind_pixel)
-                    print(hist)
-                #end
+                # if torch.any(data_hist.isnan()):
+                #     print(this_wind_pixel)
+                #     print(hist)
+                # #end
                 
                 j_start = j_end
             #end
