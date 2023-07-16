@@ -114,6 +114,11 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
                 hist = make_hist(this_wind_pixel, bins)
                 data_hist[t,i,j,:] = hist
                 
+                if torch.any(data_hist.isnan()):
+                    print(this_wind_pixel)
+                    print(hist)
+                #end
+                
                 j_start = j_end
             #end
             
@@ -124,46 +129,6 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     return data_hist
 #end
 
-def fieldsHR2avgwinds(data_field, kernel_size):
-    
-    def lr_dim(dim, ks_):
-        return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
-    #end
-    
-    timesteps, heigth, width = data_field.shape
-    height_lr, width_lr = lr_dim(heigth, kernel_size), lr_dim(width, kernel_size)
-    data_avg_lr = torch.zeros((timesteps, height_lr, width_lr))
-    
-    progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 0, leave = True)
-    
-    for t in progbar_timesteps:
-        
-        i_start = 0
-        for i in range(height_lr):
-            
-            j_start = 0
-            for j in range(width_lr):
-                
-                i_end = i_start + kernel_size
-                j_end = j_start + kernel_size
-                
-                try:
-                    this_wind_pixel = data_field[t, i_start:i_end ,j_start:j_end]
-                except:
-                    this_wind_pixel = data_field[t, i_start:, j_start:]
-                #end
-                
-                data_avg_lr[t,i,j] = torch.mean(this_wind_pixel)
-                
-                j_start = j_end
-            #end
-            
-            i_start = i_end
-        #end
-    #end
-    
-    return data_avg_lr
-#end
 
 def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, 
 			  day_start, month_start, year_start,
@@ -230,7 +195,7 @@ if __name__ == '__main__':
     w_hr = torch.Tensor(w_hr)[:, -cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
     
     # bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32.])
-    bins = torch.Tensor([0., 10., 15., 20., 30.])
+    bins = torch.Tensor([0., 10., 15., 20., 30., 35.])
         
     w_hist = fieldsHR2hist(w_hr, cparams.LR_KERNELSIZE, bins, progbars = True)
     w_lr   = torch.nn.functional.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0)
