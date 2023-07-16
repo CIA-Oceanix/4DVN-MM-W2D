@@ -92,7 +92,7 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     data_hist = torch.zeros((timesteps, height_lr, width_lr, bins.__len__() - 1))
     
     # loop to prepare histogram data
-    progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 0, leave = True)
+    progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps ', position = 0, leave = True)
     
     for t in progbar_timesteps:
         
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     means_hist_computed = torch.zeros(w_lr.shape)
     errors = torch.zeros(w_lr.shape)
     print(w_hist.shape)
-    for t in range(w_hist.shape[0]):
+    for t in tqdm(range(w_hr.shape[0]),  desc = 'Timesteps ', position = 0, leave = True):
         for i in range(height_lr):
             for j in range(width_lr):
                 mean = hist_mean_computation(w_hist[t,i,j], xbins)
