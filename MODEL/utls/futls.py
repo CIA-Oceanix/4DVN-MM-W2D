@@ -11,6 +11,36 @@ else:
 #end
 
 
+def get_resolution_mask_(freq, mask, mask_land, wfreq):
+    
+    if freq is None:
+        return mask
+    else:
+        if freq.__class__ is list:
+            if wfreq == 'lr':
+                mask[:, freq, :,:] = 1.
+            elif wfreq == 'hr':
+                mask_land = mask_land.to(mask.device)
+                mask[:, freq, :,:] = mask_land
+            #end
+            
+        elif freq.__class__ is int:
+            for t in range(mask.shape[1]):
+                if t % freq == 0:
+                    if wfreq == 'lr':
+                        mask[:,t,:,:] = 1.
+                    elif wfreq == 'hr':
+                        mask_land = mask_land.to(mask.device)
+                        mask[:,t,:,:] = mask_land
+                    #end
+                #end
+            #end
+        #end
+    #end
+    
+    return mask
+#end
+
 def get_data_mask(shape_data, mask_land, lr_sampling_freq, hr_sampling_freq, hr_obs_points, buoys_positions, mm_obsmodel):
     
     def get_resolution_mask(freq, mask, mask_land, wfreq):
@@ -256,7 +286,7 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     Takes as input tensors of dimension
         (batch_size, timesteps, height, width)
     '''
-        
+    
     def lr_dim(dim, ks_):
         return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
     #end
@@ -269,15 +299,12 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     
     if progbars:
         progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ', position = 0, leave = True)
-        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 1, leave = False)
-        progbar_height    = tqdm(range(height_lr),  desc = 'Loop i (lr) ', position = 2, leave = False)
-        progbar_width     = tqdm(range(width_lr),   desc = 'Loop j (lr) ', position = 3, leave = False)
     else:
         progbar_batches   = range(batch_size)
-        progbar_timesteps = range(timesteps)
-        progbar_height    = range(height_lr)
-        progbar_width     = range(width_lr)
     #end
+    progbar_timesteps = range(timesteps)
+    progbar_height    = range(height_lr)
+    progbar_width     = range(width_lr)
     
     for m in progbar_batches:
         for t in progbar_timesteps:
@@ -299,6 +326,11 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
                     
                     hist = make_hist(this_wind_pixel, bins)
                     data_hist[m,t,i,j,:] = hist
+                    
+                    # if torch.any(data_hist.isnan()):
+                    #     print()
+                    #     print('Nans')
+                    # #end
                     
                     j_start = j_end
                 #end
