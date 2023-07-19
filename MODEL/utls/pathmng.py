@@ -245,14 +245,15 @@ class PathManager:
         if cparams.VNAME == '4DVN-W2D':
             dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_NS', 'extent_EW'))
             dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent_NS', 'extent_EW'))
+            dataset.createVariable('mask', np.float32, ('one', 'extent_NS', 'extent_NS')) # SQUARE MASK!!!
         elif cparams.VNAME == '4DVN-PDF':
-            nbins = cparams.WIND_BINS.__len__() - 1
+            nbins = (cparams.WIND_BINS.__len__() - 1) + 1 # +1 to host vectorized lr fields
             dataset.createDimension('nbins', nbins)
             dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_lr', 'extent_lr', 'nbins'))
             dataset.createVariable('data', np.float32, ('run', 'batch', 'time', 'extent_lr', 'extent_lr', 'nbins'))
+            dataset.createVariable('mask', np.float32, ('one', 'extent_lr', 'extent_lr')) # SQUARE MASK!!!
         #end
         
-        dataset.createVariable('mask', np.float32, ('one', 'extent_NS', 'extent_NS')) # SQUARE MASK!!!
         dataset.close()
         print('Dataset.nc initialized and closed ...')
     #end

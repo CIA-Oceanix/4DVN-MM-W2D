@@ -301,7 +301,43 @@ class FokkerPlankNet(nn.Module):
     def __init__(self, shape_data, config_params):
         super(FokkerPlankNet, self).__init__()
         
-        batch_size, timesteps, height, width = shape_data
+        batch_size, timesteps, height, width, hbins = shape_data
+        self.shape_data = (timesteps, height, width,hbins)
+        self.net_hist = nn.Sequential(
+            nn.Conv2d(timesteps, timesteps * 2, kernel_size = (5,3), padding = (2,1)),
+            # nn.LeakyReLU(0.1),
+            nn.Conv2d(timesteps * 2, timesteps * 2, kernel_size = (5,3), padding = (2,1)),
+            nn.Conv2d(timesteps * 2, timesteps, kernel_size = (5,3), padding = (2,1)),
+            nn.Softmax(dim = -1)
+        )
+        
+        self.net_lr = nn.Sequential(
+            nn.Conv2d(timesteps, timesteps, kernel_size = 3, padding = 1),
+            # nn.LeakyReLU(0.1),
+            nn.Conv2d(timesteps, timesteps, kernel_size = 3, padding = 1),
+        )
+    #end
+    
+    def forward(self, data):
+        
+        batch_size = data.shape[0]
+        data_hist = data[:,:,:,:-1]
+        data_lr   = data[:,:,:,-1].reshape(batch_size, *self.shape_data[:-1])
+        
+        reco_hist = self.net_hist(data_hist)
+        reco_lr   = self.net_lr(data_lr)
+        reco_lr   = reco_lr.reshape(batch_size, self.shape_data[0],
+                                    self.shape_data[1] * self.shape_data[2], 1)
+        
+        return torch.cat([reco_hist, reco_lr], dim = -1)
+#end
+
+
+class FokkerPlankNet_(nn.Module):
+    def __init__(self, shape_data, config_params):
+        super(FokkerPlankNet_, self).__init__()
+        
+        batch_size, timesteps, height, width, hbins = shape_data
         nbins = config_params.WIND_BINS.__len__() - 1
         self.conv_1d = nn.Conv1d(timesteps, timesteps, kernel_size = 5, padding = 2)
         self.dense_ae = nn.Sequential(

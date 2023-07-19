@@ -17,7 +17,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pathmng import PathManager
 from litmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents, LitModel_OSSE2_Distribution
 from dlmodels import model_selection
-from dutls import W2DSimuDataModule
+from dutls import W2DSimuDataModule, WPDFSimuDataModule
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
@@ -26,7 +26,7 @@ else:
     DEVICE = torch.device('cpu')
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 # torch.manual_seed(161020)
 
 
@@ -165,7 +165,11 @@ class Experiment:
         self.print_exp_details()
         
         # DATAMODULE : initialize
-        self.w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
+        if self.cparams.VNAME == '4DVN-W2D':
+            self.w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
+        elif self.cparams.VNAME == '4DVN-PDF':
+            self.w2d_dm = WPDFSimuDataModule(self.path_data, self.cparams)
+        #end
         
         if self.cparams.VERSIONING:
             

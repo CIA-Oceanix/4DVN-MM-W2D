@@ -59,10 +59,9 @@ class W2DSimuDataset_WindComponents(Dataset):
     #end
 #end
 
-
 class W2DSimuDataModule(pl.LightningDataModule):
     
-    def __init__(self, path_data, cparams, timesteps = 24, normalize = False):
+    def __init__(self, path_data, cparams, timesteps = 24, normalize = True):
         super(W2DSimuDataModule, self).__init__()
         
         self.path_data     = path_data
@@ -249,3 +248,153 @@ class W2DSimuDataModule(pl.LightningDataModule):
         return DataLoader(self.test_dataset, batch_size = self.batch_size, generator = torch.Generator(DEVICE))
     #end
 #end
+
+
+class WPDFSimuData(Dataset):
+    
+    def __init__(self, data_hist, data_avg_lr):
+        
+        self.data_hist = data_hist
+        self.data_avg_lr = data_avg_lr
+        
+        self.nitems = self.data_hist.shape[0]
+        self.to_tensor()
+    #end
+    
+    def __len__(self):
+        return self.nitems
+    #end
+    
+    def __getitem__(self, idx):
+        return self.data_hist[idx,:,:,:,:], self.data_avg_lr[idx,:,:,:]
+    #end
+    
+    def to_tensor(self):
+        self.data_hist   = torch.Tensor(self.data_hist).type(torch.float32).to(DEVICE)
+        self.data_avg_lr = torch.Tensor(self.data_avg_lr).type(torch.float32).to(DEVICE)
+    #end
+#end
+
+class WPDFSimuDataModule(pl.LightningDataModule):
+    
+    def __init__(self, path_data, cparams, timesteps = 24):
+        super(WPDFSimuDataModule, self).__init__()
+        
+        self.path_data     = path_data
+        self.region_case   = cparams.REGION_CASE
+        self.region_extent = cparams.REGION_EXTENT_PX
+        self.lr_kernelsize = cparams.LR_KERNELSIZE
+        self.hr_mask_mode  = cparams.HR_MASK_MODE
+        self.batch_size    = cparams.BATCH_SIZE
+        self.test_days     = cparams.TEST_DAYS
+        self.val_days      = cparams.VAL_DAYS
+        self.timesteps     = timesteps
+        self.data_name     = cparams.DATASET_NAME
+        self.shapeData     = None
+        self.wind_modulus  = cparams.WIND_MODULUS
+        self.Dataset_class = WPDFSimuData
+        
+        self.setup()
+    #end
+    
+    def get_shapeData(self):
+        
+        if self.shapeData is not None:
+            return self.shapeData
+        else:
+            raise ValueError('Shape data is None, likely not initialized instance')
+        #end
+    #ends
+    
+    def setup(self):
+        
+        lr_dim = np.floor( (self.region_extent - self.lr_kernelsize) / self.lr_kernelsize + 1 )
+        reso = np.int32( 3 * self.region_extent / lr_dim )
+        w_hist = pickle.load(open(os.path.join(self.path_data, 'winds_24h', 
+                                               'histogram_dataset_{}km.pkl'.format(reso)), 'rb'))
+        ds = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name))
+        wind_hist = np.array(ds['hist_wind'])
+        wind_avg  = np.array(ds['avg_wind'])
+        mask      = np.array(ds['mask_land'])
+        print()
+        
+        ttimesteps, height_lr, width_lr, bins = w_hist['hr_histograms'].shape
+        self.shapeData = (self.batch_size, self.timesteps, height_lr, width_lr, bins)
+        
+        n_test  = np.int32(24 * self.test_days)
+        n_train = np.int32(wind_hist.__len__() - n_test)
+        n_val   = np.int32(24 * self.val_days)
+        n_train = np.int32(n_train - n_val)
+        
+        hst_train_set = wind_hist[:n_train, :,:,:]
+        hst_val_set   = wind_hist[n_train : n_train + n_val, :,:,:]
+        hst_test_set  = wind_hist[n_train + n_val : n_train + n_val + n_test, :,:,:]
+        
+        avg_train_set = wind_avg[:n_train, :,:]
+        avg_val_set   = wind_avg[n_train : n_train + n_val, :,:]
+        avg_test_set  = wind_avg[n_train + n_val : n_train + n_val + n_test, :,:]
+        
+        hst_train_set = self.extract_time_series(hst_train_set, 36, n_train // 24,  'hist')
+        hst_val_set   = self.extract_time_series(hst_val_set,   36, n_val // 24,    'hist')
+        hst_test_set  = self.extract_time_series(hst_test_set,  36, self.test_days, 'hist')
+        
+        avg_train_set = self.extract_time_series(avg_train_set, 36, n_train // 24,  'avg')
+        avg_val_set   = self.extract_time_series(avg_val_set,   36, n_val // 24,    'avg')
+        avg_test_set  = self.extract_time_series(avg_test_set,  36, self.test_days, 'avg')
+        
+        print('Train dataset shape : ', hst_train_set.shape)
+        print('Val   dataset shape : ', hst_val_set.shape)
+        print('Test  dataset shape : ', hst_test_set.shape)
+        print('\nInstantiating torch Datasets ...')
+        
+        self.mask_land     = mask
+        self.buoys_positions = None
+        self.train_dataset = self.Dataset_class(hst_train_set, avg_train_set)
+        self.test_dataset  = self.Dataset_class(hst_test_set, avg_test_set)
+        self.val_dataset   = self.Dataset_class(hst_val_set, avg_val_set)        
+    #end
+    
+    def extract_time_series(self, wind_data, ts_length, num_subseries, mod, random_extract = False):
+        
+        if random_extract:
+            new_wind = np.zeros((num_subseries, ts_length, *wind_data.shape[-3:]))
+            for i in range(num_subseries):
+                idx_series_start = np.random.randint(0, wind_data.shape[0] - ts_length)
+                new_series = wind_data[idx_series_start : idx_series_start + ts_length, :,:,:]
+                new_wind[i,:,:,:] = new_series
+            #end
+        else:
+            if mod == 'hist':
+                new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-3:]))
+            elif mod == 'avg':
+                new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-2:]))
+            #end
+            
+            for t in range(num_subseries - 2):
+                t_true = 18 + 24 * t
+                new_wind[t] = wind_data[t_true : t_true + ts_length]
+            #end
+        #end
+        
+        return new_wind
+    #end
+    
+    def get_land_and_buoy_positions(self):
+        return self.mask_land, self.buoys_positions
+    #end
+    
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size = self.batch_size, generator = torch.Generator(DEVICE))
+    #end
+    
+    def val_dataloader(self):
+        
+        return DataLoader(self.val_dataset, batch_size = self.batch_size, generator = torch.Generator(DEVICE))
+    #end
+    
+    def test_dataloader(self):
+        
+        return DataLoader(self.test_dataset, batch_size = self.batch_size, generator = torch.Generator(DEVICE))
+    #end
+#end
+        

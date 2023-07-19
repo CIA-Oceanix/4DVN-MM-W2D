@@ -64,7 +64,7 @@ def relative_gain(perf_base, perf_model, mode = 'lower'):
     return (1 - perf_compare / perf_reference) * 100.
 #end
 
-def Hellinger_distance(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
+def Hellinger_distance_(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
     
     if reduction_dim is None and h_target.shape.__len__() > 1:
         reduction_dim = 1
@@ -89,6 +89,57 @@ def Hellinger_distance(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
     #end
     
     return b_distance.mean()
+#end
+
+class HellingerDistance(nn.Module):
+    def __init__(self, n_items = True):
+        super(HellingerDistance, self).__init__()
+        
+        self.n_items = n_items
+    #end
+    
+    def forward(self, target, output, mask = None):
+        '''
+        Inputs: normalized probabilities, ie histograms summing to 1!!!
+        
+        Hellinger distance: metric to compare proximity between histograms.
+        Given two probability distributions :math:`P` and :math:`Q`, is computed as 
+        
+            .. math::
+                HD(P,Q) = \sqrt{1 - \sum_{x \in X} \sqrt{P(x) Q(x)}}
+        
+        with :math:`\sum_x P(x) = 1` and :math:`\sum_x Q(x) = 1`.
+        '''
+        
+        if mask is None:
+            mask = torch.ones(target.shape)
+        #end
+        
+        if self.n_items:
+            nitems = mask.sum()
+            if nitems == 0:
+                nitems = 1.
+            #end
+        #end
+        
+        target[target == 0.] = 1e-9
+        output[output == 0.] = 1e-9
+        b_coefficient = torch.sqrt( torch.mul(target, output) ).sum(dim = -1)
+        if torch.any(b_coefficient > 1.) or torch.any(b_coefficient < 0.):
+            raise ValueError('BC can not be > 1 or < 0')
+        #end
+        
+        hellinger_distance = torch.sqrt(1. - b_coefficient)
+        hellinger_distance = hellinger_distance.unsqueeze(-1).mul(mask)
+        
+        if self.n_items:
+            hd_mean = hellinger_distance.sum().div(nitems)
+        else:
+            hd_mean = hellinger_distance.mean()
+        #end
+        
+        return hd_mean
+    #end
 #end
 
 def str_sim(target, output):

@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import numpy as np
 import datetime
 
-from metrics import L2_Loss, L1_Loss
+from metrics import L2_Loss, L1_Loss, HellingerDistance
 import dlmodels as dlm
 import solver as NN_4DVar
 import futls as fs
@@ -345,7 +345,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         self.shape_data = shape_data
         
         # Initialize gradient solver (LSTM)
-        batch_size, ts_length, height, width = shape_data
+        # NOTE: this :4 is to do it compatible with LitModel_OSSE2_Distribution !!!
+        batch_size, ts_length, height, width = shape_data[:4]
         mgrad_shapedata = [ts_length * 3, height, width]
         model_shapedata = [batch_size, ts_length, height, width]
         alpha_obs = config_params.ALPHA_OBS
@@ -1021,8 +1022,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Loss function — parameters optimization
         self.l2_loss = L2_Loss()
         self.l1_loss = L1_Loss()
+        self.hd_loss = HellingerDistance()
         
         # Case-specific cparams
+        self.wind_bins = config_params.WIND_BINS
         self.run = run
         self.automatic_optimization = True
         self.has_any_nan = False
@@ -1030,7 +1033,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.wind_bins = config_params.WIND_BINS
         
         # Initialize gradient solver (LSTM)
-        batch_size, ts_length, height, width = shape_data
+        self.shape_data = shape_data
+        batch_size, ts_length, height, width, hbins = shape_data
         mgrad_shapedata = [ts_length * 9, height, width]
         model_shapedata = [batch_size, ts_length, height, width]
         alpha_obs = config_params.ALPHA_OBS
@@ -1074,125 +1078,93 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return loss, outs
     #end
     
-    def make_histograms_from_fields(self, data_fields, bins, resolution):
+    def hist_to_img_owa(self, data, mode):
         
-        if resolution == 'hr':
-            data_hist = fs.fieldsHR2hist(data_fields, kernel_size = self.hparams.lr_kernel_size, bins = bins)
-        elif resolution == 'lr':
-            data_hist = fs.fieldsLR2hist(data_fields, bins)
+        batch_size, timesteps,height, width, hbins  = self.shape_data
+        if mode == 'h2i':
+            return data.reshape(batch_size, timesteps, height * width, hbins)
+        elif mode == 'i2h':
+            return data.reshape(batch_size, timesteps, height, width, hbins)
+        else:
+            raise ValueError('Reshape mode not implemented')
         #end
-        
-        return data_hist
     #end
     
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
-        # bins = [0.0, 2.45, 4.5, 6.75]
+        hist_wind, wind_lr = batch
+        batch_size, timesteps, height, width, hbins = hist_wind.shape
         
-        wind_hr_gt_u, wind_hr_gt_v = batch[0], batch[1]
-        mwind_hr_gt = torch.sqrt( wind_hr_gt_u.pow(2) + wind_hr_gt_v.pow(2) )
-        mwind_lr_gt = torch.nn.functional.avg_pool2d(mwind_hr_gt, kernel_size = self.hparams.lr_kernel_size)
-        batch_size, timesteps, height, width = mwind_lr_gt.shape
+        # Reshape to image
+        hist_wind = hist_wind.reshape(batch_size, timesteps, height * width, hbins)
         
         # Persistences !!!
-        data_hr_obs = self.get_persistence(mwind_hr_gt, 'lr', longer_series = True)
-        data_lr_obs = self.get_persistence(mwind_lr_gt, 'hr', longer_series = True)
+        data_hst_obs = self.get_persistence(hist_wind, 'hr', longer_series = True)
+        data_lr_obs  = self.get_persistence(wind_lr,   'lr', longer_series = True)
         
-        # Histograms
-        hwind_hr = self.make_histograms_from_fields(data_hr_obs, self.wind_bins, 'hr')
-        hwind_lr = self.make_histograms_from_fields(data_lr_obs, self.wind_bins, 'lr')
+        data_hst_obs = data_hst_obs[:, timewindow_start : timewindow_end, :,:]
+        data_lr_obs  = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        hist_wind    = hist_wind[:, timewindow_start : timewindow_end, :,:]
         
-        hwind_gt = self.make_histograms_from_fields(mwind_hr_gt, self.wind_bins, 'hr')
-        
-        # Join LR and HR observations
-        batch_input = torch.zeros((batch_size, timesteps, height, width, self.wind_bins.__len__() - 1))
-        for t in range(timesteps):
-            if self.hparams.lr_mask_sfreq.__class__ is int:
-                if t % self.hparams.lr_mask_sfreq == 0:
-                    batch_input[:,t,:,:,:] = hwind_lr[:,t,:,:,:]
-                #end
-            elif self.hparams.lr_mask_sfreq.__class__ is list:
-                batch_input[:, self.hparams.lr_mask_sfreq,:,:,:] = hwind_lr[:, self.hparams.lr_mask_sfreq, :,:,:]
-            #end
-            if self.hparams.hr_mask_sfreq.__class__ is int:
-                if t % self.hparams.hr_mask_sfreq == 0:
-                    batch_input[:,t,:,:,:] = hwind_hr[:,t,:,:,:]
-                #end
-            elif self.hparams.hr_mask_sfreq.__class__ is list:
-                batch_input[:, self.hparams.hr_mask_sfreq,:,:,:] = hwind_hr[:, self.hparams.hr_mask_sfreq, :,:,:]
-            #end
-        #end
-        
-        hwind_hr    = hwind_hr[:, timewindow_start : timewindow_end, :,:,:]
-        hwind_lr    = hwind_lr[:, timewindow_start : timewindow_end, :,:,:]
-        batch_input = batch_input[:, timewindow_start : timewindow_end, :,:,:]
-        mwind_hr_gt = mwind_hr_gt[:, timewindow_start : timewindow_end, :,:]
-        mwind_lr_gt = mwind_lr_gt[:, timewindow_start : timewindow_end, :,:]
-        
-        return hwind_hr, hwind_lr, batch_input, mwind_hr_gt, mwind_lr_gt, hwind_gt
+        return data_hst_obs, data_lr_obs, hist_wind
     #end
     
-    def get_mask(self, shape_data, shape_hist_lr):
+    def get_mask(self, shape_data):
         
-        _, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(shape_data)
-        mask_lr = torch.nn.functional.avg_pool2d(mask_lr, kernel_size = self.hparams.lr_kernel_size)
-        mask_hr_dx1 = torch.nn.functional.avg_pool2d(mask_hr_dx1, kernel_size = self.hparams.lr_kernel_size)
-        mask_lr[mask_lr < 0.5]  = 0.
-        mask_lr[mask_lr >= 0.5] = 1.
-        mask_hr_dx1[mask_hr_dx1 < 0.5]  = 0.
-        mask_hr_dx1[mask_hr_dx1 >= 0.5] = 1.
+        mask_lr   = fs.get_resolution_mask_(self.hparams.lr_mask_sfreq, torch.zeros(shape_data), self.mask_land, 'lr')
+        mask_hist = fs.get_resolution_mask_(self.hparams.hr_mask_sfreq, torch.zeros(shape_data), self.mask_land, 'hr')
+        mask_lr[0,-1,:,:] = 1.
         
-        mask_slr = torch.zeros(shape_hist_lr)
-        for t in range(shape_hist_lr[1]):
-            if self.hparams.lr_mask_sfreq.__class__ is int:
-                if t % self.hparams.lr_mask_sfreq == 0:
-                    for n in range(shape_hist_lr[-1]):
-                        mask_slr[:,t,:,:,n] = mask_lr[:,t,:,:]
-                    #end
-                #end
-            elif self.hparams.lr_mask_sfreq.__class__ is list:
-                for n in range(shape_hist_lr[-1]):
-                    mask_slr[:,self.hparams.lr_mask_sfreq,:,:,n] = mask_lr[:, self.hparams.lr_mask_sfreq, :,:]
-                #end
-            #end
-            if self.hparams.hr_mask_sfreq.__class__ is int:
-                if t % self.hparams.hr_mask_sfreq == 0:
-                    for n in range(shape_hist_lr[-1]):
-                        mask_slr[:,t,:,:,n] = mask_hr_dx1[:,t,:,:]
-                    #end
-                #end
-            elif self.hparams.hr_mask_sfreq.__class__ is list:
-                for n in range(shape_hist_lr[-1]):
-                    mask_slr[:,self.hparams.hr_mask_sfreq,:,:,n] = mask_hr_dx1[:, self.hparams.hr_mask_sfreq, :,:]
-                #end
-            #end
-        #end
+        batch_size, timesteps, height, width = mask_lr.shape
+        mask_hist = mask_hist.reshape(batch_size, timesteps, height * width, 1)
         
-        return mask_slr
+        return mask_lr, mask_hist
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        hwind_hr, hwind_lr, batch_input, mwind_hr_gt, mwind_lr_gt, hwind_gt = self.prepare_batch(data)
-        hwind_gt = self.make_histograms_from_fields(mwind_hr_gt, self.wind_bins, 'hr')
+        hist_wind, wind_lr_gt, hist_wind_gt = self.prepare_batch(data)
+        batch_size, timesteps, height, width = wind_lr_gt.shape
+        _,_,_, hbins = hist_wind.shape
         
         # Mask data
-        mask = self.get_mask(mwind_hr_gt.shape, hwind_lr.shape)
+        mask_lr, mask_hist = self.get_mask(wind_lr_gt.shape)
+        wind_lr = wind_lr_gt * mask_lr
+        hist_wind = hist_wind * mask_hist
         
-        batch_input = batch_input * mask
-        outputs = self.model.Phi(batch_input)
+        wind_lr = wind_lr.reshape(batch_size, timesteps, height * width, 1)
+        wind_lr_gt = wind_lr_gt.reshape(batch_size, timesteps, height * width, 1)
+        batch_input = torch.cat([hist_wind, wind_lr], dim = -1)
+        
+        with torch.set_grad_enabled(True):
+            batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
+            
+            outputs = self.model.Phi(batch_input)
+        #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
-            self.save_samples({'data' : hwind_gt.detach().cpu(),
-                               'reco' : outputs.detach().cpu()})
+            self.save_samples({
+                'data' : torch.cat([hist_wind_gt, wind_lr_gt], dim = -1).detach().cpu().reshape(-1, timesteps, height, width, hbins + 1),
+                'reco' : outputs.detach().cpu().reshape(-1, timesteps, height, width, hbins + 1)
+            })
             
             if self.hparams.inversion == 'gs':
                 self.save_var_cost_values(self.model.var_cost_values)
             #end
         #end
         
-        loss = self.l2_loss((outputs - hwind_gt), mask = None)
+        # Obtain mean lr values
+        out_hist = outputs[:,:,:,:-1]
+        out_lr   = outputs[:,:,:,-1].unsqueeze(-1)
+        
+        wbins = torch.Tensor(self.wind_bins)
+        wbins = ((wbins[1:] + wbins[:-1]) / 2).reshape(1,1,1,-1)
+        avg_hist = (torch.ones(out_hist.shape) * wbins).mul(out_hist).sum(dim = -1).unsqueeze(-1)
+        
+        loss_lr = self.l2_loss((avg_hist - wind_lr_gt), mask = None) + self.l2_loss((wind_lr_gt - out_lr), mask = None)
+        loss_hd = self.hd_loss(hist_wind_gt, out_hist, mask = None)
+        loss = loss_lr * 1 + loss_hd * 50
         
         return dict({'loss' : loss}), outputs
     #end
