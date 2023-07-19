@@ -1,6 +1,7 @@
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import netCDF4 as nc
 import pickle
 import os
@@ -130,11 +131,11 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
 #end
 
 
-def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name, 
+def save_netCDF4_dataset(lat, lon, time, mask, w_hist, w_lr, indices, ds_name, 
 			  day_start, month_start, year_start,
 			  day_end, month_end, year_end):
    
-    filename = f'{ds_name}_{day_start:02d}-{month_start:02d}-{year_start}_{day_end:02d}-{month_end:02d}-{year_end}.nc'
+    filename = f'{ds_name}_{day_start}-{month_start}-{year_start}_{day_end}-{month_end}-{year_end}.nc'
     if os.path.exists(os.path.join(PATH_DATA, filename)):
         os.remove(os.path.join(PATH_DATA, filename))
         print('Old Dataset removed ...')
@@ -145,7 +146,7 @@ def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name,
     nc_dataset.createDimension('south-north', lat.shape[0])
     nc_dataset.createDimension('west-east', lon.shape[1])
     nc_dataset.createDimension('time', time.__len__())
-    nc_dataset.createDimension('wind_components', 2)
+    nc_dataset.createDimension('hbins', w_hist.shape[-1])
     
     nc_lat = nc_dataset.createVariable('lat', np.float32, ('south-north', 'west-east'))
     nc_lat.units = 'degree_north'
@@ -157,11 +158,12 @@ def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name,
     nc_mask.units = 'm'
     nc_mask.long_name = 'Mask_land_sea'
     nc_time = nc_dataset.createVariable('time', np.float64, ('time',))
-    nc_time.units = f'hours_since_{day_start:02d}-{month_start:02d}-{year_start}_to{day_end:02d}-{month_end:02d}-{year_end:02d}_dd-mm-yyyy'
+    nc_time.units = f'hours_since_{day_start}-{month_start}-{year_start}_to{day_end}-{month_end}-{year_end}_dd-mm-yyyy'
     nc_time.long_name = 'hours'
-    nc_wind = nc_dataset.createVariable('wind', np.float32, ('time', 'south-north', 'west-east', 'wind_components'))
-    nc_wind.units = 'm s-1'
-    nc_wind.long_name = 'model_wind'
+    nc_hist_wind = nc_dataset.createVariable('hist_wind', np.float32, ('time', 'south-north', 'west-east', 'hbins'))
+    nc_hist_wind.units = 'norm_frequencies'
+    nc_hist_wind.long_name = 'model_wind_probabilities'
+    nc_avg_wind = nc_dataset.createVariable('avg_wind', np.float32, ('time', 'south-north', 'west-east'))
     nc_windices = nc_dataset.createVariable('indices', np.int32, ('time',))
     nc_windices.units = 'none'
     nc_windices.long_name = 'indices_of_wind_images'
@@ -170,8 +172,8 @@ def save_netCDF4_dataset(lat, lon, time, mask, wind, indices, ds_name,
     nc_lon[:,:] = lon
     nc_time[:] = time
     nc_mask[:,:] = mask
-    nc_wind[:,:,:,0] = wind[:,:,:,0]
-    nc_wind[:,:,:,1] = wind[:,:,:,1]
+    nc_hist_wind[:,:,:,:] = w_hist
+    nc_avg_wind[:,:,:] = w_lr
     nc_windices = indices
     
     print('Dataset save. Closing ...')
@@ -184,21 +186,52 @@ def hist_mean_computation(hist, bins):
     return (bins * hist).sum()
 #end
 
+def get_dataset_days_extrema(ds_name):
+    
+    day_start   = ds_name[4:6]
+    month_start = ds_name[7:9]
+    year_start  = ds_name[10:14]
+    day_end     = ds_name[15:17]
+    month_end   = ds_name[18:20]
+    year_end    = ds_name[21:25]
+    
+    return day_start, month_start, year_start, day_end, month_end, year_end
+#end
+
 
 if __name__ == '__main__':
     
     dataset_name = cparams.DATASET_NAME
     ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}'))
+    day_start, month_start, year_start, day_end, month_end, year_end = get_dataset_days_extrema(dataset_name)
+    
+    lr_dim = np.floor( (cparams.REGION_EXTENT_PX - cparams.LR_KERNELSIZE) / cparams.LR_KERNELSIZE + 1 )
+    reso = np.int32( 3 * cparams.REGION_EXTENT_PX / lr_dim )
     
     w_hr = np.array(ds['wind'])
+    lat  = np.array(ds['lat'])
+    lon  = np.array(ds['lon'])
+    time = np.array(ds['time'])
+    idx  = np.array(ds['indices'])
+    mask = np.array(ds['mask_land'])
+    
     w_hr = np.sqrt(w_hr[:,:,:,0]**2 + w_hr[:,:,:,1]**2)
     w_hr = torch.Tensor(w_hr)[:, -cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
+    lat  = lat[-cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
+    lon  = lon[-cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
+    mask = mask[-cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
     
     bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32., 35.])
     # bins = torch.Tensor([0., 10., 15., 20., 30., 35.])
-        
+    
+    lat_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lat.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0).squeeze(0)
+    lon_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lon.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0).squeeze(0)
+    mask_lr = F.avg_pool2d(torch.Tensor(mask).reshape(1, 1, *tuple(mask.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0).squeeze(0)
+    mask_lr[mask_lr <= 0.5] = 0
+    mask_lr[mask_lr > 0.5]  = 1
+    
     w_hist = fieldsHR2hist(w_hr, cparams.LR_KERNELSIZE, bins, progbars = True)
-    w_lr   = torch.nn.functional.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0)
+    w_lr   = F.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0)
     timesteps, height_lr, width_lr = w_lr.shape
    
     xbins = (bins[1:] + bins[:-1]) / 2
@@ -238,14 +271,8 @@ if __name__ == '__main__':
     fig.savefig('./plots/fields_means_avgpool_and_histmeans.png', format = 'png', dpi = 300, bbox_inches = 'tight')
     plt.show()
     
-    data = {
-        'hr_histograms' : w_hist,
-        'lr_average'    : w_lr
-    }
-    
-    with open(os.path.join(PATH_DATA, 'histogram_dataset.pkl'), 'wb') as f:
-        pickle.dump(data, f)
-    f.close()
+    save_netCDF4_dataset(lat_lr, lon_lr, time, mask_lr, w_hist, w_lr, idx, 
+                         f'whist-{reso}km', day_start, month_start, year_start, day_end, month_end, year_end)
 #end
-    
+
 
