@@ -92,7 +92,7 @@ def Hellinger_distance_(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
 #end
 
 class HellingerDistance(nn.Module):
-    def __init__(self, n_items = False):
+    def __init__(self, n_items = True):
         super(HellingerDistance, self).__init__()
         
         self.n_items = n_items
