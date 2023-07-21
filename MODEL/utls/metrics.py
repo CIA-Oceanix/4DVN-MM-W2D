@@ -98,7 +98,7 @@ class HellingerDistance(nn.Module):
         self.n_items = n_items
     #end
     
-    def forward(self, target, output, mask = None):
+    def forward(self, target, output, mask = None, mode = 'hd'):
         '''
         Inputs: normalized probabilities, ie histograms summing to 1!!!
         
@@ -129,7 +129,11 @@ class HellingerDistance(nn.Module):
             raise ValueError('BC can not be > 1 or < 0')
         #end
         
-        hellinger_distance = torch.sqrt(1. - b_coefficient)
+        if mode == 'hd':
+            hellinger_distance = torch.sqrt(1. - b_coefficient)
+        elif mode == 'bd':
+            hellinger_distance = -1. * torch.log(b_coefficient)
+        #end
         hellinger_distance = hellinger_distance.unsqueeze(-1).mul(mask)
         
         if self.n_items:

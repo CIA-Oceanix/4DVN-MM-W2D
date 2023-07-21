@@ -1163,7 +1163,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         avg_hist = (torch.ones(out_hist.shape) * wbins).mul(out_hist).sum(dim = -1).unsqueeze(-1)
         
         loss_lr = self.l2_loss((avg_hist - wind_lr_gt), mask = None) + self.l2_loss((wind_lr_gt - out_lr), mask = None)
-        loss_hd = self.hd_loss(hist_wind_gt, out_hist, mask = None)
+        loss_hd = self.hd_loss(hist_wind_gt, out_hist, mask = None, mode = 'bd')
         loss = loss_lr * 1 + loss_hd * 100
         
         return dict({'loss' : loss}), outputs
