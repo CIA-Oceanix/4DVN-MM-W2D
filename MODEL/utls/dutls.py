@@ -21,8 +21,13 @@ class W2DSimuDataset_WindComponents(Dataset):
     
     def __init__(self, data, normalize, case_wmod):
         
-        wind2D = self.normalize(data, case_wmod)
-        self.wind2D = wind2D
+        if normalize:
+            wind2D = self.normalize(data, case_wmod)
+            self.wind2D = wind2D
+        else:
+            self.wind2D = data
+            self.normparams = {}
+        #end
         
         self.numitems = self.wind2D.__len__()
         self.to_tensor()
