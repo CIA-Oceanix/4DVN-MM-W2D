@@ -146,6 +146,22 @@ class HellingerDistance(nn.Module):
     #end
 #end
 
+class KLDivLoss(nn.Module):
+    def __init__(self):
+        super(KLDivLoss, self).__init__()
+        
+        pass
+    #end
+    
+    def forward(self, target, output):
+        
+        loss = target * (target.log() - output.log())
+        
+        loss = loss.mean()
+        return loss
+    #end
+#end
+
 def str_sim(target, output):
     
     if target.__class__ is not np.ndarray:

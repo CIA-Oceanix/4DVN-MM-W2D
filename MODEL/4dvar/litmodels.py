@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 import numpy as np
 import datetime
 
-from metrics import L2_Loss, L1_Loss, HellingerDistance
+from metrics import L2_Loss, L1_Loss, HellingerDistance, KLDivLoss
 import dlmodels as dlm
 import solver as NN_4DVar
 import futls as fs
@@ -1022,7 +1022,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Loss function — parameters optimization
         self.l2_loss = L2_Loss()
         self.l1_loss = L1_Loss()
-        self.hd_loss = HellingerDistance()
+        self.hd_loss = KLDivLoss()
         
         # Case-specific cparams
         self.wind_bins = config_params.WIND_BINS

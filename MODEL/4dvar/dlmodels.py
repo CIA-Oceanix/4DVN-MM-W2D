@@ -207,11 +207,11 @@ class UNet(nn.Module):
         self.encoder1 = nn.Conv2d(ts_length, 32, kernel_size = 5, padding = 2)
         self.nl1 = nn.LeakyReLU(0.1)
         # self.nl1 = nn.Identity()
-        self.bottleneck = nn.Conv2d(32, 32, kernel_size = 3, padding = 1)
+        self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
         self.nl2 = nn.LeakyReLU(0.1)
         # self.nl2 = nn.Identity()
         self.decoder1 = nn.Conv2d(32 * 2, 32, kernel_size = 5, padding = 2)
-        self.conv = nn.Conv2d(32, ts_length, kernel_size = 3, padding = 1)
+        self.conv = nn.Conv2d(32, ts_length, kernel_size = 5, padding = 2)
     #end
     
     def forward(self, x):
