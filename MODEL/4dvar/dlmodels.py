@@ -166,7 +166,7 @@ class ConvNet_mwind_angle(nn.Module):
         return output
     #end
 #end
-    
+
 
 
 class ConvAutoEncoder(nn.Module):
@@ -220,6 +220,34 @@ class UNet(nn.Module):
         dec1 = self.decoder1(dec1)
         y = self.conv(self.nl2(dec1))
         return y
+    #end
+#end
+
+class UNet_pdf(UNet):
+    def __init__(self,shape_data, config_params):
+        super(UNet_pdf, self).__init__()
+        
+        in_channels = shape_data[1] + shape_data[-1]
+        self.encoder1 = nn.Conv2d(in_channels, 32, kernel_size = 5, padding = 2)
+        self.nl1 = nn.LeakyReLU(0.1)
+        self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
+        self.nl2 = nn.LeakyReLU(0.1)
+        self.decoder1 = nn.Conv2d(32 * 2, 32, kernel_size = 5, padding = 2)
+        self.conv = nn.Conv2d(32, in_channels, kernel_size = 5, padding = 2)
+        self.softmax = nn.Softmax(dim = -1)
+    #end
+    
+    def forward(self, x):
+        
+        batch_size, timesteps, height, width, bins = x.shape
+        x = x.reshape(batch_size, timesteps * bins, height, width)
+        enc1 = self.nl1(self.encoder1(x))
+        bottleneck = self.bottleneck(enc1)
+        dec1 = torch.cat([enc1, bottleneck], dim = 1)
+        dec1 = self.decoder1(dec1)
+        y = self.conv(self.nl2(dec1))
+        y = y.reshape(batch_size, timesteps, height, width, bins)
+        y = self.softmax(x)
     #end
 #end
 
@@ -330,6 +358,7 @@ class FokkerPlankNet(nn.Module):
                                     self.shape_data[1] * self.shape_data[2], 1)
         
         return torch.cat([reco_hist, reco_lr], dim = -1)
+    #end
 #end
 
 
