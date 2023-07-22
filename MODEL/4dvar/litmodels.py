@@ -1120,9 +1120,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         mask_hist = fs.get_resolution_mask_(self.hparams.hr_mask_sfreq, torch.zeros(shape_data), self.mask_land, 'hr')
         mask_lr[0,-1,:,:] = 1.
         
-        batch_size, timesteps, height, width = mask_lr.shape
-        mask_hist = mask_hist.reshape(batch_size, timesteps, height * width, 1)
-        
         return mask_lr, mask_hist
     #end
     
@@ -1137,8 +1134,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         wind_lr   = wind_lr_gt * mask_lr
         hist_wind = hist_wind * mask_hist
         
-        wind_lr = wind_lr.reshape(batch_size, timesteps, height * width, 1)
-        wind_lr_gt = wind_lr_gt.reshape(batch_size, timesteps, height * width, 1)
+        # wind_lr = wind_lr.reshape(batch_size, timesteps, height * width, 1)
+        # wind_lr_gt = wind_lr_gt.reshape(batch_size, timesteps, height * width, 1)
         batch_input = torch.cat([hist_wind, wind_lr], dim = -1)
         
         with torch.set_grad_enabled(True):
