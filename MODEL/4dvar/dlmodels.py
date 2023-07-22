@@ -402,8 +402,8 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        self.down = Downsample_pdf(in_channels, 256)
-        self.up = Upsample_pdf(256, in_channels)
+        self.down = Downsample_pdf(in_channels, 128)
+        self.up = Upsample_pdf(128, in_channels)
         self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
         self.normalize = nn.Softmax(dim = -1)
     #end
