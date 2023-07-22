@@ -313,8 +313,8 @@ class UNet1(nn.Module):
         super(UNet1, self).__init__()
         
         self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        self.down = Downsample(in_channels, 256)
-        self.up = Upsample(256, in_channels)
+        self.down = Downsample(in_channels, 512)
+        self.up = Upsample(512, in_channels)
         self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
     #end
     
