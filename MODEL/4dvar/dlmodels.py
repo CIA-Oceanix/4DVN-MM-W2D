@@ -204,13 +204,13 @@ class UNet(nn.Module):
         
         ts_length = shape_data[1] * 3
         
-        self.encoder1 = nn.Conv2d(ts_length, 32, kernel_size = 5, padding = 2)
+        self.encoder1 = nn.Conv2d(ts_length, 64, kernel_size = 5, padding = 2)
         self.nl1 = nn.LeakyReLU(0.1)
         # self.nl1 = nn.Identity()
-        self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
+        self.bottleneck = nn.Conv2d(64, 64, kernel_size = 5, padding = 2)
         self.nl2 = nn.LeakyReLU(0.1)
         # self.nl2 = nn.Identity()
-        self.decoder1 = nn.Conv2d(32 * 2, 32, kernel_size = 5, padding = 2)
+        self.decoder1 = nn.Conv2d(64 * 2, 32, kernel_size = 5, padding = 2)
         self.conv = nn.Conv2d(32, ts_length, kernel_size = 5, padding = 2)
     #end
     
