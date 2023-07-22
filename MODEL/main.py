@@ -26,7 +26,7 @@ else:
     DEVICE = torch.device('cpu')
     print('Program runs using device : {}\n'.format(DEVICE))
 #end
-# torch.autograd.set_detect_anomaly(True)
+torch.autograd.set_detect_anomaly(True)
 # torch.manual_seed(161020)
 
 
@@ -101,9 +101,9 @@ class Experiment:
             raise ValueError('Trainable observation operator is to be used only with "gs" inversion')
         #end
         
-        if self.cparams.VNAME == '4DVN-PDF' and self.cparams.PRIOR != 'FPN':
-            raise ValueError('Select FPN prior with 4DVN-PDF case')
-        #end
+        # if self.cparams.VNAME == '4DVN-PDF' and self.cparams.PRIOR != 'FPN':
+        #     raise ValueError('Select FPN prior with 4DVN-PDF case')
+        # #end
         
     #end
     

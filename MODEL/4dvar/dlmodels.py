@@ -205,7 +205,7 @@ class UNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.encoder1 = nn.Conv2d(ts_length, 32, kernel_size = 5, padding = 2)
-        # self.nl1 = nn.LeakyReLU(0.1)
+        self.nl1 = nn.LeakyReLU(0.1)
         self.nl1 = nn.Identity()
         self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
         # self.nl2 = nn.LeakyReLU(0.1)
@@ -225,11 +225,11 @@ class UNet(nn.Module):
     #end
 #end
 
-class UNet_pdf(UNet):
+class UNet_pdf(nn.Module):
     def __init__(self,shape_data, config_params):
         super(UNet_pdf, self).__init__()
         
-        in_channels = shape_data[1] + shape_data[-1]
+        in_channels = shape_data[1] * shape_data[-1]
         self.encoder1 = nn.Conv2d(in_channels, 32, kernel_size = 5, padding = 2)
         self.nl1 = nn.LeakyReLU(0.1)
         self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
@@ -242,16 +242,16 @@ class UNet_pdf(UNet):
     def forward(self, x):
         
         batch_size, timesteps, height, width, bins = x.shape
-        x = x.reshape(batch_size, timesteps * bins, height, width)
-        enc1 = self.nl1(self.encoder1(x))
+        x_in = x.reshape(batch_size, timesteps * bins, height, width)
+        enc1 = self.nl1(self.encoder1(x_in))
         bottleneck = self.bottleneck(enc1)
         dec1 = torch.cat([enc1, bottleneck], dim = 1)
         dec1 = self.decoder1(dec1)
         y = self.conv(self.nl2(dec1))
-        y = y.reshape(batch_size, timesteps, height, width, bins)
-        y = self.softmax(x)
+        out = torch.reshape(y, (batch_size, timesteps, height, width, bins))
+        out = self.softmax(out)
         
-        return y
+        return out
     #end
 #end
 

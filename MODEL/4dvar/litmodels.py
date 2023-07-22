@@ -1108,8 +1108,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         wind_hist    = wind_hist[:, timewindow_start : timewindow_end, :,:]
         
         # Reshape to histogram
-        wind_hist    = wind_hist.reshape(batch_size, timesteps, height, width, hbins)
-        data_hst_obs = data_hst_obs.reshape(batch_size, timesteps, height, width, hbins)
+        wind_hist    = wind_hist.reshape(batch_size, wind_hist.shape[1], height, width, hbins)
+        data_hst_obs = data_hst_obs.reshape(batch_size, data_hst_obs.shape[1], height, width, hbins)
         
         return data_hst_obs, wind_hist, data_lr_obs, wind_lr
     #end
@@ -1125,18 +1125,17 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        hist_wind, hist_wind_gt, wind_lr, wind_lr_gt = self.prepare_batch(data)
+        wind_hist, wind_hist_gt, wind_lr, wind_lr_gt = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr_gt.shape
-        _,_,_, hbins = hist_wind.shape
         
         # Mask data
-        mask_lr, mask_hist = self.get_mask(wind_lr_gt.shape)
-        wind_lr   = wind_lr_gt * mask_lr
-        hist_wind = hist_wind * mask_hist
+        mask_lr, mask_hist = self.get_mask(wind_hist[:,:,:,:,0].shape)
+        hist_wind = wind_hist * mask_hist.unsqueeze(-1)
         
         # wind_lr = wind_lr.reshape(batch_size, timesteps, height * width, 1)
         # wind_lr_gt = wind_lr_gt.reshape(batch_size, timesteps, height * width, 1)
-        batch_input = torch.cat([hist_wind, wind_lr], dim = -1)
+        # batch_input = torch.cat([hist_wind, wind_lr], dim = -1)
+        batch_input = hist_wind.clone()
         
         with torch.set_grad_enabled(True):
             batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
@@ -1147,8 +1146,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
-                'data' : torch.cat([hist_wind_gt, wind_lr_gt], dim = -1).detach().cpu().reshape(-1, timesteps, height, width, hbins + 1),
-                'reco' : outputs.detach().cpu().reshape(-1, timesteps, height, width, hbins + 1)
+                'data' : wind_hist_gt.detach().cpu(),
+                'reco' : outputs.detach().cpu()
             })
             
             if self.hparams.inversion == 'gs':
@@ -1156,17 +1155,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             #end
         #end
         
-        # Obtain mean lr values
-        out_hist = outputs[:,:,:,:-1]
-        out_lr   = outputs[:,:,:,-1].unsqueeze(-1)
-        
-        wbins = torch.Tensor(self.wind_bins)
-        wbins = ((wbins[1:] + wbins[:-1]) / 2).reshape(1,1,1,-1)
-        avg_hist = (torch.ones(out_hist.shape) * wbins).mul(out_hist).sum(dim = -1).unsqueeze(-1)
-        
-        loss_lr = self.l2_loss((avg_hist - wind_lr_gt), mask = None) + self.l2_loss((wind_lr_gt - out_lr), mask = None)
-        loss_hd = self.hd_loss(hist_wind_gt, out_hist, mask = None)
-        loss = loss_lr * 1 + loss_hd * 100
+        loss = self.hd_loss(wind_hist_gt, outputs, mask = None)
         
         return dict({'loss' : loss}), outputs
     #end
