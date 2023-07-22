@@ -313,8 +313,8 @@ class UNet1(nn.Module):
         super(UNet1, self).__init__()
         
         self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        self.down = Downsample(in_channels, 128)
-        self.up = Upsample(128, in_channels)
+        self.down = Downsample(in_channels, 256)
+        self.up = Upsample(256, in_channels)
         self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
     #end
     
@@ -326,90 +326,6 @@ class UNet1(nn.Module):
         x3 = self.up(x1, x2)
         out = self.out_conv(x3)
         return out
-    #end
-#end
-
-
-class FokkerPlankNet(nn.Module):
-    def __init__(self, shape_data, config_params):
-        super(FokkerPlankNet, self).__init__()
-        
-        batch_size, timesteps, height, width, hbins = shape_data
-        self.shape_data = (timesteps, height, width,hbins)
-        self.net_hist = nn.Sequential(
-            nn.Conv2d(timesteps, timesteps * 2, kernel_size = (5,3), padding = (2,1)),
-            # nn.LeakyReLU(0.1),
-            nn.Conv2d(timesteps * 2, timesteps * 2, kernel_size = (5,3), padding = (2,1)),
-            nn.Conv2d(timesteps * 2, timesteps, kernel_size = (5,3), padding = (2,1)),
-            nn.Softmax(dim = -1)
-        )
-        
-        self.net_lr = nn.Sequential(
-            nn.Conv2d(timesteps, timesteps, kernel_size = 3, padding = 1),
-            # nn.LeakyReLU(0.1),
-            nn.Conv2d(timesteps, timesteps, kernel_size = 3, padding = 1),
-        )
-    #end
-    
-    def forward(self, data):
-        
-        batch_size = data.shape[0]
-        data_hist = data[:,:,:,:-1]
-        data_lr   = data[:,:,:,-1].reshape(batch_size, *self.shape_data[:-1])
-        
-        reco_hist = self.net_hist(data_hist)
-        reco_lr   = self.net_lr(data_lr)
-        reco_lr   = reco_lr.reshape(batch_size, self.shape_data[0],
-                                    self.shape_data[1] * self.shape_data[2], 1)
-        
-        return torch.cat([reco_hist, reco_lr], dim = -1)
-    #end
-#end
-
-
-class FokkerPlankNet_(nn.Module):
-    def __init__(self, shape_data, config_params):
-        super(FokkerPlankNet_, self).__init__()
-        
-        batch_size, timesteps, height, width, hbins = shape_data
-        nbins = config_params.WIND_BINS.__len__() - 1
-        self.conv_1d = nn.Conv1d(timesteps, timesteps, kernel_size = 5, padding = 2)
-        self.dense_ae = nn.Sequential(
-            nn.Linear(nbins, 5), nn.LeakyReLU(0.1),
-            nn.Linear(5, nbins), nn.Softmax(dim = -1)
-        )
-        self.conv_2d = nn.Conv2d(nbins, nbins, kernel_size = 3, padding = 1)
-    #end
-    
-    def forward(self, x):
-        # x.shape : (m, T, H, W, B)
-        batch_size, timesteps, height, width, nbins = x.shape
-        
-        # Model computations
-        ## Block 1: Conv1d on timesteps
-        x_ = x.reshape(batch_size, timesteps, height * width * nbins)
-        x_ = self.conv_1d(x_)
-        
-        ## Reshape
-        x_ = x_.reshape(batch_size, timesteps, height, width, nbins)
-        
-        ## Block 2: Conv2d on spatial dimensions (number of bins treated as channels)
-        ## Timesteps treated independently
-        
-        # x_ = x_.transpose(2,4)
-        # for t in range(timesteps):
-        #     x_[:,t,:,:,:] = self.conv_2d(x_[:,t,:,:,:])
-        # #end
-        # x_ = x_.transpose(2,4)
-        
-        ## Block 3: Dense on histogram bins
-        x_ = x_.reshape(batch_size, timesteps, height, width, nbins)
-        x_ = x_.reshape(batch_size, timesteps, height * width, nbins)
-        x_ = self.dense_ae(x_)
-        x_ = x_.reshape(batch_size, timesteps, height, width, nbins)
-        
-        # Return
-        return x_
     #end
 #end
 
