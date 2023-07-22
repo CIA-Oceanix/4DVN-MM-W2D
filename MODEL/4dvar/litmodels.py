@@ -1092,21 +1092,26 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
-        hist_wind, wind_lr = batch
-        batch_size, timesteps, height, width, hbins = hist_wind.shape
+        wind_hist, wind_lr = batch
+        batch_size, timesteps, height, width, hbins = wind_hist.shape
         
         # Reshape to image
-        hist_wind = hist_wind.reshape(batch_size, timesteps, height * width, hbins)
+        wind_hist = wind_hist.reshape(batch_size, timesteps, height * width, hbins)
         
         # Persistences !!!
-        data_hst_obs = self.get_persistence(hist_wind, 'hr', longer_series = True)
+        data_hst_obs = self.get_persistence(wind_hist, 'hr', longer_series = True)
         data_lr_obs  = self.get_persistence(wind_lr,   'lr', longer_series = True)
         
+        # Crop central timesteps
         data_hst_obs = data_hst_obs[:, timewindow_start : timewindow_end, :,:]
         data_lr_obs  = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        hist_wind    = hist_wind[:, timewindow_start : timewindow_end, :,:]
+        wind_hist    = wind_hist[:, timewindow_start : timewindow_end, :,:]
         
-        return data_hst_obs, data_lr_obs, hist_wind
+        # Reshape to histogram
+        wind_hist    = wind_hist.reshape(batch_size, timesteps, height, width, hbins)
+        data_hst_obs = data_hst_obs.reshape(batch_size, timesteps, height, width, hbins)
+        
+        return data_hst_obs, wind_hist, data_lr_obs, wind_lr
     #end
     
     def get_mask(self, shape_data):
@@ -1123,13 +1128,13 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        hist_wind, wind_lr_gt, hist_wind_gt = self.prepare_batch(data)
+        hist_wind, hist_wind_gt, wind_lr, wind_lr_gt = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr_gt.shape
         _,_,_, hbins = hist_wind.shape
         
         # Mask data
         mask_lr, mask_hist = self.get_mask(wind_lr_gt.shape)
-        wind_lr = wind_lr_gt * mask_lr
+        wind_lr   = wind_lr_gt * mask_lr
         hist_wind = hist_wind * mask_hist
         
         wind_lr = wind_lr.reshape(batch_size, timesteps, height * width, 1)

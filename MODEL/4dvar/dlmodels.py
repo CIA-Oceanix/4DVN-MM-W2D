@@ -205,9 +205,9 @@ class UNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.encoder1 = nn.Conv2d(ts_length, 32, kernel_size = 5, padding = 2)
-        self.nl1 = nn.LeakyReLU(0.1)
+        # self.nl1 = nn.LeakyReLU(0.1)
         self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
-        self.nl2 = nn.LeakyReLU(0.1)
+        # self.nl2 = nn.LeakyReLU(0.1)
         self.decoder1 = nn.Conv2d(32 * 2, 32, kernel_size = 5, padding = 2)
         self.conv = nn.Conv2d(32, ts_length, kernel_size = 5, padding = 2)
     #end
@@ -248,6 +248,8 @@ class UNet_pdf(UNet):
         y = self.conv(self.nl2(dec1))
         y = y.reshape(batch_size, timesteps, height, width, bins)
         y = self.softmax(x)
+        
+        return y
     #end
 #end
 
@@ -759,6 +761,9 @@ def model_selection(shape_data, config_params, components = False):
     
     elif config_params.PRIOR == 'UN1':
         return UNet1(shape_data[1] * 3, shape_data[1] * 3)
+    
+    elif config_params.PRIOR == 'UNpdf':
+        return UNet_pdf(shape_data, config_params)
     
     elif config_params.PRIOR == 'UN4':
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)
