@@ -1022,7 +1022,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Loss function — parameters optimization
         self.l2_loss = L2_Loss()
         self.l1_loss = L1_Loss()
-        self.hd_loss = KLDivLoss()
+        self.kl_loss = KLDivLoss()
+        self.hd_loss = HellingerDistance()
         
         # Case-specific cparams
         self.wind_bins = config_params.WIND_BINS
@@ -1155,7 +1156,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             #end
         #end
         
-        loss = self.hd_loss(wind_hist_gt, outputs, mask = None)
+        loss = self.kl_loss(wind_hist_gt, outputs) * 0.05 + self.l2_loss((wind_hist_gt - outputs))
         
         return dict({'loss' : loss}), outputs
     #end

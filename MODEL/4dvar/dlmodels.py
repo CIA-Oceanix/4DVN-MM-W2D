@@ -225,6 +225,21 @@ class UNet(nn.Module):
     #end
 #end
 
+
+class NormalizeLayer(nn.Module):
+    def __init__(self):
+        super(NormalizeLayer, self).__init__()
+    #end
+    
+    def forward(self, data_in):
+        batch_size, timesteps, hh, ww, bins = data_in.shape
+        data = data_in.reshape(-1, bins)
+        data = torch.stack([data[i] / data[i].sum() for i in range(data.shape[0])], dim = 1).t().clone()
+        data = data.reshape(data_in.shape)
+        return data
+    #end
+#end
+
 class UNet_pdf(nn.Module):
     def __init__(self,shape_data, config_params):
         super(UNet_pdf, self).__init__()
@@ -237,6 +252,7 @@ class UNet_pdf(nn.Module):
         self.decoder1 = nn.Conv2d(32 * 2, 32, kernel_size = 5, padding = 2)
         self.conv = nn.Conv2d(32, in_channels, kernel_size = 5, padding = 2)
         self.softmax = nn.Softmax(dim = -1)
+        # self.softmax = NormalizeLayer()
     #end
     
     def forward(self, x):
@@ -250,7 +266,6 @@ class UNet_pdf(nn.Module):
         y = self.conv(self.nl2(dec1))
         out = y.reshape(batch_size, timesteps, height, width, bins)
         y_out = self.softmax(out).clone()
-        y_out[y_out == 0.] = 1e-9
         
         return y_out
     #end
@@ -325,6 +340,87 @@ class UNet1(nn.Module):
         
         x3 = self.up(x1, x2)
         out = self.out_conv(x3)
+        return out
+    #end
+#end
+
+
+class DoubleConv_pdf(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(DoubleConv_pdf, self).__init__()
+        
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
+        )
+    #end
+    
+    def forward(self, data):
+        return self.conv(data)
+    #end
+#end
+
+class Downsample_pdf(nn.Module):
+    def __init__(self, in_channels, out_channels, downsample_factor = 4):
+        super(Downsample_pdf, self).__init__()
+        
+        self.down_conv = nn.Sequential(
+            nn.MaxPool2d(downsample_factor),
+            DoubleConv_pdf(in_channels, out_channels)
+        )
+    #end
+    
+    def forward(self, data):
+        return self.down_conv(data)
+    #end
+#end
+
+class Upsample_pdf(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(Upsample_pdf, self).__init__()
+        
+        self.up_conv = nn.Sequential(
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
+            nn.LeakyReLU(0.1),
+            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2),
+            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 3, stride = 1)
+        )
+        self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 5, padding = 2)
+    #end
+    
+    def forward(self, scale1_data, scale2_data):
+        
+        scale2_data_upscaled = self.up_conv(scale2_data)
+        data = torch.cat([scale1_data, scale2_data_upscaled], dim = 1)
+        return self.conv(data)
+    #end
+#end
+
+class UNet1_pdf(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(UNet1_pdf, self).__init__()
+        
+        self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
+        self.down = Downsample_pdf(in_channels, 512)
+        self.up = Upsample_pdf(512, in_channels)
+        self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
+        self.normalize = nn.Softmax(dim = -1)
+    #end
+    
+    def forward(self, data):
+        
+        batch_size, timesteps, height, width, nbins = data.shape
+        in_data = data.reshape(batch_size, timesteps * nbins, height, width)
+        
+        x1 = self.in_conv(in_data)
+        x2 = self.down(x1)
+        
+        x3  = self.up(x1, x2)
+        out = self.out_conv(x3)
+        out = self.normalize(out).clone()
+        
+        out = out.reshape(batch_size, timesteps, height, width, nbins)
         return out
     #end
 #end
@@ -684,6 +780,9 @@ def model_selection(shape_data, config_params, components = False):
     elif config_params.PRIOR == 'UNpdf':
         return UNet_pdf(shape_data, config_params)
     
+    elif config_params.PRIOR == 'UN1pdf':
+        return UNet1_pdf(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1])
+    
     elif config_params.PRIOR == 'UN4':
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)
     
@@ -691,7 +790,9 @@ def model_selection(shape_data, config_params, components = False):
         return MLP(config_params, shape_data)
     
     elif config_params.PRIOR == 'FPN':
-        return FokkerPlankNet(shape_data, config_params)
+        # return FokkerPlankNet(shape_data, config_params)
+        raise ValueError('FPN deprecated')
+        return None
     
     else:
         raise NotImplementedError('No valid prior')

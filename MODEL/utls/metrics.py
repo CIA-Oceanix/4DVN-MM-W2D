@@ -122,8 +122,8 @@ class HellingerDistance(nn.Module):
             #end
         #end
         
-        target[target == 0.] = 1e-9
-        output[output == 0.] = 1e-9
+        # target[target == 0.] = 1e-9
+        # output[output == 0.] = 1e-9
         b_coefficient = torch.sqrt( torch.mul(target, output) ).sum(dim = -1)
         if torch.any(b_coefficient > 1.) or torch.any(b_coefficient < 0.):
             raise ValueError('BC can not be > 1 or < 0')
@@ -146,19 +146,24 @@ class HellingerDistance(nn.Module):
     #end
 #end
 
-class KLDivLoss(nn.Module):
+class KLDivLoss(torch.nn.Module):
     def __init__(self):
         super(KLDivLoss, self).__init__()
-        
-        pass
     #end
     
     def forward(self, target, output):
         
-        loss = target * (target.log() - output.log())
+        if target.__class__ is not torch.Tensor:
+            target = torch.Tensor(target)
+        if output.__class__ is not torch.Tensor:
+            output = torch.Tensor(output)
+        #end
         
-        loss = loss.mean()
-        return loss
+        target[target < 1e-9] = 1e-9
+        output[output < 1e-9] = 1e-9
+        kld = output.mul( output.log() - target.log() )
+        kld = kld.mean()
+        return kld
     #end
 #end
 
