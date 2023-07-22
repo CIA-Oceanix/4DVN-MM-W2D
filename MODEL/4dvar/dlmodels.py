@@ -418,9 +418,9 @@ class UNet1_pdf(nn.Module):
         
         x3  = self.up(x1, x2)
         out = self.out_conv(x3)
+        out = out.reshape(batch_size, timesteps, height, width, nbins)
         out = self.normalize(out).clone()
         
-        out = out.reshape(batch_size, timesteps, height, width, nbins)
         return out
     #end
 #end
