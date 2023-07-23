@@ -362,7 +362,7 @@ class DoubleConv_pdf(nn.Module):
 #end
 
 class Downsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, downsample_factor = 4):
+    def __init__(self, in_channels, out_channels, downsample_factor = 2):
         super(Downsample_pdf, self).__init__()
         
         self.down_conv = nn.Sequential(
@@ -377,15 +377,23 @@ class Downsample_pdf(nn.Module):
 #end
 
 class Upsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, cparams):
         super(Upsample_pdf, self).__init__()
         
-        self.up_conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
-            nn.LeakyReLU(0.1),
-            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2),
-            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 3, stride = 1)
-        )
+        if cparams.LR_KERNELSIZE == 29:
+            self.up_conv = nn.Sequential(
+                nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
+                nn.LeakyReLU(0.1),
+                nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2),
+                nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 3, stride = 1)
+            )
+        elif cparams.LR_KERNELSIZE == 10:
+            self.up_conv = nn.Sequential(
+                nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
+                nn.LeakyReLU(0.1),
+                nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
+            )
+        #end
         self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 3, padding = 1)
     #end
     
@@ -398,12 +406,12 @@ class Upsample_pdf(nn.Module):
 #end
 
 class UNet1_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, cparams):
         super(UNet1_pdf, self).__init__()
         
         self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 3, padding = 1)
         self.down = Downsample_pdf(in_channels, 256)
-        self.up = Upsample_pdf(256, in_channels)
+        self.up = Upsample_pdf(256, in_channels, cparams)
         self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
         self.normalize = nn.Softmax(dim = -1)
     #end
@@ -781,7 +789,7 @@ def model_selection(shape_data, config_params, components = False):
         return UNet_pdf(shape_data, config_params)
     
     elif config_params.PRIOR == 'UN1pdf':
-        return UNet1_pdf(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1])
+        return UNet1_pdf(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], config_params)
     
     elif config_params.PRIOR == 'UN4':
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)
