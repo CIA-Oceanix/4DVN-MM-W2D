@@ -362,7 +362,7 @@ class DoubleConv_pdf(nn.Module):
 #end
 
 class Downsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, downsample_factor = 2):
+    def __init__(self, in_channels, out_channels, downsample_factor = 4):
         super(Downsample_pdf, self).__init__()
         
         self.down_conv = nn.Sequential(
