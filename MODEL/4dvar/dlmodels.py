@@ -443,9 +443,9 @@ class ConvNet_pdf(nn.Module):
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, 256, kernel_size = 5, padding = 2),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(256, 512, kernel_size = 5, padding = 2),
+            nn.Conv2d(256, 256, kernel_size = 5, padding = 2),
             nn.LeakyReLU(0.1),
-            nn.Conv2d(512, in_channels, kernel_size = 5, padding = 2)
+            nn.Conv2d(256, in_channels, kernel_size = 5, padding = 2)
         )
         self.normalize = nn.Softmax(dim = -1)
     #end
