@@ -384,7 +384,7 @@ class Upsample_pdf(nn.Module):
             nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
             nn.LeakyReLU(0.1),
             nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2),
-            # nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 3, stride = 1)
+            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 3, stride = 1)
         )
         self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 5, padding = 2)
     #end
