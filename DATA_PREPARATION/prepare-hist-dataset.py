@@ -201,6 +201,11 @@ def get_dataset_days_extrema(ds_name):
 
 if __name__ == '__main__':
     
+    print('###############""')
+    print('WARNING! Set properly cparams.json')
+    print('Kernel size (LR) : {}'.format(cparams.LR_KERNELSIZE))
+    print('###############""')
+    
     dataset_name = cparams.DATASET_NAME
     ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}'))
     day_start, month_start, year_start, day_end, month_end, year_end = get_dataset_days_extrema(dataset_name)

@@ -362,7 +362,7 @@ class DoubleConv_pdf(nn.Module):
 #end
 
 class Downsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, downsample_factor = 4):
+    def __init__(self, in_channels, out_channels, downsample_factor = 2):
         super(Downsample_pdf, self).__init__()
         
         self.down_conv = nn.Sequential(
@@ -386,7 +386,7 @@ class Upsample_pdf(nn.Module):
             nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2),
             nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 3, stride = 1)
         )
-        self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 5, padding = 2)
+        self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 3, padding = 1)
     #end
     
     def forward(self, scale1_data, scale2_data):
@@ -401,10 +401,10 @@ class UNet1_pdf(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(UNet1_pdf, self).__init__()
         
-        self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        self.down = Downsample_pdf(in_channels, 128)
-        self.up = Upsample_pdf(128, in_channels)
-        self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
+        self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 3, padding = 1)
+        self.down = Downsample_pdf(in_channels, 256)
+        self.up = Upsample_pdf(256, in_channels)
+        self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
         self.normalize = nn.Softmax(dim = -1)
     #end
     
