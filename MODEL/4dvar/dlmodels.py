@@ -434,6 +434,34 @@ class UNet1_pdf(nn.Module):
 #end
 
 
+class ConvNet_pdf(nn.Module):
+    def __init__(self, shape_data, cparams):
+        super(ConvNet_pdf, self).__init__()
+        
+        in_channels = shape_data[1] * shape_data[-1]
+        
+        self.net = nn.Sequential(
+            nn.Conv2d(in_channels, 128, kernel_size = 3, padding = 1),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(128, in_channels, kernel_size = 3, padding = 1),
+        )
+        self.normalize = nn.Softmax(dim = -1)
+    #end
+    
+    def forward(self, data):
+        
+        batch_size, timesteps, height, width, nbins = data.shape
+        in_data = data.reshape(batch_size, timesteps * nbins, height, width)
+        
+        out = self.net(in_data)
+        out = out.reshape(batch_size, timesteps, height, width, nbins)
+        out = self.normalize(out).clone()
+        
+        return out
+    #end
+#end
+
+
 # TIP
 ###############################################################################
 ##### 4DVARNET OBSERVATION MODELS #############################################
@@ -775,6 +803,9 @@ def model_selection(shape_data, config_params, components = False):
             return ConvNet_mwind_angle(shape_data, config_params)
         #end
     #end
+    
+    elif config_params.PRIOR == 'SNpdf':
+        return ConvNet_pdf(shape_data, config_params)
     
     elif config_params.PRIOR == 'RN':
         return ResNet(shape_data, config_params)
