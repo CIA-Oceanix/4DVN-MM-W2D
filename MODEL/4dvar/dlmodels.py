@@ -412,7 +412,7 @@ class UNet1_pdf(nn.Module):
         self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 3, padding = 1)
         self.down = Downsample_pdf(in_channels, 128)
         self.up = Upsample_pdf(128, in_channels, cparams)
-        self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
+        # self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
         self.normalize = nn.Softmax(dim = -1)
     #end
     
@@ -442,9 +442,9 @@ class ConvNet_pdf(nn.Module):
         
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, 256, kernel_size = 5, padding = 2),
-            nn.LeakyReLU(0.1),
+            # nn.LeakyReLU(0.1),
             nn.Conv2d(256, 256, kernel_size = 5, padding = 2),
-            nn.LeakyReLU(0.1),
+            # nn.LeakyReLU(0.1),
             nn.Conv2d(256, in_channels, kernel_size = 5, padding = 2)
         )
         self.normalize = nn.Softmax(dim = -1)
