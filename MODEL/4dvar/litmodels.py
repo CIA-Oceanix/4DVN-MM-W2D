@@ -1132,7 +1132,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Mask data
         mask_lr, mask_hist = self.get_mask(wind_hist[:,:,:,:,0].shape)
         # wind_hist = wind_hist * mask_hist.unsqueeze(-1)
-        batch_input = wind_hist.clone()
+        batch_input = wind_hist_gt.clone()
         
         # Inversion
         with torch.set_grad_enabled(True):
