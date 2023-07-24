@@ -424,8 +424,8 @@ class UNet1_pdf(nn.Module):
         x1 = self.in_conv(in_data)
         x2 = self.down(x1)
         
-        x3  = self.up(x1, x2)
-        out = self.out_conv(x3)
+        out  = self.up(x1, x2)
+        # out = self.out_conv(out)
         out = out.reshape(batch_size, timesteps, height, width, nbins)
         out = self.normalize(out).clone()
         
