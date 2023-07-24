@@ -1156,7 +1156,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             #end
         #end
         
-        loss = self.kl_loss(wind_hist_gt, outputs) * 1 #+ self.l2_loss((wind_hist_gt - outputs))
+        # loss = self.kl_loss(wind_hist_gt, outputs) * 1 + self.l2_loss((wind_hist_gt - outputs))
+        loss = self.l2_loss((wind_hist_gt - outputs))
         
         return dict({'loss' : loss}), outputs
     #end
