@@ -1131,16 +1131,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Mask data
         mask_lr, mask_hist = self.get_mask(wind_hist[:,:,:,:,0].shape)
-        hist_wind = wind_hist * mask_hist.unsqueeze(-1)
+        # wind_hist = wind_hist * mask_hist.unsqueeze(-1)
+        batch_input = wind_hist.clone()
         
-        # wind_lr = wind_lr.reshape(batch_size, timesteps, height * width, 1)
-        # wind_lr_gt = wind_lr_gt.reshape(batch_size, timesteps, height * width, 1)
-        # batch_input = torch.cat([hist_wind, wind_lr], dim = -1)
-        batch_input = hist_wind.clone()
-        
+        # Inversion
         with torch.set_grad_enabled(True):
             batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
-            
             outputs = self.model.Phi(batch_input)
         #end
         
@@ -1150,14 +1146,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 'data' : wind_hist_gt.detach().cpu(),
                 'reco' : outputs.detach().cpu()
             })
-            
-            if self.hparams.inversion == 'gs':
-                self.save_var_cost_values(self.model.var_cost_values)
-            #end
         #end
         
-        loss = self.kl_loss(wind_hist_gt, outputs) * 1 + self.l2_loss((wind_hist_gt - outputs)) + self.hd_loss(wind_hist_gt, outputs)
-        # loss = self.l2_loss((wind_hist_gt - outputs))
+        loss_mse = self.l2_loss((wind_hist_gt - outputs))
+        loss_kld = self.kl_loss(wind_hist_gt, outputs)
+        loss_hd  = self.hd_loss(wind_hist_gt, outputs)
+        loss = loss_kld + loss_mse + loss_hd
         
         return dict({'loss' : loss}), outputs
     #end
