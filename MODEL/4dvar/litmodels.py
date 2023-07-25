@@ -1155,7 +1155,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         batch_size, timesteps, height, width = wind_lr_gt.shape
         
         # Mask data
-        # mask_lr, mask_hist = self.get_mask(wind_hist_hr[:,:,:,:,0].shape)
         wind_hist = wind_hist * mask_hist.unsqueeze(-1)
         batch_input = wind_hist.clone()
         
@@ -1173,7 +1172,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             })
         #end
         
-        loss_mse = 1.0 * self.l2_loss((wind_hist_gt - outputs))
+        loss_mse = 0.0 * self.l2_loss((wind_hist_gt - outputs))
         loss_kld = 0.0 * self.kl_loss(wind_hist_gt, outputs)
         loss_hd  = 1.0 * self.hd_loss(wind_hist_gt, outputs)
         loss = loss_kld + loss_mse + loss_hd
