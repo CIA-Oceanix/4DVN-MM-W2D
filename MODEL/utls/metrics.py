@@ -122,11 +122,14 @@ class HellingerDistance(nn.Module):
             #end
         #end
         
-        # target[target == 0.] = 1e-9
-        # output[output == 0.] = 1e-9
+        target[target < 1e-9] = 1e-9
+        output[output < 1e-9] = 1e-9
+        
         b_coefficient = torch.sqrt( torch.mul(target, output) ).sum(dim = -1)
-        if torch.any(b_coefficient > 1.) or torch.any(b_coefficient < 0.):
-            raise ValueError('BC can not be > 1 or < 0')
+        if torch.any(b_coefficient > 1.):
+            b_coefficient[b_coefficient > 1.] = 1.
+        if torch.any(b_coefficient < 0.):
+            b_coefficient[b_coefficient < 0.] = 0.
         #end
         
         if mode == 'hd':

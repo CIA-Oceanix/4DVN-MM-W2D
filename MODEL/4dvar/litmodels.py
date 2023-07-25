@@ -1177,7 +1177,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         #end
         
         wind_hist = outputs[:,:,:,:,:self.shape_data[-1]]
-        loss_mse = 0.0 * self.l2_loss((wind_hist_gt - wind_hist))
+        loss_mse = 1.0 * self.l2_loss((wind_hist_gt - wind_hist))
         loss_kld = 0.0 * self.kl_loss(wind_hist_gt, wind_hist)
         loss_hd  = 1.0 * self.hd_loss(wind_hist_gt, wind_hist)
         loss = loss_kld + loss_mse + loss_hd
