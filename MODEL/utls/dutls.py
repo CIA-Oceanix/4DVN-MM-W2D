@@ -315,10 +315,10 @@ class WPDFSimuDataModule(pl.LightningDataModule):
     
     def setup(self):
         
-        lr_dim = np.floor( (self.region_extent - self.lr_kernelsize) / self.lr_kernelsize + 1 )
-        reso = np.int32( 3 * self.region_extent / lr_dim )
-        w_hist = pickle.load(open(os.path.join(self.path_data, 'winds_24h', 
-                                               'histogram_dataset_{}km.pkl'.format(reso)), 'rb'))
+        # lr_dim = np.floor( (self.region_extent - self.lr_kernelsize) / self.lr_kernelsize + 1 )
+        # reso = np.int32( 3 * self.region_extent / lr_dim )
+        # w_hist = pickle.load(open(os.path.join(self.path_data, 'winds_24h', 
+        #                                        'histogram_dataset_{}km.pkl'.format(reso)), 'rb'))
         ds = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name))
         wind_hist_hr = np.array(ds['hist_wind_hr'])
         wind_hist_lr = np.array(ds['hist_wind_lr'])
@@ -326,7 +326,7 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         mask         = np.array(ds['mask_land'])
         wind_hist   = np.concatenate((wind_hist_hr, wind_hist_lr), axis = -1)
         
-        ttimesteps, height_lr, width_lr, bins = w_hist['hr_histograms'].shape
+        ttimesteps, height_lr, width_lr, bins = wind_hist_hr.shape
         self.shapeData = (self.batch_size, self.timesteps, height_lr, width_lr, bins)
         
         n_test  = np.int32(24 * self.test_days)
