@@ -127,9 +127,9 @@ class HellingerDistance(nn.Module):
         
         b_coefficient = torch.sqrt( torch.mul(target, output) ).sum(dim = -1)
         if torch.any(b_coefficient > 1.):
-            b_coefficient[b_coefficient > 1.] = 1.
+            b_coefficient.clone()[b_coefficient > 1.] = 1.
         if torch.any(b_coefficient < 0.):
-            b_coefficient[b_coefficient < 0.] = 0.
+            b_coefficient.clone()[b_coefficient < 0.] = 0.
         #end
         
         if mode == 'hd':
