@@ -1135,9 +1135,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         hst_lr_obs   = hst_lr_obs.reshape(batch_size, hst_lr_obs.shape[1], height, width, hbins)
         
         # Superpose high and low-resolution histograms
-        data_hst_obs, mask_hist = self.superpose_lr_hr_histograms(hst_lr_obs, hst_hr_obs)
+        # data_hst_obs, mask_hist = self.superpose_lr_hr_histograms(hst_lr_obs, hst_hr_obs)
         
-        return data_hst_obs, wind_hist_hr, data_lr_obs, wind_lr, mask_hist
+        return hst_hr_obs, hst_lr_obs, wind_hist_hr, data_lr_obs, wind_lr
     #end
     
     def get_mask(self, shape_data):
@@ -1151,12 +1151,16 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        wind_hist, wind_hist_gt, wind_lr, wind_lr_gt, mask_hist = self.prepare_batch(data)
+        wind_hist_hr, wind_hist_lr, wind_hist_gt, wind_lr, wind_lr_gt = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr_gt.shape
         
         # Mask data
-        wind_hist = wind_hist * mask_hist.unsqueeze(-1)
-        batch_input = wind_hist.clone()
+        mask_hr, mask_lr = self.get_mask(wind_hist_hr[:,:,:,:,0].shape)
+        wind_hist_hr = wind_hist_hr.clone() * mask_hr.unsqueeze(-1)
+        wind_hist_lr = wind_hist_lr.clone() * mask_lr.unsqueeze(-1)
+        # wind_hist = wind_hist * mask_hist.unsqueeze(-1)
+        # batch_input = wind_hist.clone()
+        batch_input = torch.cat([wind_hist_hr, wind_hist_lr], dim = -1)
         
         # Inversion
         with torch.set_grad_enabled(True):
@@ -1172,9 +1176,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             })
         #end
         
-        loss_mse = 0.0 * self.l2_loss((wind_hist_gt - outputs))
-        loss_kld = 0.0 * self.kl_loss(wind_hist_gt, outputs)
-        loss_hd  = 1.0 * self.hd_loss(wind_hist_gt, outputs)
+        wind_hist = outputs[:,:,:,:,:self.shape_data[-1]]
+        loss_mse = 0.0 * self.l2_loss((wind_hist_gt - wind_hist))
+        loss_kld = 0.0 * self.kl_loss(wind_hist_gt, wind_hist)
+        loss_hd  = 1.0 * self.hd_loss(wind_hist_gt, wind_hist)
         loss = loss_kld + loss_mse + loss_hd
         
         return dict({'loss' : loss}), outputs

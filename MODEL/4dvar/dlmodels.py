@@ -438,7 +438,8 @@ class ConvNet_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(ConvNet_pdf, self).__init__()
         
-        in_channels = shape_data[1] * shape_data[-1]
+        in_channels = shape_data[1] * shape_data[-1] * 2
+        self.nbins  = shape_data[-1] 
         
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, 256, kernel_size = 5, padding = 2),
@@ -457,7 +458,8 @@ class ConvNet_pdf(nn.Module):
         
         out = self.net(in_data)
         out = out.reshape(batch_size, timesteps, height, width, nbins)
-        out = self.normalize(out).clone()
+        out[:,:,:,:,:self.nbins] = self.normalize(out[:,:,:,:,:self.nbins]).clone()
+        out[:,:,:,:,-self.nbins:] = self.normalize(out[:,:,:,:,-self.nbins:]).clone()
         
         return out
     #end
