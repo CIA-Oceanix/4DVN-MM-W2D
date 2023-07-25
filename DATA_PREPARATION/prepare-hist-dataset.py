@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-white')
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import argparse
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.getcwd(), 'config.env'))
 PATH_DATA = os.getenv('PATH_DATA')
@@ -67,9 +68,7 @@ def make_hist(data_, bins, normalized = True):
         bins = torch.Tensor(bins)
     #end
     
-    # h = torch.histogram(data_, bins = bins)
     h = get_histogram(data_, bins = bins)
-    h = torch.autograd.Variable(h)
     
     if normalized:
         return h.div(h.sum())
@@ -90,7 +89,8 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     
     timesteps, heigth, width = data_field.shape
     height_lr, width_lr = lr_dim(heigth, kernel_size), lr_dim(width, kernel_size)
-    data_hist = torch.zeros((timesteps, height_lr, width_lr, bins.__len__() - 1))
+    data_hist_hr = torch.zeros((timesteps, height_lr, width_lr, bins.__len__() - 1))
+    data_hist_lr = torch.zeros((timesteps, height_lr, width_lr, bins.__len__() - 1))
     
     # loop to prepare histogram data
     progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps ', position = 0, leave = True)
@@ -112,13 +112,11 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
                     this_wind_pixel = data_field[t, i_start:, j_start:]
                 #end
                 
-                hist = make_hist(this_wind_pixel, bins)
-                data_hist[t,i,j,:] = hist
+                hist_hr = make_hist(this_wind_pixel, bins)
+                data_hist_hr[t,i,j,:] = hist_hr
                 
-                # if torch.any(data_hist.isnan()):
-                #     print(this_wind_pixel)
-                #     print(hist)
-                # #end
+                hist_lr = make_hist(this_wind_pixel.mean(), bins)
+                data_hist_lr[t,i,j,:] = hist_lr
                 
                 j_start = j_end
             #end
@@ -127,11 +125,11 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
         #end
     #end
     
-    return data_hist
+    return data_hist_hr, data_hist_lr
 #end
 
 
-def save_netCDF4_dataset(lat, lon, time, mask, w_hist, w_lr, indices, ds_name, 
+def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, w_hist_lr, w_lr, indices, ds_name, 
 			  day_start, month_start, year_start,
 			  day_end, month_end, year_end):
    
@@ -146,7 +144,7 @@ def save_netCDF4_dataset(lat, lon, time, mask, w_hist, w_lr, indices, ds_name,
     nc_dataset.createDimension('south-north', lat.shape[0])
     nc_dataset.createDimension('west-east', lon.shape[1])
     nc_dataset.createDimension('time', time.__len__())
-    nc_dataset.createDimension('hbins', w_hist.shape[-1])
+    nc_dataset.createDimension('hbins', w_hist_hr.shape[-1])
     
     nc_lat = nc_dataset.createVariable('lat', np.float32, ('south-north', 'west-east'))
     nc_lat.units = 'degree_north'
@@ -160,9 +158,12 @@ def save_netCDF4_dataset(lat, lon, time, mask, w_hist, w_lr, indices, ds_name,
     nc_time = nc_dataset.createVariable('time', np.float64, ('time',))
     nc_time.units = f'hours_since_{day_start}-{month_start}-{year_start}_to{day_end}-{month_end}-{year_end}_dd-mm-yyyy'
     nc_time.long_name = 'hours'
-    nc_hist_wind = nc_dataset.createVariable('hist_wind', np.float32, ('time', 'south-north', 'west-east', 'hbins'))
-    nc_hist_wind.units = 'norm_frequencies'
-    nc_hist_wind.long_name = 'model_wind_probabilities'
+    nc_hist_wind_hr = nc_dataset.createVariable('hist_wind_hr', np.float32, ('time', 'south-north', 'west-east', 'hbins'))
+    nc_hist_wind_hr.units = 'norm_frequencies'
+    nc_hist_wind_hr.long_name = 'model_wind_probabilities_hr'
+    nc_hist_wind_lr = nc_dataset.createVariable('hist_wind_lr', np.float32, ('time', 'south-north', 'west-east', 'hbins'))
+    nc_hist_wind_lr.units = 'norm_frequencies'
+    nc_hist_wind_lr.long_name = 'model_wind_probabilities_lr'
     nc_avg_wind = nc_dataset.createVariable('avg_wind', np.float32, ('time', 'south-north', 'west-east'))
     nc_windices = nc_dataset.createVariable('indices', np.int32, ('time',))
     nc_windices.units = 'none'
@@ -172,7 +173,8 @@ def save_netCDF4_dataset(lat, lon, time, mask, w_hist, w_lr, indices, ds_name,
     nc_lon[:,:] = lon
     nc_time[:] = time
     nc_mask[:,:] = mask
-    nc_hist_wind[:,:,:,:] = w_hist
+    nc_hist_wind_hr[:,:,:,:] = w_hist_hr
+    nc_hist_wind_lr[:,:,:,:] = w_hist_lr
     nc_avg_wind[:,:,:] = w_lr
     nc_windices = indices
     
@@ -188,12 +190,12 @@ def hist_mean_computation(hist, bins):
 
 def get_dataset_days_extrema(ds_name):
     
-    day_start   = ds_name[4:6]
-    month_start = ds_name[7:9]
-    year_start  = ds_name[10:14]
-    day_end     = ds_name[15:17]
-    month_end   = ds_name[18:20]
-    year_end    = ds_name[21:25]
+    day_start   = ds_name[7:9]
+    month_start = ds_name[10:12]
+    year_start  = ds_name[13:17]
+    day_end     = ds_name[18:20]
+    month_end   = ds_name[21:23]
+    year_end    = ds_name[24:28]
     
     return day_start, month_start, year_start, day_end, month_end, year_end
 #end
@@ -201,17 +203,31 @@ def get_dataset_days_extrema(ds_name):
 
 if __name__ == '__main__':
     
-    print('###############""')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-ks', type = int)
+    parser.add_argument('-re', type = int, default = 200)
+    args = parser.parse_args()
+    lr_dsfactor   = args.ks
+    region_extent = args.re
+    
+    if (lr_dsfactor != 10 and lr_dsfactor != 29) or lr_dsfactor is None:
+        # raise ValueError('Please provide a valid kernelsize: 10 (LR resolution 30 km) or 29 (LR resolution 100 km)')
+        lr_dsfactor = 10
+    #end
+    
+    print()
+    print('##################################')
     print('WARNING! Set properly cparams.json')
-    print('Kernel size (LR) : {}'.format(cparams.LR_KERNELSIZE))
-    print('###############""')
+    print('Kernel size (LR) : {}'.format(lr_dsfactor))
+    print('##################################')
     
     dataset_name = cparams.DATASET_NAME
+    # dataset_name = 'wds_uv_01-01-2021_01-03-2021.nc'
     ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}'))
     day_start, month_start, year_start, day_end, month_end, year_end = get_dataset_days_extrema(dataset_name)
     
-    lr_dim = np.floor( (cparams.REGION_EXTENT_PX - cparams.LR_KERNELSIZE) / cparams.LR_KERNELSIZE + 1 )
-    reso = np.int32( 3 * cparams.REGION_EXTENT_PX / lr_dim )
+    lr_dim = np.floor( (region_extent - lr_dsfactor) / lr_dsfactor + 1 )
+    reso = np.int32( 3 * region_extent / lr_dim )
     
     w_hr = np.array(ds['wind'])
     lat  = np.array(ds['lat'])
@@ -221,34 +237,42 @@ if __name__ == '__main__':
     mask = np.array(ds['mask_land'])
     
     w_hr = np.sqrt(w_hr[:,:,:,0]**2 + w_hr[:,:,:,1]**2)
-    w_hr = torch.Tensor(w_hr)[:, -cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
-    lat  = lat[-cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
-    lon  = lon[-cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
-    mask = mask[-cparams.REGION_EXTENT_PX:, -cparams.REGION_EXTENT_PX:]
+    w_hr = torch.Tensor(w_hr)[:, -region_extent:, -region_extent:]
+    lat  = lat[-region_extent:, -region_extent:]
+    lon  = lon[-region_extent:, -region_extent:]
+    mask = mask[-region_extent:, -region_extent:]
     
     bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32., 35.])
-    # bins = torch.Tensor([0., 10., 15., 20., 30., 35.])
+    # bins = torch.Tensor([0., 3., 6.5, 10., 13.5, 16.5, 20., 25., 30., 35.])
     
-    lat_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lat.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0).squeeze(0)
-    lon_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lon.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0).squeeze(0)
-    mask_lr = F.avg_pool2d(torch.Tensor(mask).reshape(1, 1, *tuple(mask.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0).squeeze(0)
+    # Downsample HR > LR
+    w_lr = F.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = lr_dsfactor).squeeze(0)
+    timesteps, height_lr, width_lr = w_lr.shape
+    lat_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lat.shape)), kernel_size = lr_dsfactor).squeeze(0).squeeze(0)
+    lon_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lon.shape)), kernel_size = lr_dsfactor).squeeze(0).squeeze(0)
+    mask_lr = F.avg_pool2d(torch.Tensor(mask).reshape(1, 1, *tuple(mask.shape)), kernel_size = lr_dsfactor).squeeze(0).squeeze(0)
     mask_lr[mask_lr <= 0.5] = 0
     mask_lr[mask_lr > 0.5]  = 1
     
-    w_hist = fieldsHR2hist(w_hr, cparams.LR_KERNELSIZE, bins, progbars = True)
-    w_lr   = F.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = cparams.LR_KERNELSIZE).squeeze(0)
-    timesteps, height_lr, width_lr = w_lr.shape
+    # Histogrammize
+    w_hist_hr, w_hist_lr = fieldsHR2hist(w_hr, lr_dsfactor, bins, progbars = True)
+    
+    # Save dataset
+    save_netCDF4_dataset(lat_lr, lon_lr, time, mask_lr, w_hist_hr, w_hist_lr, w_lr, idx, 
+                         f'whist-{reso}km', day_start, month_start, year_start, day_end, month_end, year_end)
    
+    
+   # PLOTS
     xbins = (bins[1:] + bins[:-1]) / 2
     means_hist_computed = torch.zeros(w_lr.shape)
     errors = torch.zeros(w_lr.shape)
-    print(w_hist.shape)
+    print(w_hist_hr.shape)
     for t in tqdm(range(w_hr.shape[0]),  desc = 'Timesteps ', position = 0, leave = True):
         for i in range(height_lr):
             for j in range(width_lr):
-                mean = hist_mean_computation(w_hist[t,i,j], xbins)
+                mean = hist_mean_computation(w_hist_hr[t,i,j], xbins)
                 if torch.isnan(mean):
-                    print(w_hist[t,i,j])
+                    print(w_hist_hr[t,i,j])
                     raise ValueError('Nans!!!')
                 #end
                 means_hist_computed[t,i,j] = mean
@@ -262,8 +286,8 @@ if __name__ == '__main__':
     ax[1].scatter(means_hist_computed.flatten().numpy(), w_lr.flatten().numpy())
     ax[1].set_xlabel('Means (histograms) [m/s]')
     ax[1].set_ylabel('Means (LR avg pool 2d) [m/s]')
-    ax[1].set_xticks(np.linspace(0, 20, 5))
-    ax[1].set_yticks(np.linspace(0, 20, 5))
+    ax[1].set_xticks(np.linspace(0, w_hr.max(), 5))
+    ax[1].set_yticks(np.linspace(0, w_hr.max(), 5))
     ax[1].plot(np.linspace(0, 20, 5), np.linspace(0, 20, 5), c = 'k', ls = '--', lw = 2)
     fig.tight_layout()
     fig.savefig('./plots/avg_error_means_avgpool_and_histmean.png', format = 'png', dpi = 300, bbox_inches = 'tight')
@@ -276,8 +300,7 @@ if __name__ == '__main__':
     fig.savefig('./plots/fields_means_avgpool_and_histmeans.png', format = 'png', dpi = 300, bbox_inches = 'tight')
     plt.show()
     
-    save_netCDF4_dataset(lat_lr, lon_lr, time, mask_lr, w_hist, w_lr, idx, 
-                         f'whist-{reso}km', day_start, month_start, year_start, day_end, month_end, year_end)
+    
 #end
 
 

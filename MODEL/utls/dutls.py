@@ -257,12 +257,13 @@ class W2DSimuDataModule(pl.LightningDataModule):
 
 class WPDFSimuData(Dataset):
     
-    def __init__(self, data_hist, data_avg_lr):
+    def __init__(self, data_hist_hr, data_hist_lr, data_avg_lr):
         
-        self.data_hist = data_hist
+        self.data_hist_hr = data_hist_hr
+        self.data_hist_lr = data_hist_lr
         self.data_avg_lr = data_avg_lr
         
-        self.nitems = self.data_hist.shape[0]
+        self.nitems = self.data_hist_hr.shape[0]
         self.to_tensor()
     #end
     
@@ -271,12 +272,13 @@ class WPDFSimuData(Dataset):
     #end
     
     def __getitem__(self, idx):
-        return self.data_hist[idx,:,:,:,:], self.data_avg_lr[idx,:,:,:]
+        return self.data_hist_hr[idx,:,:,:,:], self.data_hist_lr[idx,:,:,:,:], self.data_avg_lr[idx,:,:,:]
     #end
     
     def to_tensor(self):
-        self.data_hist   = torch.Tensor(self.data_hist).type(torch.float32).to(DEVICE)
-        self.data_avg_lr = torch.Tensor(self.data_avg_lr).type(torch.float32).to(DEVICE)
+        self.data_hist_hr = torch.Tensor(self.data_hist_hr).type(torch.float32).to(DEVICE)
+        self.data_hist_lr = torch.Tensor(self.data_hist_lr).type(torch.float32).to(DEVICE)
+        self.data_avg_lr  = torch.Tensor(self.data_avg_lr).type(torch.float32).to(DEVICE)
     #end
 #end
 
@@ -318,10 +320,11 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         w_hist = pickle.load(open(os.path.join(self.path_data, 'winds_24h', 
                                                'histogram_dataset_{}km.pkl'.format(reso)), 'rb'))
         ds = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name))
-        wind_hist = np.array(ds['hist_wind'])
-        wind_avg  = np.array(ds['avg_wind'])
-        mask      = np.array(ds['mask_land'])
-        print()
+        wind_hist_hr = np.array(ds['hist_wind_hr'])
+        wind_hist_lr = np.array(ds['hist_wind_lr'])
+        wind_avg     = np.array(ds['avg_wind'])
+        mask         = np.array(ds['mask_land'])
+        wind_hist   = np.concatenate((wind_hist_hr, wind_hist_lr), axis = -1)
         
         ttimesteps, height_lr, width_lr, bins = w_hist['hr_histograms'].shape
         self.shapeData = (self.batch_size, self.timesteps, height_lr, width_lr, bins)
@@ -347,6 +350,13 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         avg_val_set   = self.extract_time_series(avg_val_set,   36, n_val // 24,    'avg')
         avg_test_set  = self.extract_time_series(avg_test_set,  36, self.test_days, 'avg')
         
+        hst_train_set_hr = hst_train_set[:,:,:,:, :bins]
+        hst_train_set_lr = hst_train_set[:,:,:,:, -bins:]
+        hst_test_set_hr  = hst_test_set[:,:,:,:, :bins]
+        hst_test_set_lr  = hst_test_set[:,:,:,:, -bins:]
+        hst_val_set_hr   = hst_val_set[:,:,:,:, :bins]
+        hst_val_set_lr   = hst_val_set[:,:,:,:, -bins:]
+        
         print('Train dataset shape : ', hst_train_set.shape)
         print('Val   dataset shape : ', hst_val_set.shape)
         print('Test  dataset shape : ', hst_test_set.shape)
@@ -354,9 +364,9 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         
         self.mask_land     = mask
         self.buoys_positions = None
-        self.train_dataset = self.Dataset_class(hst_train_set, avg_train_set)
-        self.test_dataset  = self.Dataset_class(hst_test_set, avg_test_set)
-        self.val_dataset   = self.Dataset_class(hst_val_set, avg_val_set)        
+        self.train_dataset = self.Dataset_class(hst_train_set_hr, hst_train_set_lr, avg_train_set)
+        self.test_dataset  = self.Dataset_class(hst_test_set_hr, hst_test_set_lr, avg_test_set)
+        self.val_dataset   = self.Dataset_class(hst_val_set_hr, hst_val_set_lr, avg_val_set)        
     #end
     
     def extract_time_series(self, wind_data, ts_length, num_subseries, mod, random_extract = False):

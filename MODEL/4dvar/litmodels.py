@@ -1079,58 +1079,83 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return loss, outs
     #end
     
-    def hist_to_img_owa(self, data, mode):
+    def superpose_lr_hr_histograms(self, hist_lr, hist_hr):
         
-        batch_size, timesteps,height, width, hbins  = self.shape_data
-        if mode == 'h2i':
-            return data.reshape(batch_size, timesteps, height * width, hbins)
-        elif mode == 'i2h':
-            return data.reshape(batch_size, timesteps, height, width, hbins)
-        else:
-            raise ValueError('Reshape mode not implemented')
+        mask_hist_lr = fs.get_resolution_mask_(self.hparams.lr_mask_sfreq, torch.zeros(hist_lr[:,:,:,:,0].shape), self.mask_land, 'lr')
+        mask_hist_hr = fs.get_resolution_mask_(self.hparams.hr_mask_sfreq, torch.zeros(hist_hr[:,:,:,:,0].shape), self.mask_land, 'hr')
+        wind_hist    = torch.zeros(hist_hr.shape)
+        mask_hist    = torch.zeros(hist_hr[:,:,:,:,0].shape)
+        
+        # wind_hist[torch.all(mask_hist_lr == 0).logical_not()] = wind_hist_lr[torch.all(mask_hist_lr == 0).logical_not()]
+        # wind_hist[torch.all(mask_hist_hr == 0).logical_not()] = wind_hist_hr[torch.all(mask_hist_hr == 0).logical_not()]
+        batch_size, timesteps, _,_,_ = hist_hr.shape
+        for m in range(batch_size):
+            for t in range(timesteps):
+                if not torch.all(mask_hist_lr[m,t,:,:] == 0):
+                    wind_hist[m,t,:,:,:] = hist_lr[m,t,:,:,:]
+                    mask_hist[m,t,:,:]   = mask_hist_lr[m,t,:,:]
+                #end
+                if not torch.all(mask_hist_hr[m,t,:,:] == 0):
+                    wind_hist[m,t,:,:,:] = hist_hr[m,t,:,:,:]
+                    mask_hist[m,t,:,:]   = mask_hist_hr[m,t,:,:]
+                #end
+            #end
         #end
+        
+        mask_hist[:,-1,:,:] = 1.
+        
+        return wind_hist, mask_hist
     #end
     
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
-        wind_hist, wind_lr = batch
-        batch_size, timesteps, height, width, hbins = wind_hist.shape
+        wind_hist_hr, wind_hist_lr, wind_lr = batch
+        batch_size, timesteps, height, width, hbins = wind_hist_hr.shape
         
         # Reshape to image
-        wind_hist = wind_hist.reshape(batch_size, timesteps, height * width, hbins)
+        wind_hist_hr = wind_hist_hr.reshape(batch_size, timesteps, height * width, hbins)
+        wind_hist_lr = wind_hist_lr.reshape(batch_size, timesteps, height * width, hbins)
         
         # Persistences !!!
-        data_hst_obs = self.get_persistence(wind_hist, 'hr', longer_series = True)
-        data_lr_obs  = self.get_persistence(wind_lr,   'lr', longer_series = True)
+        hst_hr_obs  = self.get_persistence(wind_hist_hr, 'hr', longer_series = True)
+        hst_lr_obs  = self.get_persistence(wind_hist_lr, 'hr', longer_series = True)
+        data_lr_obs = self.get_persistence(wind_lr, 'lr', longer_series = True)
         
         # Crop central timesteps
-        data_hst_obs = data_hst_obs[:, timewindow_start : timewindow_end, :,:]
+        hst_hr_obs   = hst_hr_obs[:, timewindow_start : timewindow_end, :,:]
+        hst_lr_obs   = hst_lr_obs[:, timewindow_start : timewindow_end, :,:]
         data_lr_obs  = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        wind_hist    = wind_hist[:, timewindow_start : timewindow_end, :,:]
+        wind_hist_hr = wind_hist_hr[:, timewindow_start : timewindow_end, :,:]
+        wind_hist_lr = wind_hist_lr[:, timewindow_start : timewindow_end, :,:]
         
         # Reshape to histogram
-        wind_hist    = wind_hist.reshape(batch_size, wind_hist.shape[1], height, width, hbins)
-        data_hst_obs = data_hst_obs.reshape(batch_size, data_hst_obs.shape[1], height, width, hbins)
+        wind_hist_hr = wind_hist_hr.reshape(batch_size, wind_hist_hr.shape[1], height, width, hbins)
+        wind_hist_lr = wind_hist_lr.reshape(batch_size, wind_hist_lr.shape[1], height, width, hbins)
+        hst_hr_obs   = hst_hr_obs.reshape(batch_size, hst_hr_obs.shape[1], height, width, hbins)
+        hst_lr_obs   = hst_lr_obs.reshape(batch_size, hst_lr_obs.shape[1], height, width, hbins)
         
-        return data_hst_obs, wind_hist, data_lr_obs, wind_lr
+        # Superpose high and low-resolution histograms
+        data_hst_obs, mask_hist = self.superpose_lr_hr_histograms(hst_lr_obs, hst_hr_obs)
+        
+        return data_hst_obs, wind_hist_hr, data_lr_obs, wind_lr, mask_hist
     #end
     
     def get_mask(self, shape_data):
         
         mask_lr   = fs.get_resolution_mask_(self.hparams.lr_mask_sfreq, torch.zeros(shape_data), self.mask_land, 'lr')
         mask_hist = fs.get_resolution_mask_(self.hparams.hr_mask_sfreq, torch.zeros(shape_data), self.mask_land, 'hr')
-        mask_lr[0,-1,:,:] = 1.
+        mask_lr[:,-1,:,:] = 1.
         
         return mask_lr, mask_hist
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        wind_hist, wind_hist_gt, wind_lr, wind_lr_gt = self.prepare_batch(data)
+        wind_hist, wind_hist_gt, wind_lr, wind_lr_gt, mask_hist = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr_gt.shape
         
         # Mask data
-        mask_lr, mask_hist = self.get_mask(wind_hist[:,:,:,:,0].shape)
+        # mask_lr, mask_hist = self.get_mask(wind_hist_hr[:,:,:,:,0].shape)
         wind_hist = wind_hist * mask_hist.unsqueeze(-1)
         batch_input = wind_hist.clone()
         
