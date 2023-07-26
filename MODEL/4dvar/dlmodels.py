@@ -382,7 +382,7 @@ class ConvNet_pdf(nn.Module):
         
         batch_size, _, height, width = data.shape
         out = self.net(data)
-        out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
+        out = out.reshape(batch_size, self.timesteps, 20,20, self.nbins)
         out = self.normalize(out).clone()
         
         return out
