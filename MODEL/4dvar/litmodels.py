@@ -760,19 +760,15 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
                 'data' : wind_hist_gt.detach().cpu(),
-                'reco' : outputs[0].detach().cpu()
+                'reco' : outputs.detach().cpu()
             })
         #end
         
-        wind_hist = outputs[0]
-        reco_hr   = outputs[1]
+        loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - outputs))
+        loss_kld      = 1.0 * self.kl_loss(wind_hist_gt, outputs)
+        loss_hd       = 1.0 * self.hd_loss(wind_hist_gt, outputs)
+        loss = loss_kld + loss_hd + loss_mse_hist
         
-        loss_mse_hr   = 1.0 * self.l2_loss((reco_hr[:,timesteps:,:,:] - wind_hr_gt))
-        loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - wind_hist))
-        loss_kld      = 1.0 * self.kl_loss(wind_hist_gt, wind_hist)
-        loss_hd       = 1.0 * self.hd_loss(wind_hist_gt, wind_hist)
-        loss = loss_kld + loss_hd + loss_mse_hist + loss_mse_hr
-        
-        return dict({'loss' : loss}), outputs[0]
+        return dict({'loss' : loss}), outputs
     #end
 #end
