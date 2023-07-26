@@ -717,7 +717,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Persistences !!!
         wind_hr_obs = self.get_persistence(wind_hr, 'hr', longer_series = True)
-        wind_lr_obs = self.get_persistence(wind_lr, 'hr', longer_series = True)
+        wind_lr_obs = self.get_persistence(wind_lr, 'lr', longer_series = True)
         
         # Crop central timesteps
         wind_hr_obs   = wind_hr_obs[:, timewindow_start : timewindow_end, :,:]
