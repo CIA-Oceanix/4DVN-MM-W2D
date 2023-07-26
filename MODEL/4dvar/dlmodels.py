@@ -350,7 +350,8 @@ class UNet1_pdf(nn.Module):
         x2 = self.down(x1)
         
         out = self.up(x1, x2)
-        out = self.out_conv(out)
+        # out = self.out_conv(out)
+        out = self.out_conv(data)
         out = self.downsample(out)
         out = self.shrnk_conv(out)
         
