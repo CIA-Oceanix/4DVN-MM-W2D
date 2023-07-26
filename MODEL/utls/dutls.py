@@ -10,10 +10,8 @@ from torch.utils.data import Dataset, DataLoader
 
 if torch.cuda.is_available():
     DEVICE  = torch.device('cuda')
-    WORKERS = 32
 else:
     DEVICE  = torch.device('cpu')
-    WORKERS = 8
 #end
 
 
@@ -255,15 +253,27 @@ class W2DSimuDataModule(pl.LightningDataModule):
 #end
 
 
+
+#------------------------------------------------------------------------------
+# TIP
+# CASE HISTOGRAMS
+#------------------------------------------------------------------------------
+
 class WPDFSimuData(Dataset):
     
-    def __init__(self, data_hist_hr, data_hist_lr, data_avg_lr):
+    def __init__(self, data_hist, data_field, normalize = True):
         
-        self.data_hist_hr = data_hist_hr
-        self.data_hist_lr = data_hist_lr
-        self.data_avg_lr = data_avg_lr
+        self.data_hist  = data_hist
         
-        self.nitems = self.data_hist_hr.shape[0]
+        if normalize:
+            data_field = self.normalize(data_field)
+            self.data_field = data_field
+        else:
+            self.data_field = data_field
+            self.normparams = {}
+        #end
+        
+        self.nitems = self.data_hist.shape[0]
         self.to_tensor()
     #end
     
@@ -272,15 +282,30 @@ class WPDFSimuData(Dataset):
     #end
     
     def __getitem__(self, idx):
-        return self.data_hist_hr[idx,:,:,:,:], self.data_hist_lr[idx,:,:,:,:], self.data_avg_lr[idx,:,:,:]
+        return self.data_hist[idx,:,:,:,:], self.data_field[idx,:,:,:]
+    #end
+    
+    def normalize(self, data):
+        
+        normparams = dict()
+        data_std  = data.std()
+        data = data / data_std
+        normparams.update({'std'  : data_std})
+        
+        self.normparams = normparams
+        return data
     #end
     
     def to_tensor(self):
-        self.data_hist_hr = torch.Tensor(self.data_hist_hr).type(torch.float32).to(DEVICE)
-        self.data_hist_lr = torch.Tensor(self.data_hist_lr).type(torch.float32).to(DEVICE)
-        self.data_avg_lr  = torch.Tensor(self.data_avg_lr).type(torch.float32).to(DEVICE)
+        self.data_hist  = torch.Tensor(self.data_hist).type(torch.float32).to(DEVICE)
+        self.data_field = torch.Tensor(self.data_field).type(torch.float32).to(DEVICE)
+    #end
+    
+    def get_normparams(self):
+        return self.normparams
     #end
 #end
+
 
 class WPDFSimuDataModule(pl.LightningDataModule):
     
@@ -315,18 +340,12 @@ class WPDFSimuDataModule(pl.LightningDataModule):
     
     def setup(self):
         
-        # lr_dim = np.floor( (self.region_extent - self.lr_kernelsize) / self.lr_kernelsize + 1 )
-        # reso = np.int32( 3 * self.region_extent / lr_dim )
-        # w_hist = pickle.load(open(os.path.join(self.path_data, 'winds_24h', 
-        #                                        'histogram_dataset_{}km.pkl'.format(reso)), 'rb'))
         ds = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name))
-        wind_hist_hr = np.array(ds['hist_wind_hr'])
-        wind_hist_lr = np.array(ds['hist_wind_lr'])
-        wind_avg     = np.array(ds['avg_wind'])
-        mask         = np.array(ds['mask_land'])
-        wind_hist   = np.concatenate((wind_hist_hr, wind_hist_lr), axis = -1)
+        wind_hist = np.array(ds['hist_wind_hr'])
+        wind_hr   = np.array(ds['hr_wind_modulus'])
+        mask      = np.array(ds['mask_land'])
         
-        ttimesteps, height_lr, width_lr, bins = wind_hist_hr.shape
+        timesteps, height_lr, width_lr, bins = wind_hist.shape
         self.shapeData = (self.batch_size, self.timesteps, height_lr, width_lr, bins)
         
         n_test  = np.int32(24 * self.test_days)
@@ -334,39 +353,33 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         n_val   = np.int32(24 * self.val_days)
         n_train = np.int32(n_train - n_val)
         
-        hst_train_set = wind_hist[:n_train, :,:,:]
-        hst_val_set   = wind_hist[n_train : n_train + n_val, :,:,:]
-        hst_test_set  = wind_hist[n_train + n_val : n_train + n_val + n_test, :,:,:]
+        hwind_train_set = wind_hist[:n_train, :,:,:]
+        hwind_val_set   = wind_hist[n_train : n_train + n_val, :,:,:]
+        hwind_test_set  = wind_hist[n_train + n_val : n_train + n_val + n_test, :,:,:]
         
-        avg_train_set = wind_avg[:n_train, :,:]
-        avg_val_set   = wind_avg[n_train : n_train + n_val, :,:]
-        avg_test_set  = wind_avg[n_train + n_val : n_train + n_val + n_test, :,:]
+        mwind_train_set = wind_hr[:n_train, :,:]
+        mwind_val_set   = wind_hr[n_train : n_train + n_val, :,:]
+        mwind_test_set  = wind_hr[n_train + n_val : n_train + n_val + n_test, :,:]
         
-        hst_train_set = self.extract_time_series(hst_train_set, 36, n_train // 24,  'hist')
-        hst_val_set   = self.extract_time_series(hst_val_set,   36, n_val // 24,    'hist')
-        hst_test_set  = self.extract_time_series(hst_test_set,  36, self.test_days, 'hist')
+        hwind_train_set = self.extract_time_series(hwind_train_set, 36, n_train // 24,  'hist')
+        hwind_val_set   = self.extract_time_series(hwind_val_set,   36, n_val // 24,    'hist')
+        hwind_test_set  = self.extract_time_series(hwind_test_set,  36, self.test_days, 'hist')
         
-        avg_train_set = self.extract_time_series(avg_train_set, 36, n_train // 24,  'avg')
-        avg_val_set   = self.extract_time_series(avg_val_set,   36, n_val // 24,    'avg')
-        avg_test_set  = self.extract_time_series(avg_test_set,  36, self.test_days, 'avg')
+        mwind_train_set = self.extract_time_series(mwind_train_set, 36, n_train // 24,  'field')
+        mwind_val_set   = self.extract_time_series(mwind_val_set,   36, n_val // 24,    'field')
+        mwind_test_set  = self.extract_time_series(mwind_test_set,  36, self.test_days, 'field')
         
-        hst_train_set_hr = hst_train_set[:,:,:,:, :bins]
-        hst_train_set_lr = hst_train_set[:,:,:,:, -bins:]
-        hst_test_set_hr  = hst_test_set[:,:,:,:, :bins]
-        hst_test_set_lr  = hst_test_set[:,:,:,:, -bins:]
-        hst_val_set_hr   = hst_val_set[:,:,:,:, :bins]
-        hst_val_set_lr   = hst_val_set[:,:,:,:, -bins:]
-        
-        print('Train dataset shape : ', hst_train_set.shape)
-        print('Val   dataset shape : ', hst_val_set.shape)
-        print('Test  dataset shape : ', hst_test_set.shape)
+        print('Train dataset shape : ', hwind_train_set.shape, mwind_train_set.shape)
+        print('Val   dataset shape : ', hwind_val_set.shape,   mwind_val_set.shape)
+        print('Test  dataset shape : ', hwind_test_set.shape,  mwind_test_set.shape)
         print('\nInstantiating torch Datasets ...')
         
-        self.mask_land     = mask
+        self.mask_land       = mask
         self.buoys_positions = None
-        self.train_dataset = self.Dataset_class(hst_train_set_hr, hst_train_set_lr, avg_train_set)
-        self.test_dataset  = self.Dataset_class(hst_test_set_hr, hst_test_set_lr, avg_test_set)
-        self.val_dataset   = self.Dataset_class(hst_val_set_hr, hst_val_set_lr, avg_val_set)        
+        self.train_dataset   = self.Dataset_class(hwind_train_set, mwind_train_set)
+        self.test_dataset    = self.Dataset_class(hwind_test_set,  mwind_test_set)
+        self.val_dataset     = self.Dataset_class(hwind_val_set,   mwind_val_set)
+        self.save_nparams()        
     #end
     
     def extract_time_series(self, wind_data, ts_length, num_subseries, mod, random_extract = False):
@@ -381,7 +394,7 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         else:
             if mod == 'hist':
                 new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-3:]))
-            elif mod == 'avg':
+            elif mod == 'field':
                 new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-2:]))
             #end
             
@@ -392,6 +405,13 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         #end
         
         return new_wind
+    #end
+    
+    def save_nparams(self):
+        
+        with open(os.path.join(self.path_data, 'winds_24h', 'normparams-test-hmod.pkl'), 'wb') as f:
+            pickle.dump(self.test_dataset.get_normparams(), f)
+        f.close()
     #end
     
     def get_land_and_buoy_positions(self):

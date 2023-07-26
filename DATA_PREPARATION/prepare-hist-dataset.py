@@ -90,7 +90,6 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     timesteps, heigth, width = data_field.shape
     height_lr, width_lr = lr_dim(heigth, kernel_size), lr_dim(width, kernel_size)
     data_hist_hr = torch.zeros((timesteps, height_lr, width_lr, bins.__len__() - 1))
-    data_hist_lr = torch.zeros((timesteps, height_lr, width_lr, bins.__len__() - 1))
     
     # loop to prepare histogram data
     progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps ', position = 0, leave = True)
@@ -115,9 +114,6 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
                 hist_hr = make_hist(this_wind_pixel, bins)
                 data_hist_hr[t,i,j,:] = hist_hr
                 
-                hist_lr = make_hist(this_wind_pixel.mean(), bins)
-                data_hist_lr[t,i,j,:] = hist_lr
-                
                 j_start = j_end
             #end
             
@@ -125,11 +121,11 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
         #end
     #end
     
-    return data_hist_hr, data_hist_lr
+    return data_hist_hr
 #end
 
 
-def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, w_hist_lr, w_lr, indices, ds_name, 
+def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, wind_hr, indices, ds_name, 
 			  day_start, month_start, year_start,
 			  day_end, month_end, year_end):
    
@@ -141,42 +137,43 @@ def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, w_hist_lr, w_lr, indic
     
     print('Creating new netCDF4 Dataset ...')
     nc_dataset = nc.Dataset(os.path.join(PATH_DATA, f'{filename}'), mode = 'w', format = 'NETCDF4_CLASSIC')
-    nc_dataset.createDimension('south-north', lat.shape[0])
-    nc_dataset.createDimension('west-east', lon.shape[1])
-    nc_dataset.createDimension('time', time.__len__())
-    nc_dataset.createDimension('hbins', w_hist_hr.shape[-1])
     
-    nc_lat = nc_dataset.createVariable('lat', np.float32, ('south-north', 'west-east'))
-    nc_lat.units = 'degree_north'
-    nc_lat.long_name = 'latitude'
-    nc_lon = nc_dataset.createVariable('lon', np.float32, ('south-north', 'west-east'))
-    nc_lon.units = 'degree_east'
-    nc_lon.long_name = 'longitude'
-    nc_mask = nc_dataset.createVariable('mask_land', np.float32, ('south-north', 'west-east'))
-    nc_mask.units = 'm'
-    nc_mask.long_name = 'Mask_land_sea'
-    nc_time = nc_dataset.createVariable('time', np.float64, ('time',))
-    nc_time.units = f'hours_since_{day_start}-{month_start}-{year_start}_to{day_end}-{month_end}-{year_end}_dd-mm-yyyy'
-    nc_time.long_name = 'hours'
-    nc_hist_wind_hr = nc_dataset.createVariable('hist_wind_hr', np.float32, ('time', 'south-north', 'west-east', 'hbins'))
-    nc_hist_wind_hr.units = 'norm_frequencies'
-    nc_hist_wind_hr.long_name = 'model_wind_probabilities_hr'
-    nc_hist_wind_lr = nc_dataset.createVariable('hist_wind_lr', np.float32, ('time', 'south-north', 'west-east', 'hbins'))
-    nc_hist_wind_lr.units = 'norm_frequencies'
-    nc_hist_wind_lr.long_name = 'model_wind_probabilities_lr'
-    nc_avg_wind = nc_dataset.createVariable('avg_wind', np.float32, ('time', 'south-north', 'west-east'))
-    nc_windices = nc_dataset.createVariable('indices', np.int32, ('time',))
-    nc_windices.units = 'none'
-    nc_windices.long_name = 'indices_of_wind_images'
+    nc_dataset.createDimension('south-north_hr-grid', lat.shape[0])
+    nc_dataset.createDimension('west-east_hr-grid',   lon.shape[1])
+    nc_dataset.createDimension('south-north_lr-grid', w_hist_hr.shape[1])
+    nc_dataset.createDimension('west-east_lr-grid',   w_hist_hr.shape[2])
+    nc_dataset.createDimension('time',                time.__len__())
+    nc_dataset.createDimension('hbins',               w_hist_hr.shape[-1])
     
-    nc_lat[:,:] = lat
-    nc_lon[:,:] = lon
-    nc_time[:] = time
-    nc_mask[:,:] = mask
+    nc_lat                    = nc_dataset.createVariable('lat', np.float32, ('south-north_hr-grid', 'west-east_hr-grid'))
+    nc_lat.units              = 'degree_north'
+    nc_lat.long_name          = 'latitude'
+    nc_lon                    = nc_dataset.createVariable('lon', np.float32, ('south-north_hr-grid', 'west-east_hr-grid'))
+    nc_lon.units              = 'degree_east'
+    nc_lon.long_name          = 'longitude'
+    nc_mask                   = nc_dataset.createVariable('mask_land', np.float32, ('south-north_hr-grid', 'west-east_hr-grid'))
+    nc_mask.units             = 'm'
+    nc_mask.long_name         = 'Mask land sea (masks land)'
+    nc_time                   = nc_dataset.createVariable('time', np.float64, ('time',))
+    nc_time.units             = f'hours_since_{day_start}-{month_start}-{year_start}_to{day_end}-{month_end}-{year_end}_dd-mm-yyyy'
+    nc_time.long_name         = 'hours'
+    nc_hist_wind_hr           = nc_dataset.createVariable('hist_wind_hr', np.float32, ('time', 'south-north_lr-grid', 'west-east_lr-grid', 'hbins'))
+    nc_hist_wind_hr.units     = 'norm_frequencies'
+    nc_hist_wind_hr.long_name = 'hr model wind probabilities'
+    nc_hr_wind                = nc_dataset.createVariable('hr_wind_modulus', np.float32, ('time', 'south-north_hr-grid', 'west-east_hr-grid'))
+    nc_hr_wind.units          = 'm s-1'
+    nc_hr_wind.long_name      = 'wind speed modulus'
+    nc_windices               = nc_dataset.createVariable('indices', np.int32, ('time',))
+    nc_windices.units         = 'none'
+    nc_windices.long_name     = 'indices of wind images'
+    
+    nc_lat[:,:]              = lat
+    nc_lon[:,:]              = lon
+    nc_time[:]               = time
+    nc_mask[:,:]             = mask
     nc_hist_wind_hr[:,:,:,:] = w_hist_hr
-    nc_hist_wind_lr[:,:,:,:] = w_hist_lr
-    nc_avg_wind[:,:,:] = w_lr
-    nc_windices = indices
+    nc_hr_wind[:,:,:]        = wind_hr
+    nc_windices              = indices
     
     print('Dataset save. Closing ...')
     nc_dataset.close()
@@ -221,8 +218,8 @@ if __name__ == '__main__':
     print('Kernel size (LR) : {}'.format(lr_dsfactor))
     print('##################################')
     
-    dataset_name = cparams.DATASET_NAME
-    # dataset_name = 'wds_uv_01-01-2021_01-03-2021.nc'
+    # dataset_name = cparams.DATASET_NAME
+    dataset_name = 'wds_uv_01-01-2021_01-03-2021.nc'
     ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}'))
     day_start, month_start, year_start, day_end, month_end, year_end = get_dataset_days_extrema(dataset_name)
     
@@ -248,17 +245,12 @@ if __name__ == '__main__':
     # Downsample HR > LR
     w_lr = F.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = lr_dsfactor).squeeze(0)
     timesteps, height_lr, width_lr = w_lr.shape
-    lat_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lat.shape)), kernel_size = lr_dsfactor).squeeze(0).squeeze(0)
-    lon_lr = F.avg_pool2d(torch.Tensor(lat).reshape(1, 1, *tuple(lon.shape)), kernel_size = lr_dsfactor).squeeze(0).squeeze(0)
-    mask_lr = F.avg_pool2d(torch.Tensor(mask).reshape(1, 1, *tuple(mask.shape)), kernel_size = lr_dsfactor).squeeze(0).squeeze(0)
-    mask_lr[mask_lr <= 0.5] = 0
-    mask_lr[mask_lr > 0.5]  = 1
     
     # Histogrammize
-    w_hist_hr, w_hist_lr = fieldsHR2hist(w_hr, lr_dsfactor, bins, progbars = True)
+    w_hist_hr = fieldsHR2hist(w_hr, lr_dsfactor, bins, progbars = True)
     
     # Save dataset
-    save_netCDF4_dataset(lat_lr, lon_lr, time, mask_lr, w_hist_hr, w_hist_lr, w_lr, idx, 
+    save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, w_hr, idx, 
                          f'whist-{reso}km', day_start, month_start, year_start, day_end, month_end, year_end)
    
     

@@ -111,18 +111,6 @@ class ResNet(nn.Module):
     #end
 #end
 
-class CBlock(nn.Sequential):
-    
-    def __init__(self, in_channels, out_channels, kernel_size, padding):
-        super(CBlock, self).__init__(
-            nn.Conv2d(in_channels, out_channels, (kernel_size, kernel_size), 
-                       padding = 'same',
-                       padding_mode = 'reflect',
-                      bias = True),
-            nn.LeakyReLU(0.1)
-        )
-    #end
-#end
 
 class ConvNet(nn.Module):
     
@@ -143,30 +131,6 @@ class ConvNet(nn.Module):
         return reco
     #end
 #end
-
-class ConvNet_mwind_angle(nn.Module):
-    
-    def __init__(self, shape_data, config_params):
-        super(ConvNet_mwind_angle, self).__init__()
-        
-        ts_length = shape_data[1] * 3
-        input_planes = ts_length * 3
-        
-        self.net = nn.Sequential(
-            nn.Conv2d(input_planes, 64, (5,5), padding = 2),
-            nn.Conv2d(64, input_planes, (5,5), padding = 2)
-        )
-        self.nonlinearity = nn.Tanh()
-    #end
-    
-    def forward(self, data):
-        
-        output = self.net(data)
-        output[:,72:,:,:] = self.nonlinearity(output[:,72:,:,:])
-        return output
-    #end
-#end
-
 
 
 class ConvAutoEncoder(nn.Module):
@@ -226,52 +190,6 @@ class UNet(nn.Module):
 #end
 
 
-class NormalizeLayer(nn.Module):
-    def __init__(self):
-        super(NormalizeLayer, self).__init__()
-    #end
-    
-    def forward(self, data_in):
-        batch_size, timesteps, hh, ww, bins = data_in.shape
-        data = data_in.reshape(-1, bins)
-        data = torch.stack([data[i] / data[i].sum() for i in range(data.shape[0])], dim = 1).t().clone()
-        data = data.reshape(data_in.shape)
-        return data
-    #end
-#end
-
-class UNet_pdf(nn.Module):
-    def __init__(self,shape_data, config_params):
-        super(UNet_pdf, self).__init__()
-        
-        in_channels = shape_data[1] * shape_data[-1]
-        self.encoder1 = nn.Conv2d(in_channels, 32, kernel_size = 5, padding = 2)
-        self.nl1 = nn.LeakyReLU(0.1)
-        self.bottleneck = nn.Conv2d(32, 32, kernel_size = 5, padding = 2)
-        self.nl2 = nn.LeakyReLU(0.1)
-        self.decoder1 = nn.Conv2d(32 * 2, 32, kernel_size = 5, padding = 2)
-        self.conv = nn.Conv2d(32, in_channels, kernel_size = 5, padding = 2)
-        self.softmax = nn.Softmax(dim = -1)
-        # self.softmax = NormalizeLayer()
-    #end
-    
-    def forward(self, x):
-        
-        batch_size, timesteps, height, width, bins = x.shape
-        x_in = x.reshape(batch_size, timesteps * bins, height, width)
-        enc1 = self.nl1(self.encoder1(x_in))
-        bottleneck = self.bottleneck(enc1)
-        dec1 = torch.cat([enc1, bottleneck], dim = 1)
-        dec1 = self.decoder1(dec1)
-        y = self.conv(self.nl2(dec1))
-        out = y.reshape(batch_size, timesteps, height, width, bins)
-        y_out = self.softmax(out).clone()
-        
-        return y_out
-    #end
-#end
-
-
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DoubleConv, self).__init__()
@@ -324,9 +242,11 @@ class Upsample(nn.Module):
 #end
 
 class UNet1(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, shape_data, cparams):
         super(UNet1, self).__init__()
         
+        in_channels  = shape_data[1] * 3
+        out_channels = shape_data[1] * 3 
         self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down = Downsample(in_channels, 512)
         self.up = Upsample(512, in_channels)
@@ -352,7 +272,7 @@ class DoubleConv_pdf(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
             nn.LeakyReLU(0.1),
-            # nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
+            nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
         )
     #end
     
@@ -391,7 +311,7 @@ class Upsample_pdf(nn.Module):
             self.up_conv = nn.Sequential(
                 nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
                 nn.LeakyReLU(0.1),
-                # nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
+                nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
             )
         #end
         self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 3, padding = 1)
@@ -406,27 +326,32 @@ class Upsample_pdf(nn.Module):
 #end
 
 class UNet1_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, cparams):
+    def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
-        self.in_conv = nn.Conv2d(in_channels, in_channels, kernel_size = 3, padding = 1)
-        self.down = Downsample_pdf(in_channels, 128)
-        self.up = Upsample_pdf(128, in_channels, cparams)
-        # self.out_conv = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
-        self.normalize = nn.Softmax(dim = -1)
+        in_channels     = shape_data[1] * 2
+        out_channels    = shape_data[1] * shape_data[-1]
+        self.nbins      = shape_data[-1]
+        self.timesteps  = shape_data[1]
+        self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 3, padding = 1)
+        self.down       = Downsample_pdf(in_channels, 128)
+        self.up         = Upsample_pdf(128, in_channels, cparams)
+        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
+        self.out_conv   = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
+        self.normalize  = nn.Softmax(dim = -1)
     #end
     
     def forward(self, data):
         
-        batch_size, timesteps, height, width, nbins = data.shape
-        in_data = data.reshape(batch_size, timesteps * nbins, height, width)
+        batch_size, _, height, width = data.shape
         
-        x1 = self.in_conv(in_data)
+        x1 = self.in_conv(data)
         x2 = self.down(x1)
         
-        out  = self.up(x1, x2)
-        # out = self.out_conv(out)
-        out = out.reshape(batch_size, timesteps, height, width, nbins)
+        out = self.up(x1, x2)
+        out = self.downsample(out)
+        out = self.out_conv(out)
+        out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out = self.normalize(out).clone()
         
         return out
@@ -458,7 +383,7 @@ class ConvNet_pdf(nn.Module):
         
         out = self.net(in_data)
         out = out.reshape(batch_size, timesteps, height, width, nbins)
-        out[:,:,:,:,:self.nbins] = self.normalize(out[:,:,:,:,:self.nbins]).clone()
+        out[:,:,:,:,:self.nbins]  = self.normalize(out[:,:,:,:,:self.nbins]).clone()
         out[:,:,:,:,-self.nbins:] = self.normalize(out[:,:,:,:,-self.nbins:]).clone()
         
         return out
@@ -804,7 +729,7 @@ def model_selection(shape_data, config_params, components = False):
         if not components:
             return ConvNet(shape_data, config_params)
         else:
-            return ConvNet_mwind_angle(shape_data, config_params)
+            raise ValueError('Wind components case DEPRECATED')
         #end
     #end
     
@@ -818,13 +743,10 @@ def model_selection(shape_data, config_params, components = False):
         return UNet(shape_data, config_params)
     
     elif config_params.PRIOR == 'UN1':
-        return UNet1(shape_data[1] * 3, shape_data[1] * 3)
-    
-    elif config_params.PRIOR == 'UNpdf':
-        return UNet_pdf(shape_data, config_params)
-    
+        return UNet1(shape_data, config_params)
+        
     elif config_params.PRIOR == 'UN1pdf':
-        return UNet1_pdf(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], config_params)
+        return UNet1_pdf(shape_data, config_params)
     
     elif config_params.PRIOR == 'UN4':
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)

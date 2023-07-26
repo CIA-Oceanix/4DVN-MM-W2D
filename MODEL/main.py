@@ -15,7 +15,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathmng import PathManager
-from litmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE1_WindComponents, LitModel_OSSE2_Distribution
+from litmodels import LitModel_OSSE1_WindModulus, LitModel_OSSE2_Distribution
 from dlmodels import model_selection
 from dutls import W2DSimuDataModule, WPDFSimuDataModule
 
@@ -221,14 +221,8 @@ class Experiment:
                                                        real_run,
                                                        start_time = start_time).to(DEVICE)
             else:
-                
-                Phi = model_selection(shape_data, self.cparams, components = True).to(DEVICE)
-                lit_model = LitModel_OSSE1_WindComponents(Phi, 
-                                                          shape_data, 
-                                                          land_buoy_coords, 
-                                                          self.cparams, 
-                                                          real_run, 
-                                                          start_time = start_time).to(DEVICE)
+                # COMPONENTS DEPRECATED
+                pass
             #end
         elif self.cparams.VNAME == '4DVN-PDF':
             
