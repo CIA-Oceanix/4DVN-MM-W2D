@@ -365,15 +365,16 @@ class ConvNet_pdf(nn.Module):
         super(ConvNet_pdf, self).__init__()
         
         in_channels    = shape_data[1] * 2
+        out_channels   = shape_data[1] * shape_data[-1]
         self.nbins     = shape_data[-1]
         self.timesteps = shape_data[1]
         
         self.net = nn.Sequential(
-            nn.Conv2d(in_channels, 64, kernel_size = 5, padding = 2),
+            nn.Conv2d(in_channels, 128, kernel_size = 5, padding = 2),
             # nn.LeakyReLU(0.1),
             # nn.Conv2d(256, 256, kernel_size = 5, padding = 2),
             # nn.LeakyReLU(0.1),
-            nn.Conv2d(64, in_channels, kernel_size = 5, padding = 2)
+            nn.Conv2d(128, out_channels, kernel_size = 5, padding = 2)
         )
         self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.normalize = nn.Softmax(dim = -1)
