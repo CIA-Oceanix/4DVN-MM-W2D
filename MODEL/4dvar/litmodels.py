@@ -767,10 +767,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         wind_hist = outputs[0]
         reco_hr   = outputs[1]
         
-        # dernormalize hr ground truths and reconstructions on the fly
-        reco_hr    = reco_hr[:,timesteps:,:,:] * self.normparams['std']
-        wind_hr_gt = wind_hr_gt * self.normparams['std']
-        
         loss_mse_hr   = 1.0 * self.l2_loss((reco_hr - wind_hr_gt))
         loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - wind_hist))
         loss_kld      = 1.0 * self.kl_loss(wind_hist_gt, wind_hist)

@@ -227,7 +227,7 @@ class Experiment:
             #end
         elif self.cparams.VNAME == '4DVN-PDF':
             
-            Phi = model_selection(shape_data, self.cparams).to(DEVICE)
+            Phi = model_selection(shape_data, self.cparams, normparams).to(DEVICE)
             lit_model = LitModel_OSSE2_Distribution(Phi,
                                                     shape_data,
                                                     land_buoy_coords,

@@ -361,20 +361,20 @@ class UNet1_pdf(nn.Module):
 
 
 class ConvNet_pdf(nn.Module):
-    def __init__(self, shape_data, cparams):
+    def __init__(self, shape_data, cparams, w_nparams):
         super(ConvNet_pdf, self).__init__()
         
         in_channels    = shape_data[1] * 2
         out_channels   = shape_data[1] * shape_data[-1]
         self.nbins     = shape_data[-1]
         self.timesteps = shape_data[1]
+        self.w_nparams = w_nparams
         
         self.net = nn.Sequential(
-            nn.Conv2d(in_channels, 128, kernel_size = 5, padding = 2),
+            nn.Conv2d(in_channels, 32, kernel_size = (5,5), padding = 2),
             # nn.LeakyReLU(0.1),
-            # nn.Conv2d(256, 256, kernel_size = 5, padding = 2),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(128, in_channels, kernel_size = 5, padding = 2)
+            nn.Conv2d(32, in_channels, kernel_size = (5,5), padding = 2),
+            nn.LeakyReLU(0.1)
         )
         self.downsample = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size = cparams.LR_KERNELSIZE, stride = cparams.LR_KERNELSIZE)
@@ -385,7 +385,7 @@ class ConvNet_pdf(nn.Module):
     def forward(self, data):
         
         batch_size, _, height, width = data.shape
-        out_hr = self.net(data)
+        out_hr = self.net(data) * self.w_nparams['std']
         out    = self.downsample(out_hr)
         out    = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out    = self.normalize(out).clone()
@@ -727,7 +727,7 @@ class ModelObs_MM1d_uv(ModelObs_MM1d):
 ##### MODEL SELECTION #########################################################
 ###############################################################################
 
-def model_selection(shape_data, config_params, components = False):
+def model_selection(shape_data, config_params, normparams = None, components = False):
     
     if config_params.PRIOR == 'SN':
         if not components:
@@ -738,7 +738,7 @@ def model_selection(shape_data, config_params, components = False):
     #end
     
     elif config_params.PRIOR == 'SNpdf':
-        return ConvNet_pdf(shape_data, config_params)
+        return ConvNet_pdf(shape_data, config_params, normparams)
     
     elif config_params.PRIOR == 'RN':
         return ResNet(shape_data, config_params)
