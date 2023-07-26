@@ -334,8 +334,8 @@ class UNet1_pdf(nn.Module):
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        self.down       = Downsample_pdf(in_channels, 512)
-        self.up         = Upsample_pdf(512, in_channels, cparams)
+        self.down       = Downsample_pdf(in_channels, 256)
+        self.up         = Upsample_pdf(256, in_channels, cparams)
         self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.out_conv   = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
         self.normalize  = nn.Softmax(dim = -1)
@@ -351,6 +351,7 @@ class UNet1_pdf(nn.Module):
         out = self.up(x1, x2)
         out = self.downsample(out)
         out = self.out_conv(out)
+        
         out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out = self.normalize(out).clone()
         
@@ -363,8 +364,9 @@ class ConvNet_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(ConvNet_pdf, self).__init__()
         
-        in_channels = shape_data[1] * shape_data[-1] * 2
-        self.nbins  = shape_data[-1] 
+        in_channels    = shape_data[1] * 2
+        self.nbins     = shape_data[-1]
+        self.timesteps = shape_data[1]
         
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size = 5, padding = 2),
@@ -378,13 +380,10 @@ class ConvNet_pdf(nn.Module):
     
     def forward(self, data):
         
-        batch_size, timesteps, height, width, nbins = data.shape
-        in_data = data.reshape(batch_size, timesteps * nbins, height, width)
-        
-        out = self.net(in_data)
-        out = out.reshape(batch_size, timesteps, height, width, nbins)
-        out[:,:,:,:,:self.nbins]  = self.normalize(out[:,:,:,:,:self.nbins]).clone()
-        out[:,:,:,:,-self.nbins:] = self.normalize(out[:,:,:,:,-self.nbins:]).clone()
+        batch_size, _, height, width = data.shape
+        out = self.net(data)
+        out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
+        out = self.normalize(out).clone()
         
         return out
     #end
