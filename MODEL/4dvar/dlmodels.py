@@ -373,10 +373,12 @@ class ConvNet_pdf(nn.Module):
             nn.Conv2d(in_channels, 128, kernel_size = 5, padding = 2),
             # nn.LeakyReLU(0.1),
             # nn.Conv2d(256, 256, kernel_size = 5, padding = 2),
-            # nn.LeakyReLU(0.1),
-            nn.Conv2d(128, out_channels, kernel_size = 5, padding = 2)
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(128, in_channels, kernel_size = 5, padding = 2)
         )
-        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
+        self.downsample = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size = cparams.LR_KERNELSIZE, stride = cparams.LR_KERNELSIZE)
+        )
         self.normalize = nn.Softmax(dim = -1)
     #end
     
