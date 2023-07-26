@@ -385,8 +385,8 @@ class ConvNet_pdf(nn.Module):
     def forward(self, data):
         
         batch_size, _, height, width = data.shape
-        out_hr = self.net(data) * self.w_nparams['std']
-        out    = self.downsample(out_hr)
+        out_hr = self.net(data)
+        out    = self.downsample(out_hr * self.w_nparams['std'])
         out    = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out    = self.normalize(out).clone()
         
