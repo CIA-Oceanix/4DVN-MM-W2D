@@ -777,6 +777,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss_hd       = 10.0 * self.hd_loss(wind_hist_gt, wind_hist)
         loss = loss_kld + loss_hd + loss_mse_hist + loss_mse_hr
         
-        return dict({'loss' : loss}), outputs
+        return dict({'loss' : loss}), outputs[0]
     #end
 #end
