@@ -375,6 +375,7 @@ class ConvNet_pdf(nn.Module):
             # nn.LeakyReLU(0.1),
             nn.Conv2d(64, in_channels, kernel_size = 5, padding = 2)
         )
+        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.normalize = nn.Softmax(dim = -1)
     #end
     
@@ -382,7 +383,8 @@ class ConvNet_pdf(nn.Module):
         
         batch_size, _, height, width = data.shape
         out = self.net(data)
-        out = out.reshape(batch_size, self.timesteps, 20,20, self.nbins)
+        out = self.downsample(out)
+        out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out = self.normalize(out).clone()
         
         return out
