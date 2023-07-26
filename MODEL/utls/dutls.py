@@ -414,6 +414,14 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         f.close()
     #end
     
+    def get_normparams(self, stage):
+        if stage == 'train':
+            return self.train_dataset.get_normparams()
+        if stage == 'test':
+            return self.test_dataset.get_normparams()
+        #end
+    #end
+    
     def get_land_and_buoy_positions(self):
         return self.mask_land, self.buoys_positions
     #end

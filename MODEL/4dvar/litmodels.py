@@ -593,14 +593,15 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
 
 class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
-    def __init__(self, Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None):
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, normparams, config_params, run, start_time = None):
         super(LitModel_OSSE2_Distribution, self).__init__(Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)
         
         self.start_time = start_time
         
         # Mask for land/sea locations and buoys positions
-        self.mask_land = torch.Tensor(land_buoy_coordinates[0])
+        self.mask_land     = torch.Tensor(land_buoy_coordinates[0])
         self.buoy_position = land_buoy_coordinates[1]
+        self.normparams    = normparams
         
         # Loss function — parameters optimization
         self.l2_loss = L2_Loss()
@@ -763,11 +764,18 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             })
         #end
         
-        wind_hist = outputs[:,:,:,:,:]
-        loss_mse = 1.0 * self.l2_loss((wind_hist_gt - wind_hist))
-        loss_kld = 10.0 * self.kl_loss(wind_hist_gt, wind_hist)
-        loss_hd  = 10.0 * self.hd_loss(wind_hist_gt, wind_hist)
-        loss = loss_kld + loss_mse + loss_hd
+        wind_hist = outputs[0]
+        reco_hr   = outputs[1]
+        
+        # dernormalize hr ground truths and reconstructions on the fly
+        reco_hr    = reco_hr * self.normparams['std']
+        wind_hr_gt = wind_hr_gt * self.normparams['std']
+        
+        loss_mse_hr   = 1.0 * self.l2_loss((reco_hr - wind_hr_gt))
+        loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - wind_hist))
+        loss_kld      = 10.0 * self.kl_loss(wind_hist_gt, wind_hist)
+        loss_hd       = 10.0 * self.hd_loss(wind_hist_gt, wind_hist)
+        loss = loss_kld + loss_hd + loss_mse_hist + loss_mse_hr
         
         return dict({'loss' : loss}), outputs
     #end

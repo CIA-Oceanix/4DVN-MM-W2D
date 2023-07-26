@@ -208,6 +208,7 @@ class Experiment:
         ## Obtain shape data
         shape_data = self.w2d_dm.get_shapeData()
         land_buoy_coords = self.w2d_dm.get_land_and_buoy_positions()
+        normparams = self.w2d_dm.get_normparams(stage = 'train')
         
         ## Instantiate dynamical prior and lit model
         if self.cparams.VNAME == '4DVN-W2D':
@@ -230,6 +231,7 @@ class Experiment:
             lit_model = LitModel_OSSE2_Distribution(Phi,
                                                     shape_data,
                                                     land_buoy_coords,
+                                                    normparams,
                                                     self.cparams,
                                                     real_run,
                                                     start_time = start_time).to(DEVICE)
