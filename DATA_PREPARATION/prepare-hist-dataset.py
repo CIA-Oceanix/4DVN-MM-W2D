@@ -218,8 +218,8 @@ if __name__ == '__main__':
     print('Kernel size (LR) : {}'.format(lr_dsfactor))
     print('##################################')
     
-    # dataset_name = cparams.DATASET_NAME
-    dataset_name = 'wds_uv_01-01-2021_01-03-2021.nc'
+    dataset_name = cparams.DATASET_NAME
+    # dataset_name = 'wds_uv_01-01-2021_01-03-2021.nc'
     ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}'))
     day_start, month_start, year_start, day_end, month_end, year_end = get_dataset_days_extrema(dataset_name)
     
