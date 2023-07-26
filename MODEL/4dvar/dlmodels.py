@@ -333,9 +333,9 @@ class UNet1_pdf(nn.Module):
         out_channels    = shape_data[1] * shape_data[-1]
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
-        self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 3, padding = 1)
-        self.down       = Downsample_pdf(in_channels, 128)
-        self.up         = Upsample_pdf(128, in_channels, cparams)
+        self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
+        self.down       = Downsample_pdf(in_channels, 512)
+        self.up         = Upsample_pdf(512, in_channels, cparams)
         self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.out_conv   = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
         self.normalize  = nn.Softmax(dim = -1)
