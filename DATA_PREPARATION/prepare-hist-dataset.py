@@ -239,8 +239,9 @@ if __name__ == '__main__':
     lon  = lon[-region_extent:, -region_extent:]
     mask = mask[-region_extent:, -region_extent:]
     
-    bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32., 35.])
+    # bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32., 35.])
     # bins = torch.Tensor([0., 3., 6.5, 10., 13.5, 16.5, 20., 25., 30., 35.])
+    bins = torch.Tensor([0., 5., 15., 25., 35.])
     
     # Downsample HR > LR
     w_lr = F.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = lr_dsfactor).squeeze(0)
