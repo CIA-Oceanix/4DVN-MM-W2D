@@ -330,17 +330,19 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1]
-        out_channels    = shape_data[1] * shape_data[-1]
+        out_channels    = 1024
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
+        
+        # UNet
         # self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         # self.down       = Downsample_pdf(in_channels, 256)
         # self.up         = Upsample_pdf(256, in_channels, cparams)
+        
+        # Histogrammization
         self.out_conv   = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
-        # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
-        self.nl = nn.ReLU()
-        self.downsample = nn.Conv2d(out_channels, out_channels, kernel_size = 10, stride = 10)
-        # self.shrnk_conv = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 1, stride = 1)
+        self.shrnk_conv = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 1, stride = 1)
+        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.normalize  = nn.Softmax(dim = -1)
     #end
     
@@ -355,8 +357,7 @@ class UNet1_pdf(nn.Module):
         # out = self.out_conv(out)
         out = self.out_conv(data[:,self.timesteps:,:,:])
         out = self.downsample(out)
-        # out = self.nl(out)
-        # out = self.shrnk_conv(out)
+        out = self.shrnk_conv(out)
         
         out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out = self.normalize(out).clone()
