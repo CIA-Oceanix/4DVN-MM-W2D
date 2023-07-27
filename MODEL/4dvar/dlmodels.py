@@ -345,7 +345,8 @@ class UNet1_pdf(nn.Module):
             nn.ReLU(),
             nn.Conv2d(out_channels, 512, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(512, shape_data[1] * shape_data[-1], kernel_size = (5,5), padding = 2)
+            nn.Conv2d(512, shape_data[1] * shape_data[-1], kernel_size = (5,5), padding = 2),
+            nn.ReLU()
         )
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Conv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], kernel_size = 10, stride = 10)
