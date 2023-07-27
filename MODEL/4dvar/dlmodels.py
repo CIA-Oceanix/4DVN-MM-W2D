@@ -354,8 +354,8 @@ class UNet1_pdf(nn.Module):
         # out = self.up(x1, x2)
         # out = self.out_conv(out)
         out = self.out_conv(data)
-        out = self.nl(out)
         out = self.downsample(out)
+        out = self.nl(out)
         # out = self.shrnk_conv(out)
         
         out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
