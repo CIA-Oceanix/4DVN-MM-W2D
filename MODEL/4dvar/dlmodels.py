@@ -343,7 +343,7 @@ class UNet1_pdf(nn.Module):
         # self.out_conv   = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
         # self.shrnk_conv = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 1, stride = 1)
         self.out_conv   = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size = (5,5), padding = 2),
+            nn.Conv2d(in_channels, out_channels, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
             nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = (5,5), padding = 2),
             nn.ReLU()
