@@ -329,7 +329,7 @@ class UNet1_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
-        in_channels     = shape_data[1] * 2
+        in_channels     = shape_data[1]
         out_channels    = shape_data[1] * shape_data[-1]
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
@@ -353,7 +353,7 @@ class UNet1_pdf(nn.Module):
         
         # out = self.up(x1, x2)
         # out = self.out_conv(out)
-        out = self.out_conv(data)
+        out = self.out_conv(data[:,self.timesteps:,:,:])
         out = self.downsample(out)
         # out = self.nl(out)
         # out = self.shrnk_conv(out)

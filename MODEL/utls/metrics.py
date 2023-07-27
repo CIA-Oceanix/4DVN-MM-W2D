@@ -164,7 +164,7 @@ class KLDivLoss(torch.nn.Module):
         
         target[target < 1e-9] = 1e-9
         output[output < 1e-9] = 1e-9
-        kld = target.mul( target.log() - output.log() ).sum(dim = -1)
+        kld = (target.mul( target.log() - output.log() )).sum(dim = -1)
         kld = kld.mean()
         return kld
     #end
