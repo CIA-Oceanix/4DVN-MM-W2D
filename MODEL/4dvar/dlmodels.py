@@ -329,19 +329,17 @@ class UNet1_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
-        in_channels     = shape_data[1]
+        in_channels     = shape_data[1] * 2
         out_channels    = 1024
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         
         # UNet
-        # self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        # self.down       = Downsample_pdf(in_channels, 256)
-        # self.up         = Upsample_pdf(256, in_channels, cparams)
+        self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
+        self.down       = Downsample_pdf(in_channels, 256)
+        self.up         = Upsample_pdf(256, in_channels, cparams)
         
         # Histogrammization
-        # self.out_conv   = nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1)
-        # self.shrnk_conv = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 1, stride = 1)
         self.out_conv   = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
@@ -357,12 +355,12 @@ class UNet1_pdf(nn.Module):
         
         batch_size, _, height, width = data.shape
         
-        # x1 = self.in_conv(data)
-        # x2 = self.down(x1)
+        x1 = self.in_conv(data)
+        x2 = self.down(x1)
         
-        # out = self.up(x1, x2)
-        # out = self.out_conv(out)
-        out = self.out_conv(data[:,self.timesteps:,:,:])
+        out = self.up(x1, x2)
+        out = self.out_conv(out)
+        # out = self.out_conv(data[:,self.timesteps:,:,:])
         out = self.downsample(out)
         
         out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
