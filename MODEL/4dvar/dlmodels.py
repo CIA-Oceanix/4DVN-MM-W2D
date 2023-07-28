@@ -386,8 +386,8 @@ class UNet1_pdf(nn.Module):
         out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         for m in range(batch_size):
             t_start = 0
-            for t in range(self.timesteps):
-                t_end = self.nbins * t_start + self.nbins
+            for t in range(self.timesteps-1):
+                t_end = self.nbins * t + self.nbins
                 out_[m,t,:,:,:] = out[m, t_start : t_end,:,:].transpose(0,2)
                 t_start = t_end
             #end
