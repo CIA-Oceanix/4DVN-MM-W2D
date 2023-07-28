@@ -755,9 +755,15 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # batch_input = batch_input * mask
         
         # Inversion
-        with torch.set_grad_enabled(True):
-            batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
-            outputs = self.model.Phi(batch_input)
+        if phase == 'train':
+            with torch.set_grad_enabled(True):
+                batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
+                outputs = self.model.Phi(batch_input)
+            #end
+        else:
+            with torch.no_grad():
+                outputs = self.model.Phi(batch_input)
+            #end
         #end
         
         # Save reconstructions
