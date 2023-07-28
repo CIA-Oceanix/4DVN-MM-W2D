@@ -606,7 +606,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Loss function — parameters optimization
         self.l2_loss = L2_Loss()
         self.l1_loss = L1_Loss()
-        self.kl_loss = KLDivLoss()
+        self.kl_loss = torch.nn.KLDivLoss(log_target = False, reduction = 'batchmean')
         self.hd_loss = HellingerDistance()
         
         # Case-specific cparams
@@ -671,34 +671,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         print('TEST END. Downsample mask')
         self.downsample_mask()
-    #end
-    
-    def superpose_lr_hr_histograms(self, hist_lr, hist_hr):
-        
-        mask_hist_lr = fs.get_resolution_mask_(self.hparams.lr_mask_sfreq, torch.zeros(hist_lr[:,:,:,:,0].shape), self.mask_land, 'lr')
-        mask_hist_hr = fs.get_resolution_mask_(self.hparams.hr_mask_sfreq, torch.zeros(hist_hr[:,:,:,:,0].shape), self.mask_land, 'hr')
-        wind_hist    = torch.zeros(hist_hr.shape)
-        mask_hist    = torch.zeros(hist_hr[:,:,:,:,0].shape)
-        
-        # wind_hist[torch.all(mask_hist_lr == 0).logical_not()] = wind_hist_lr[torch.all(mask_hist_lr == 0).logical_not()]
-        # wind_hist[torch.all(mask_hist_hr == 0).logical_not()] = wind_hist_hr[torch.all(mask_hist_hr == 0).logical_not()]
-        batch_size, timesteps, _,_,_ = hist_hr.shape
-        for m in range(batch_size):
-            for t in range(timesteps):
-                if not torch.all(mask_hist_lr[m,t,:,:] == 0):
-                    wind_hist[m,t,:,:,:] = hist_lr[m,t,:,:,:]
-                    mask_hist[m,t,:,:]   = mask_hist_lr[m,t,:,:]
-                #end
-                if not torch.all(mask_hist_hr[m,t,:,:] == 0):
-                    wind_hist[m,t,:,:,:] = hist_hr[m,t,:,:,:]
-                    mask_hist[m,t,:,:]   = mask_hist_hr[m,t,:,:]
-                #end
-            #end
-        #end
-        
-        mask_hist[:,-1,:,:] = 1.
-        
-        return wind_hist, mask_hist
     #end
     
     def downsample_mask(self):
@@ -775,7 +747,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         #end
         
         loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - outputs))
-        loss_kld      = 1.0 * self.kl_loss(wind_hist_gt, outputs)
+        loss_kld      = 1.0 * self.kl_loss(outputs, wind_hist_gt)
         # loss_hd       = 1.0 * self.hd_loss(wind_hist_gt, outputs)
         loss = loss_kld + loss_mse_hist
         
