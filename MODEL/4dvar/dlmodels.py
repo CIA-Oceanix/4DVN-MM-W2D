@@ -391,9 +391,9 @@ class UNet1_pdf(nn.Module):
                 out_[m,t,:,:,:] = out[m,t : t + self.nbins,:,:].transpose(0,2)
             #end
         #end
-        out = self.normalize(out).clone()
+        out_ = self.normalize(out_).clone()
         
-        return out
+        return out_
     #end
 #end
 
