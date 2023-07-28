@@ -297,7 +297,7 @@ class Downsample_pdf(nn.Module):
 #end
 
 class Upsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, cparams):
+    def __init__(self, in_channels, out_channels, outer_channels, cparams):
         super(Upsample_pdf, self).__init__()
         
         if cparams.LR_KERNELSIZE == 29:
@@ -314,7 +314,7 @@ class Upsample_pdf(nn.Module):
                 nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
             )
         #end
-        self.conv = nn.Conv2d(out_channels * 2, out_channels, kernel_size = 3, padding = 1)
+        self.conv = nn.Conv2d(out_channels * 2, outer_channels, kernel_size = 3, padding = 1)
     #end
     
     def forward(self, scale1_data, scale2_data):
@@ -352,9 +352,8 @@ class UNet1_pdf(nn.Module):
         # UNet
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down       = Downsample_pdf(in_channels, 256)
-        self.up         = Upsample_pdf(256, in_channels, cparams)
-        self.res_skip   = nn.Identity()
-        self.uconv      = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
+        self.up         = Upsample_pdf(256, in_channels, out_channels, cparams)
+        # self.uconv      = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
@@ -379,8 +378,7 @@ class UNet1_pdf(nn.Module):
         x1 = self.in_conv(data)
         x2 = self.down(x1)
         out = self.up(x1, x2)
-        # out = self.res_skip(out)
-        out = self.uconv(out)
+        # out = self.uconv(out)
         
         # Histogrammization
         out = self.out_conv(out)
