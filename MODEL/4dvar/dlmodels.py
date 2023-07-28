@@ -325,6 +325,21 @@ class Upsample_pdf(nn.Module):
     #end
 #end
 
+class DepthwiseConv2d(nn.Sequential):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, stride = 1):
+        super(DepthwiseConv2d, self).__init__(
+            nn.Conv2d(in_channels, in_channels,
+                      kernel_size = kernel_size,
+                      padding     = padding,
+                      stride      = stride,
+                      groups      = in_channels,
+                      bias        = True),
+            nn.Conv2d(in_channels, out_channels,
+                      kernel_size = 1)
+        )
+    #end
+#end
+
 class UNet1_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
@@ -341,15 +356,16 @@ class UNet1_pdf(nn.Module):
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size = (5,5), padding = 2),
+            DepthwiseConv2d(in_channels, out_channels, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(out_channels, 512, kernel_size = (5,5), padding = 2),
+            DepthwiseConv2d(out_channels, 512, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(512, shape_data[1] * shape_data[-1], kernel_size = (5,5), padding = 2),
+            DepthwiseConv2d(512, shape_data[1] * shape_data[-1], kernel_size = (5,5), padding = 2),
             nn.ReLU()
         )
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
-        self.downsample = nn.Conv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], kernel_size = 10, stride = 10)
+        self.downsample = DepthwiseConv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], 
+                                          kernel_size = 10, padding = 1, stride = 10)
         self.normalize  = nn.Softmax(dim = -1)
     #end
     
@@ -357,12 +373,15 @@ class UNet1_pdf(nn.Module):
         
         batch_size, _, height, width = data.shape
         
+        # UNet
         x1 = self.in_conv(data)
         x2 = self.down(x1)
-        
         out = self.up(x1, x2)
+        
+        # Histogrammization
         out = self.out_conv(out)
-        # out = self.out_conv(data[:,self.timesteps:,:,:])
+        
+        # To LR gridsize
         out = self.downsample(out)
         
         out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
