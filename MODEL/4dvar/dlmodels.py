@@ -363,9 +363,7 @@ class UNet1_pdf(nn.Module):
             nn.Conv2d(512, shape_data[1] * shape_data[-1], kernel_size = (3,3), padding = 1),
             nn.ReLU()
         )
-        # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
-        self.downsample = nn.Conv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], 
-                                          kernel_size = 10, padding = 1, stride = 10)
+        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.normalize  = nn.LogSoftmax(dim = -1)
     #end
     
@@ -391,6 +389,7 @@ class UNet1_pdf(nn.Module):
             for t in range(self.timesteps):
                 t_end = self.nbins * t_start + self.nbins
                 out_[m,t,:,:,:] = out[m, t_start : t_end,:,:].transpose(0,2)
+                t_start = t_end
             #end
         #end
         out_ = self.normalize(out_).clone()
