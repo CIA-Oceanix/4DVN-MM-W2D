@@ -345,14 +345,14 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1] * 2
-        out_channels    = 512
+        out_channels    = 1024
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         
         # UNet
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        self.down       = Downsample_pdf(in_channels, 256)
-        self.up         = Upsample_pdf(256, in_channels, out_channels, cparams)
+        self.down       = Downsample_pdf(in_channels, 512)
+        self.up         = Upsample_pdf(512, in_channels, out_channels, cparams)
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
