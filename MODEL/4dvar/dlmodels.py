@@ -353,7 +353,7 @@ class UNet1_pdf(nn.Module):
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down       = Downsample_pdf(in_channels, 256)
         self.up         = Upsample_pdf(256, in_channels, cparams)
-        self.uconv      = nn.Conv2d(256, out_channels, kernel_size = 5, padding = 2)
+        self.uconv      = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
