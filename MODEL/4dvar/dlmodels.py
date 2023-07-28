@@ -388,7 +388,7 @@ class UNet1_pdf(nn.Module):
         out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         for m in range(batch_size):
             for t in range(self.timesteps):
-                out_[m,t,:,:,:] = out[m,t : t + self.nbins,:,:]
+                out_[m,t,:,:,:] = out[m,t : t + self.nbins,:,:].transpose(0,2)
             #end
         #end
         out = self.normalize(out).clone()
