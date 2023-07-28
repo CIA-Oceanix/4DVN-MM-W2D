@@ -742,7 +742,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
                 'data' : wind_hist_gt.detach().cpu(),
-                'reco' : outputs.detach().cpu()
+                'reco' : outputs.detach().cpu().exp()
             })
         #end
         
