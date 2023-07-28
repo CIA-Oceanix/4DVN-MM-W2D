@@ -345,22 +345,22 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1] * 2
-        out_channels    = 1024
+        out_channels    = 128
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         
         # UNet
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
-        self.down       = Downsample_pdf(in_channels, 512)
-        self.up         = Upsample_pdf(512, in_channels, out_channels, cparams)
+        self.down       = Downsample_pdf(in_channels, 128)
+        self.up         = Upsample_pdf(128, in_channels, out_channels, cparams)
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(out_channels, 512, kernel_size = (5,5), padding = 2),
+            DepthwiseConv2d(out_channels, 128, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(512, shape_data[1] * shape_data[-1], kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(128, shape_data[1] * shape_data[-1], kernel_size = (3,3), padding = 1),
             nn.ReLU()
         )
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
@@ -387,8 +387,10 @@ class UNet1_pdf(nn.Module):
         # out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         for m in range(batch_size):
+            t_start = 0
             for t in range(self.timesteps):
-                out_[m,t,:,:,:] = out[m,t : t + self.nbins,:,:].transpose(0,2)
+                t_end = self.nbins * t_start + self.nbins
+                out_[m,t,:,:,:] = out[m, t_start : t_end,:,:].transpose(0,2)
             #end
         #end
         out_ = self.normalize(out_).clone()
