@@ -353,6 +353,7 @@ class UNet1_pdf(nn.Module):
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down       = Downsample_pdf(in_channels, 256)
         self.up         = Upsample_pdf(256, in_channels, cparams)
+        self.res_skip   = nn.Identity()
         self.uconv      = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
         
         # Histogrammization
@@ -378,6 +379,7 @@ class UNet1_pdf(nn.Module):
         x1 = self.in_conv(data)
         x2 = self.down(x1)
         out = self.up(x1, x2)
+        out = self.res_skip(out)
         out = self.uconv(out)
         
         # Histogrammization
