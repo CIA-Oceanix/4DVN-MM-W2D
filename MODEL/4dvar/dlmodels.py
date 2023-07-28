@@ -345,7 +345,7 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1] * 2
-        out_channels    = 1024
+        out_channels    = 512
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         
@@ -353,20 +353,19 @@ class UNet1_pdf(nn.Module):
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down       = Downsample_pdf(in_channels, 256)
         self.up         = Upsample_pdf(256, in_channels, out_channels, cparams)
-        # self.uconv      = nn.Conv2d(in_channels, out_channels, kernel_size = 5, padding = 2)
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
-            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(out_channels, out_channels, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
             DepthwiseConv2d(out_channels, 512, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(512, shape_data[1] * shape_data[-1], kernel_size = (5,5), padding = 2),
+            DepthwiseConv2d(512, shape_data[1] * shape_data[-1], kernel_size = (3,3), padding = 1),
             nn.ReLU()
         )
-        # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
-        self.downsample = nn.Conv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], 
-                                          kernel_size = 10, padding = 1, stride = 10)
+        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
+        # self.downsample = nn.Conv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], 
+        #                                   kernel_size = 10, padding = 1, stride = 10)
         self.normalize  = nn.LogSoftmax(dim = -1)
     #end
     
@@ -378,7 +377,6 @@ class UNet1_pdf(nn.Module):
         x1 = self.in_conv(data)
         x2 = self.down(x1)
         out = self.up(x1, x2)
-        # out = self.uconv(out)
         
         # Histogrammization
         out = self.out_conv(out)
