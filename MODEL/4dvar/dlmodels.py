@@ -363,9 +363,9 @@ class UNet1_pdf(nn.Module):
             DepthwiseConv2d(512, shape_data[1] * shape_data[-1], kernel_size = (3,3), padding = 1),
             nn.ReLU()
         )
-        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
-        # self.downsample = nn.Conv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], 
-        #                                   kernel_size = 10, padding = 1, stride = 10)
+        # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
+        self.downsample = nn.Conv2d(shape_data[1] * shape_data[-1], shape_data[1] * shape_data[-1], 
+                                          kernel_size = 10, padding = 1, stride = 10)
         self.normalize  = nn.LogSoftmax(dim = -1)
     #end
     
@@ -384,7 +384,13 @@ class UNet1_pdf(nn.Module):
         # To LR gridsize
         out = self.downsample(out)
         
-        out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
+        # out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
+        out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
+        for m in range(batch_size):
+            for t in range(self.timesteps):
+                out_[m,t,:,:,:] = out[m,t : t + self.nbins,:,:]
+            #end
+        #end
         out = self.normalize(out).clone()
         
         return out
