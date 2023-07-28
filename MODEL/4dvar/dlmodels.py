@@ -378,6 +378,7 @@ class UNet1_pdf(nn.Module):
         x1 = self.in_conv(data)
         x2 = self.down(x1)
         out = self.up(x1, x2)
+        out = self.uconv(out)
         
         # Histogrammization
         out = self.out_conv(out)
