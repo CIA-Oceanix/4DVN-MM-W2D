@@ -663,6 +663,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return loss, outs
     #end
     
+    def training_epoch_end(self, outputs):
+        torch.cuda.empty_cache()
+    #end
+    
     def test_epoch_end(self, outputs):
         
         print('TEST END. Downsample mask')
