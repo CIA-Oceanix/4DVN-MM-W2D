@@ -356,16 +356,16 @@ class UNet1_pdf(nn.Module):
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
-            nn.Conv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
+            DepthwiseConv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(256, 512, kernel_size = (5,5), padding = 2),
+            DepthwiseConv2d(256, 512, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(512, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU()
         )
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Sequential(
-            nn.Conv2d(out_channels, out_channels, kernel_size = 10, stride = 10),
+            DepthwiseConv2d(out_channels, out_channels, kernel_size = 10, stride = 10),
             nn.ReLU()
         )
         self.linear     = DepthwiseConv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
