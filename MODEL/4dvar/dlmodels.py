@@ -345,7 +345,7 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1] * 2
-        out_channels    = 1024
+        out_channels    = 512
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         
@@ -356,16 +356,16 @@ class UNet1_pdf(nn.Module):
         
         # Histogrammization
         self.out_conv   = nn.Sequential(
-            DepthwiseConv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
+            nn.Conv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(256, 512, kernel_size = (5,5), padding = 2),
+            nn.Conv2d(256, 512, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
+            nn.Conv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU()
         )
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Sequential(
-            DepthwiseConv2d(out_channels, out_channels, kernel_size = 10, padding = 1, stride = 10),
+            nn.Conv2d(out_channels, out_channels, kernel_size = 10, stride = 10),
             nn.ReLU()
         )
         self.linear     = DepthwiseConv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
@@ -388,17 +388,17 @@ class UNet1_pdf(nn.Module):
         out = self.downsample(out)
         out = self.linear(out)
         
-        # out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
-        out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
-        for m in range(batch_size):
-            t_start = 0
-            for t in range(self.timesteps-1):
-                t_end = self.nbins * t + self.nbins
-                out_[m,t,:,:,:] = out[m, t_start : t_end,:,:].transpose(0,2)
-                t_start = t_end
-            #end
-        #end
-        out_ = self.normalize(out_).clone()
+        out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
+        # out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
+        # for m in range(batch_size):
+        #     t_start = 0
+        #     for t in range(self.timesteps-1):
+        #         t_end = self.nbins * t + self.nbins
+        #         out_[m,t,:,:,:] = out[m, t_start : t_end,:,:].transpose(0,2)
+        #         t_start = t_end
+        #     #end
+        # #end
+        out_ = self.normalize(out).clone()
         
         return out_
     #end
