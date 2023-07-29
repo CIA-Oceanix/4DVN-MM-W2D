@@ -163,6 +163,12 @@ class LitModel_Base(pl.LightningModule):
             )
         #end
         
+        params.append(
+            {'params'       : self.model.Phi.parameters(),
+              'lr'           : self.hparams.prior_lr,
+              'weight_decay' : self.hparams.prior_wd}    
+        )
+        
         if self.hparams.mm_obsmodel:
             print('Multi-modal obs model')
             params.append(
@@ -697,7 +703,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Mask data
         mask_, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
         mask = torch.cat([mask_lr, mask_hr_dx1], dim = 1)
-        batch_input = torch.cat([wind_lr, wind_hr], dim = 1)
+        batch_input = torch.cat([wind_lr, wind_hr_gt], dim = 1)
         # batch_input = batch_input * mask
         
         # Inversion
