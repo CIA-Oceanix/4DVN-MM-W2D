@@ -360,7 +360,7 @@ class UNet1_pdf(nn.Module):
             nn.ReLU(),
             nn.Conv2d(256, 256, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(256, 256, kernel_size = (3,3), padding = 1),
+            nn.Conv2d(256, 256, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
             nn.Conv2d(256, out_channels, kernel_size = (3,3), padding = 1)
         )
