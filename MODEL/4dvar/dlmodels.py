@@ -391,13 +391,11 @@ class UNet1_pdf(nn.Module):
         
         # out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
         out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
-        for m in range(batch_size):
-            t_start = 0
-            for t in range(self.timesteps-1):
-                t_end = self.nbins * t + self.nbins
-                out_[m,t,:,:,:] = torch.movedim(out[m, t_start : t_end,:,:], 1, 3)
-                t_start = t_end
-            #end
+        t_start = 0
+        for t in range(self.timesteps-1):
+            t_end = self.nbins * t + self.nbins
+            out_[:,t,:,:,:] = torch.movedim(out[:, t_start : t_end,:,:], 1, 3)
+            t_start = t_end
         #end
         out_ = self.normalize(out_).clone()
         
