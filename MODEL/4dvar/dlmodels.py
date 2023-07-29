@@ -358,9 +358,9 @@ class UNet1_pdf(nn.Module):
         self.to_hist    = nn.Sequential(
             nn.Conv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(256, 256, kernel_size = (5,5), padding = 2),
+            nn.Conv2d(256, out_channels, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            nn.Conv2d(256, out_channels, kernel_size = (3,3), padding = 1),
+            nn.Conv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
             # nn.ReLU(),
         )
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)

@@ -163,32 +163,6 @@ class LitModel_Base(pl.LightningModule):
             )
         #end
         
-        if self.model.Phi.__class__ is list or self.model.Phi.__class__ is torch.nn.ModuleList:
-            
-            params.append(
-                {'params'       : self.model.Phi[0].parameters(),
-                 'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd}
-            )
-            params.append(
-                {'params'       : self.model.Phi[1].parameters(),
-                 'lr'           : self.hparams.prior_cos_lr,
-                 'weight_decay' : self.hparams.prior_cos_wd}
-            )
-            params.append(
-                {'params'       : self.model.Phi[2].parameters(),
-                 'lr'           : self.hparams.prior_sin_lr,
-                 'weight_decay' : self.hparams.prior_sin_wd}
-            )
-            #end
-        else:
-            params.append(
-                {'params'       : self.model.Phi.parameters(),
-                  'lr'           : self.hparams.prior_lr,
-                  'weight_decay' : self.hparams.prior_wd}    
-            )
-        #end
-        
         if self.hparams.mm_obsmodel:
             print('Multi-modal obs model')
             params.append(
