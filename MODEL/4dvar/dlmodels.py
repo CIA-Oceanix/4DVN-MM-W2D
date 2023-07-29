@@ -344,8 +344,8 @@ class UNet1_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
-        in_channels     = shape_data[1] * 1
-        out_channels    = 256
+        in_channels     = shape_data[1] * 2
+        out_channels    = 512
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         
@@ -383,7 +383,7 @@ class UNet1_pdf(nn.Module):
         
         # Histogrammization
         # out = self.to_hist(out)
-        out = self.to_hist(data[:,self.timesteps:,:,:])
+        out = self.to_hist(data)
         
         # To LR gridsize
         out = self.downsample(out)
