@@ -366,7 +366,7 @@ class UNet1_pdf(nn.Module):
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size = 10, stride = 10),
-            nn.ReLU()
+            # nn.ReLU()
         )
         self.linear     = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
         self.normalize  = nn.LogSoftmax(dim = -1)
