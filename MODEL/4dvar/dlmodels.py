@@ -345,7 +345,7 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1] * 1
-        out_channels    = 512
+        out_channels    = 256
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         
