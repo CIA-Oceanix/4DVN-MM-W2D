@@ -340,6 +340,25 @@ class DepthwiseConv2d(nn.Sequential):
     #end
 #end
 
+class HistogrammizationDirect(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(HistogrammizationDirect, self).__init__()
+        
+        self.net = nn.Sequential(
+            nn.Conv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
+            nn.ReLU(),
+            nn.Conv2d(256, out_channels, kernel_size = (5,5), padding = 2),
+            nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
+            # nn.ReLU(),
+        )
+    #end
+    
+    def forward(self, data):
+        return self.net(data)
+    #end
+#end
+
 class UNet1_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
@@ -355,14 +374,16 @@ class UNet1_pdf(nn.Module):
         self.up         = Upsample_pdf(512, in_channels, in_channels, cparams)
         
         # Histogrammization
-        self.to_hist    = nn.Sequential(
-            nn.Conv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
-            nn.ReLU(),
-            nn.Conv2d(256, out_channels, kernel_size = (5,5), padding = 2),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
-            # nn.ReLU(),
-        )
+        # self.to_hist    = nn.Sequential(
+        #     nn.Conv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
+        #     nn.ReLU(),
+        #     nn.Conv2d(256, out_channels, kernel_size = (5,5), padding = 2),
+        #     nn.ReLU(),
+        #     nn.Conv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
+        #     # nn.ReLU(),
+        # )
+        self.to_hist = HistogrammizationDirect(in_channels, out_channels)
+        
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Sequential(
             nn.Conv2d(out_channels, out_channels, kernel_size = 10, stride = 10),
