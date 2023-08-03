@@ -393,6 +393,19 @@ class UNet1_pdf(nn.Module):
         self.normalize  = nn.LogSoftmax(dim = -1)
     #end
     
+    def reshape(self, data):
+        
+        out = torch.zeros(data.shape[0], self.timesteps, *tuple(data.shape[-2:]), self.nbins)
+        t_start = 0
+        for t in range(self.timesteps-1):
+            t_end = self.nbins * t + self.nbins
+            out[:,t,:,:,:] = torch.movedim(data[:, t_start : t_end,:,:], 1, 3)
+            t_start = t_end
+        #end
+        
+        return out
+    #end
+    
     def forward(self, data):
         
         batch_size, _, height, width = data.shape
@@ -801,6 +814,9 @@ def model_selection(shape_data, config_params, normparams = None, components = F
             raise ValueError('Wind components case DEPRECATED')
         #end
     #end
+    
+    elif config_params.PRIOR == 'AE':
+        return ConvAutoEncoder(shape_data, config_params)
     
     elif config_params.PRIOR == 'SNpdf':
         return ConvNet_pdf(shape_data, config_params, normparams)
