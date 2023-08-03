@@ -208,7 +208,6 @@ class Experiment:
         ## Obtain shape data
         shape_data = self.w2d_dm.get_shapeData()
         land_buoy_coords = self.w2d_dm.get_land_and_buoy_positions()
-        normparams = self.w2d_dm.get_normparams(stage = 'train')
         
         ## Instantiate dynamical prior and lit model
         if self.cparams.VNAME == '4DVN-W2D':
@@ -227,6 +226,7 @@ class Experiment:
             #end
         elif self.cparams.VNAME == '4DVN-PDF':
             
+            normparams = self.w2d_dm.get_normparams(stage = 'train')
             Phi = model_selection(shape_data, self.cparams, normparams).to(DEVICE)
             lit_model = LitModel_OSSE2_Distribution(Phi,
                                                     shape_data,
