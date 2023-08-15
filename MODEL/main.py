@@ -21,10 +21,10 @@ from dutls import W2DSimuDataModule, WPDFSimuDataModule
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
-    print('Program runs using device : {}\n'.format(DEVICE))
+    print('\nProgram runs using device : {}\n'.format(DEVICE))
 else:
     DEVICE = torch.device('cpu')
-    print('Program runs using device : {}\n'.format(DEVICE))
+    print('\nProgram runs using device : {}\n'.format(DEVICE))
 #end
 torch.autograd.set_detect_anomaly(True)
 # torch.manual_seed(161020)
@@ -109,6 +109,7 @@ class Experiment:
     
     def print_exp_details(self):
         # Print experiment details
+        print()
         print('##############################################################')
         print('Experiment\n')
         print('Model name                 : {}'.format(self.model_name))
@@ -121,7 +122,7 @@ class Experiment:
         print('Path target                : {}'.format(self.path_checkpoint))
         print('##############################################################')
     #end
-        
+    
     def initialize_model_names_paths(self, path_manager):
         
         self.path_checkpoint_source, self.name_source_model = path_manager.get_source_ckpt_path()
@@ -159,7 +160,7 @@ class Experiment:
         self.initialize_model_names_paths(path_manager)
         
         self.path_manager = path_manager
-        self.path_checkpoint = path_manager.get_path('ckpt')    
+        self.path_checkpoint = path_manager.get_path('ckpt')
         
         # introduce
         self.print_exp_details()
@@ -224,6 +225,7 @@ class Experiment:
                 # COMPONENTS DEPRECATED
                 pass
             #end
+            
         elif self.cparams.VNAME == '4DVN-PDF':
             
             normparams = self.w2d_dm.get_normparams(stage = 'train')
