@@ -375,7 +375,7 @@ class UNet1_pdf(nn.Module):
         self.down       = Downsample_pdf(in_channels, 512)
         self.up         = Upsample_pdf(512, in_channels, in_channels, cparams)
         
-        self.to_hist = HistogrammizationDirect(shape_data[1], out_channels)
+        self.to_hist = HistogrammizationDirect(shape_data[1] * 2, out_channels)
         
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Sequential(
