@@ -414,8 +414,8 @@ class UNet1_pdf(nn.Module):
         out = self.up(x1, x2)
         
         # interpolate lr
-        out_lr_intrp = self.interpolate_lr(out[:,:self.timesteps,:,:], self.lr_sfreq)
-        out = out[:, self.timesteps:, :,:] + out_lr_intrp
+        # out_lr_intrp = self.interpolate_lr(out[:,:self.timesteps,:,:], self.lr_sfreq)
+        # out = out[:, self.timesteps:, :,:] + out_lr_intrp
         
         # Histogrammization
         out = self.to_hist(out)
