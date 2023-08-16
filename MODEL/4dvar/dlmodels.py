@@ -375,7 +375,7 @@ class UNet1_pdf(nn.Module):
         self.down       = Downsample_pdf(in_channels, 512)
         self.up         = Upsample_pdf(512, in_channels, in_channels, cparams)
         
-        self.to_hist = HistogrammizationDirect(shape_data[1] * 2, out_channels)
+        self.to_hist = HistogrammizationDirect(shape_data[1], out_channels)
         
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Sequential(
@@ -414,8 +414,8 @@ class UNet1_pdf(nn.Module):
         out = self.up(x1, x2)
         
         # interpolate lr
-        # out_lr_intrp = self.interpolate_lr(out[:,:self.timesteps,:,:], self.lr_sfreq)
-        # out = out[:, self.timesteps:, :,:] + out_lr_intrp
+        out_lr_intrp = self.interpolate_lr(data[:,:self.timesteps,:,:], self.lr_sfreq)
+        out = out[:, self.timesteps:, :,:] + out_lr_intrp
         
         # Histogrammization
         out = self.to_hist(out)
