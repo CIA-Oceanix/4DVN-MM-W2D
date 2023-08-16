@@ -676,14 +676,25 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         wind_hr_obs = self.get_persistence(wind_hr, 'hr', longer_series = True)
         wind_lr_obs = self.get_persistence(wind_lr, 'lr', longer_series = True)
         
+        if self.hparams.hr_mask_sfreq is None:
+            wind_an_obs = wind_lr_obs
+        else:
+            wind_an_obs = (wind_hr_obs - wind_lr_obs)
+        #end
+        
+        if True:
+            wind_lr_obs[:,-1,:,:] = wind_lr[:,-1,:,:]
+        #end
+        
         # Crop central timesteps
         wind_hr_obs   = wind_hr_obs[:, timewindow_start : timewindow_end, :,:]
         wind_lr_obs   = wind_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        wind_an_obs   = wind_an_obs[:, timewindow_start : timewindow_end, :,:]
         wind_hr       = wind_hr[:, timewindow_start : timewindow_end, :,:]
         wind_lr       = wind_lr[:, timewindow_start : timewindow_end, :,:]
         wind_hist     = wind_hist[:, timewindow_start : timewindow_end, :,:,:]
         
-        return wind_hr_obs, wind_lr_obs, wind_hr, wind_lr, wind_hist
+        return wind_hr_obs, wind_lr_obs, wind_an_obs, wind_hr, wind_lr, wind_hist
     #end
     
     def get_mask(self, shape_data):
@@ -697,13 +708,13 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        wind_hr, wind_lr, wind_hr_gt, wind_lr_gt, wind_hist_gt = self.prepare_batch(data)
+        wind_hr, wind_lr, wind_an, wind_hr_gt, wind_lr_gt, wind_hist_gt = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr_gt.shape
         
         # Mask data
         mask_, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
         mask = torch.cat([mask_lr, mask_hr_dx1], dim = 1)
-        batch_input = torch.cat([wind_lr, wind_hr], dim = 1)
+        batch_input = torch.cat([wind_lr, wind_an], dim = 1)
         batch_input = batch_input * mask
         
         # Inversion

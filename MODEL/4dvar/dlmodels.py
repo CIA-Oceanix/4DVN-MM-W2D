@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from torch import nn
 from unet import UNet4
+import futls as fs
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
@@ -367,13 +368,14 @@ class UNet1_pdf(nn.Module):
         out_channels    = 512
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
+        self.lr_sfreq   = cparams.LR_MASK_SFREQ
         
         # UNet
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down       = Downsample_pdf(in_channels, 512)
         self.up         = Upsample_pdf(512, in_channels, in_channels, cparams)
         
-        self.to_hist = HistogrammizationDirect(in_channels, out_channels)
+        self.to_hist = HistogrammizationDirect(shape_data[1], out_channels)
         
         # self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
         self.downsample = nn.Sequential(
@@ -397,6 +399,11 @@ class UNet1_pdf(nn.Module):
         return out
     #end
     
+    def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
+        
+        return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
+    #end
+    
     def forward(self, data):
         
         batch_size, _, height, width = data.shape
@@ -405,6 +412,10 @@ class UNet1_pdf(nn.Module):
         x1 = self.in_conv(data)
         x2 = self.down(x1)
         out = self.up(x1, x2)
+        
+        # interpolate lr
+        out_lr_intrp = self.interpolate_lr(out[:,:self.timesteps,:,:], self.lr_sfreq)
+        out = out[:, self.timesteps:, :,:] + out_lr_intrp
         
         # Histogrammization
         out = self.to_hist(out)
