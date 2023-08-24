@@ -427,6 +427,7 @@ class UNet1_pdf(nn.Module):
         out = self.linear(out)
         out = self.downsample(out)
         out = self.reshape(out)
+        out = self.normalize(out)
         
         return out
     #end
