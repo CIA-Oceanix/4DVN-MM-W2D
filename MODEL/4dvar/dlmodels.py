@@ -350,9 +350,9 @@ class HistogrammizationDirect(nn.Module):
             nn.ReLU(),
             DepthwiseConv2d(256, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(512, 512, kernel_size = (3,3), padding = 1),
-            nn.ReLU(),
             DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
+            nn.ReLU(),
+            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
             # nn.ReLU(),
         )
     #end
@@ -366,7 +366,7 @@ class UNet1_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
-        in_channels     = shape_data[1] * 2
+        in_channels     = shape_data[1] * 1
         out_channels    = 1024
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
@@ -379,7 +379,7 @@ class UNet1_pdf(nn.Module):
         
         self.to_hist = HistogrammizationDirect(shape_data[1] * 1, out_channels)
         
-        self.downsample = nn.AvgPool2d(cparams.LR_KERNELSIZE)
+        self.downsample = nn.MaxPool2d(cparams.LR_KERNELSIZE)
         # self.downsample = nn.Sequential(
         #     nn.Conv2d(out_channels, out_channels, kernel_size = 10, stride = 10),
         #     nn.ReLU()
@@ -411,33 +411,24 @@ class UNet1_pdf(nn.Module):
         batch_size, _, height, width = data.shape
         
         # UNet
-        x1 = self.in_conv(data)
-        x2 = self.down(x1)
-        out = self.up(x1, x2)
+        # x1 = self.in_conv(data)
+        # x2 = self.down(x1)
+        # out = self.up(x1, x2)
         
-        # interpolate lr
-        out_lr_intrp = self.interpolate_lr(data[:,:self.timesteps,:,:], self.lr_sfreq)
-        out = out[:, self.timesteps:, :,:] + out_lr_intrp
+        # # interpolate lr
+        # out_lr_intrp = self.interpolate_lr(data[:,:self.timesteps,:,:], self.lr_sfreq)
+        # out = out[:, self.timesteps:, :,:] + out_lr_intrp
         
         # Histogrammization
-        out = self.to_hist(out)
-        # out = self.to_hist(data)
+        # out = self.to_hist(out)
+        out = self.to_hist(data)
         
         # To LR gridsize
-        out = self.downsample(out)
         out = self.linear(out)
+        out = self.downsample(out)
+        out = self.reshape(out)
         
-        # out = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
-        out_ = torch.zeros(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
-        t_start = 0
-        for t in range(self.timesteps-1):
-            t_end = self.nbins * t + self.nbins
-            out_[:,t,:,:,:] = torch.movedim(out[:, t_start : t_end,:,:], 1, 3)
-            t_start = t_end
-        #end
-        out_ = self.normalize(out_).clone()
-        
-        return out_
+        return out
     #end
 #end
 
