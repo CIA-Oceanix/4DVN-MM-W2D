@@ -346,13 +346,13 @@ class HistogrammizationDirect(nn.Module):
         super(HistogrammizationDirect, self).__init__()
         
         self.net = nn.Sequential(
-            DepthwiseConv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
+            nn.Conv2d(in_channels, 256, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(256, 256, kernel_size = (5,5), padding = 2),
+            nn.Conv2d(256, 256, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (5,5), padding = 2),
+            nn.Conv2d(256, out_channels, kernel_size = (5,5), padding = 2),
             nn.ReLU(),
-            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
+            nn.Conv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
             # nn.ReLU(),
         )
     #end
