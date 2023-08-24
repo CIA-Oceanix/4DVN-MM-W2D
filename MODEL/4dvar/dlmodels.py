@@ -348,9 +348,9 @@ class HistogrammizationDirect(nn.Module):
         self.net = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(256, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             # nn.ReLU(),
         )
     #end
@@ -365,7 +365,7 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1] * 2
-        out_channels    = 512
+        out_channels    = 1024
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
         self.lr_sfreq   = cparams.LR_MASK_SFREQ
