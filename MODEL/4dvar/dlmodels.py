@@ -350,6 +350,8 @@ class HistogrammizationDirect(nn.Module):
             nn.ReLU(),
             DepthwiseConv2d(256, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
+            DepthwiseConv2d(512, 512, kernel_size = (3,3), padding = 1),
+            nn.ReLU(),
             DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             # nn.ReLU(),
         )
