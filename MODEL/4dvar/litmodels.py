@@ -572,6 +572,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
 
 
 class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
+    # Now this will change a bit
     
     def __init__(self, Phi, shape_data, land_buoy_coordinates, normparams, config_params, run, start_time = None):
         super(LitModel_OSSE2_Distribution, self).__init__(Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)

@@ -363,6 +363,7 @@ class HistogrammizationDirect(nn.Module):
 #end
 
 class UNet1_pdf(nn.Module):
+    # Now this will change a bit
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         

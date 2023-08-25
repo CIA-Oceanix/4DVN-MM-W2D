@@ -132,6 +132,7 @@ class Experiment:
     
     def load_checkpoint(self, lit_model, stage, run):
         
+        # Now this wil change a bit
         if stage == 'PARAMS-INIT':
             checkpoint_name = os.path.join(self.path_checkpoint_source,
                             f'run{run}-' + self.name_source_model + '-epoch=*.ckpt')
