@@ -440,11 +440,11 @@ class TrainableFieldsToHist(nn.Module):
     
     def forward(self, data_input):
         
-        fields_ = self.Phi_fields_hr(data_input)
+        # fields_ = self.Phi_fields_hr(data_input)
         
-        # interpolate lr
-        fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
-        fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
+        # # interpolate lr
+        # fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
+        # fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
