@@ -251,6 +251,8 @@ class PathManager:
             dataset.createDimension('nbins', nbins)
             dataset.createVariable('reco', np.float32, ('run', 'batch', 'time', 'extent_lr', 'extent_lr', 'nbins'))
             dataset.createVariable('data', np.float32, ('one', 'batch', 'time', 'extent_lr', 'extent_lr', 'nbins'))
+            dataset.createVariable('wreco', np.float32, ('run', 'batch', 'time', 'extent_NS', 'extent_EW'))
+            dataset.createVariable('wdata', np.float32, ('one', 'batch', 'time', 'extent_NS', 'extent_EW'))
             dataset.createVariable('mask', np.float32, ('one', 'extent_lr', 'extent_lr')) # SQUARE MASK!!!
         #end
         
@@ -308,29 +310,23 @@ class PathManager:
         f.close()
     #end
     
-    def save_litmodel_trainer(self, lit_model, trainer):
-        
-        '''DEPRECATED
-        Model checkpoint is always saved, that comprehends lit model. 
-        Trainer can be re-instantiated at no cost.
-        Will remove this method in next version
-        '''
-        pass
-    #end
-    
     def save_model_output(self, outputs, mask_land, cparams, train_losses, val_losses, run):
         
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
+        wdata = torch.cat([item['wdata'] for item in outputs], dim = 0)
+        wreco = torch.cat([item['wreco'] for item in outputs], dim = 0)
         print(data.shape)
         print(reco.shape)
         
         reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
         if run == 0:
             reco_ncd['data'][0,:,:,:,:] = data
+            reco_ncd['wdata'][0,:,:,:,:] = wdata
             reco_ncd['mask'][0,:,:] = mask_land.cpu()
         #end
         reco_ncd['reco'][run,:,:,:,:] = reco
+        reco_ncd['wreco'][run,:,:,:,:] = wreco
         reco_ncd.close()
         
         with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:

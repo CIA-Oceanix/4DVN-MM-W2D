@@ -789,11 +789,11 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if phase == 'train':
             with torch.set_grad_enabled(True):
                 batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
-                outputs = self.model.Phi(batch_input)
+                outputs,_ = self.model.Phi(batch_input)
             #end
         else:
             with torch.no_grad():
-                outputs = self.model.Phi(batch_input)
+                outputs, reco_hr = self.model.Phi(batch_input)
             #end
         #end
         
@@ -801,7 +801,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
                 'data' : wind_hist_gt.detach().cpu(),
-                'reco' : outputs.detach().cpu().exp()
+                'reco' : outputs.detach().cpu().exp(),
+                'wdata': wind_hr_gt.detach().cpu(),
+                'wreco': reco_hr.detach().cpu()
             })
         #end
         
