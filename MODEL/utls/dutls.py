@@ -309,7 +309,7 @@ class WPDFSimuData(Dataset):
 
 class WPDFSimuDataModule(pl.LightningDataModule):
     
-    def __init__(self, path_data, cparams, timesteps = 24):
+    def __init__(self, path_data, cparams, timesteps = 24, normalize = False):
         super(WPDFSimuDataModule, self).__init__()
         
         self.path_data     = path_data
@@ -323,6 +323,7 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         self.timesteps     = timesteps
         self.data_name     = cparams.DATASET_NAME
         self.shapeData     = None
+        self.normalize     = normalize
         self.wind_modulus  = cparams.WIND_MODULUS
         self.Dataset_class = WPDFSimuData
         
@@ -376,9 +377,9 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         
         self.mask_land       = mask
         self.buoys_positions = None
-        self.train_dataset   = self.Dataset_class(hwind_train_set, mwind_train_set)
-        self.test_dataset    = self.Dataset_class(hwind_test_set,  mwind_test_set)
-        self.val_dataset     = self.Dataset_class(hwind_val_set,   mwind_val_set)
+        self.train_dataset   = self.Dataset_class(hwind_train_set, mwind_train_set, self.normalize)
+        self.test_dataset    = self.Dataset_class(hwind_test_set,  mwind_test_set, self.normalize)
+        self.val_dataset     = self.Dataset_class(hwind_val_set,   mwind_val_set, self.normalize)
         self.save_nparams()        
     #end
     
