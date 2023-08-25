@@ -358,7 +358,7 @@ class HistogrammizationDirect(nn.Module):
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
-        self.linear_reshape = DepthwiseConv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
+        self.linear_reshape = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
         self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.normalize      = nn.LogSoftmax(dim = -1)
     #end
