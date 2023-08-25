@@ -341,29 +341,56 @@ class DepthwiseConv2d(nn.Sequential):
     #end
 #end
 
+
 class HistogrammizationDirect(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, shape_data, lr_kernelsize):
         super(HistogrammizationDirect, self).__init__()
         
-        self.net = nn.Sequential(
+        self.nbins      = shape_data[-1]
+        self.timesteps  = shape_data[1]
+        
+        self.conv2d_relu_cascade = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(256, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1),
-            # nn.ReLU(),
+            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
+        self.linear_reshape = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
+        self.downsample     = nn.MaxPool2d(lr_kernelsize)
+        self.normalize      = nn.LogSoftmax(dim = -1)
     #end
     
-    def forward(self, data):
-        return self.net(data)
+    def reshape(self, data):
+        
+        out = torch.zeros(data.shape[0], self.timesteps, *tuple(data.shape[-2:]), self.nbins)
+        t_start = 0
+        for t in range(self.timesteps-1):
+            t_end = self.nbins * t + self.nbins
+            out[:,t,:,:,:] = torch.movedim(data[:, t_start : t_end,:,:], 1, 3)
+            t_start = t_end
+        #end
+        
+        return out
+    #end
+    
+    def forward(self, data_fields_hr):
+        
+        out = self.conv2d_relu_cascade(data_fields_hr)
+        out = self.linear_reshape(out)
+        out = self.downsample(out)
+        out = self.reshape(out)
+        out = self.normalize(out)
+        
+        return out
     #end
 #end
 
 class UNet1_pdf(nn.Module):
     # Now this will change a bit
+    # Soon to deprecate this ugly monster and update to a more flexible and elegant solution
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
@@ -378,28 +405,7 @@ class UNet1_pdf(nn.Module):
         self.down       = Downsample_pdf(in_channels, 512)
         self.up         = Upsample_pdf(512, in_channels, in_channels, cparams)
         
-        self.to_hist = HistogrammizationDirect(shape_data[1] * 1, out_channels)
-        
-        self.downsample = nn.MaxPool2d(cparams.LR_KERNELSIZE)
-        # self.downsample = nn.Sequential(
-        #     nn.Conv2d(out_channels, out_channels, kernel_size = 10, stride = 10),
-        #     nn.ReLU()
-        # )
-        self.linear     = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
-        self.normalize  = nn.LogSoftmax(dim = -1)
-    #end
-    
-    def reshape(self, data):
-        
-        out = torch.zeros(data.shape[0], self.timesteps, *tuple(data.shape[-2:]), self.nbins)
-        t_start = 0
-        for t in range(self.timesteps-1):
-            t_end = self.nbins * t + self.nbins
-            out[:,t,:,:,:] = torch.movedim(data[:, t_start : t_end,:,:], 1, 3)
-            t_start = t_end
-        #end
-        
-        return out
+        self.fields_to_hist = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE)
     #end
     
     def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
@@ -422,15 +428,21 @@ class UNet1_pdf(nn.Module):
         
         # Histogrammization
         # out = self.to_hist(out)
-        out = self.to_hist(data)
-        
-        # To LR gridsize
-        out = self.linear(out)
-        out = self.downsample(out)
-        out = self.reshape(out)
-        out = self.normalize(out)
+        out = self.fields_to_hist(data)
         
         return out
+    #end
+#end
+
+
+class TrainableFieldsToHist(nn.Module):
+    def __init__(self):
+        super(TrainableFieldsToHist, self).__init__()
+        pass
+    #end
+    
+    def forward(self):
+        pass
     #end
 #end
 
