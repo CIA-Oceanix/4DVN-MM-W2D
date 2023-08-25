@@ -395,21 +395,14 @@ class UNet1_pdf(nn.Module):
         super(UNet1_pdf, self).__init__()
         
         in_channels     = shape_data[1] * 1
-        out_channels    = 1024
-        self.nbins      = shape_data[-1]
-        self.timesteps  = shape_data[1]
-        self.lr_sfreq   = cparams.LR_MASK_SFREQ
         
         # UNet
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down       = Downsample_pdf(in_channels, 512)
         self.up         = Upsample_pdf(512, in_channels, in_channels, cparams)
-        
-        self.fields_to_hist = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE)
     #end
     
     def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
-        
         return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
     #end
     
@@ -418,17 +411,13 @@ class UNet1_pdf(nn.Module):
         batch_size, _, height, width = data.shape
         
         # UNet
-        # x1 = self.in_conv(data)
-        # x2 = self.down(x1)
-        # out = self.up(x1, x2)
+        x1 = self.in_conv(data)
+        x2 = self.down(x1)
+        out = self.up(x1, x2)
         
         # # interpolate lr
         # out_lr_intrp = self.interpolate_lr(data[:,:self.timesteps,:,:], self.lr_sfreq)
         # out = out[:, self.timesteps:, :,:] + out_lr_intrp
-        
-        # Histogrammization
-        # out = self.to_hist(out)
-        out = self.fields_to_hist(data)
         
         return out
     #end
@@ -436,13 +425,24 @@ class UNet1_pdf(nn.Module):
 
 
 class TrainableFieldsToHist(nn.Module):
-    def __init__(self):
+    # Note: quando tutto questo sarà incorporato in 4DVarNet, non cambierà nulla
+    # perchè lo stato x saranno istogrammi che verranno trattati dall'operatore H.
+    # Semmai, ci sarà solo da modificare il costo variazionale, che comunque
+    # potrebbe restare L2-norm tra istogrammi. Ma vedremo
+    def __init__(self, shape_data, cparams):
         super(TrainableFieldsToHist, self).__init__()
-        pass
+        
+        in_channels             = shape_data[1] * 1
+        out_channels            = 1024
+        self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
+        self.Phi_fields_to_hist = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE)
     #end
     
-    def forward(self):
-        pass
+    def forward(self, data_input):
+        
+        # fields_hr = self.Phi_fields_hr(data_input)
+        hist_out  = self.Phi_fields_to_hist(data_input)
+        return hist_out
     #end
 #end
 
@@ -840,7 +840,7 @@ def model_selection(shape_data, config_params, normparams = None, components = F
         return UNet1(shape_data, config_params)
         
     elif config_params.PRIOR == 'UN1pdf':
-        return UNet1_pdf(shape_data, config_params)
+        return TrainableFieldsToHist(shape_data, config_params) # Uses UNet.
     
     elif config_params.PRIOR == 'UN4':
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)
