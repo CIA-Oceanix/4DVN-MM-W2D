@@ -447,8 +447,8 @@ class TrainableFieldsToHist(nn.Module):
         # fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(fields_hr)
-        return hist_out, fields_
+        hist_out  = self.Phi_fields_to_hist(data_input)
+        return hist_out, None
     #end
 #end
 
