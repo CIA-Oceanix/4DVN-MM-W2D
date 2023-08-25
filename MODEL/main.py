@@ -132,7 +132,6 @@ class Experiment:
     
     def load_checkpoint(self, lit_model, stage, run):
         
-        # Now this wil change a bit
         if stage == 'PARAMS-INIT':
             checkpoint_name = os.path.join(self.path_checkpoint_source,
                             f'run{run}-' + self.name_source_model + '-epoch=*.ckpt')
@@ -153,6 +152,17 @@ class Experiment:
         #end
         
         return lit_model
+    #end
+    
+    def load_pretrained_params(self, pretrained_model, run):
+        
+        checkpoint_name = os.path.join(self.path_model, pretrained_model, 'ckpt', f'run{run}-' + pretrained_model + '-epoch=*.ckpt')
+        checkpoint_path = glob.glob(checkpoint_name)[0]
+        ckpt_model      = open(checkpoint_path, 'rb')
+        print('\n\nCHECKPOINT (PRE-TRAINED MODEL) : {}\n\n'.format(checkpoint_path))
+        model_statedict = torch.load(ckpt_model, map_location = DEVICE)['state_dict']
+        
+        return model_statedict
     #end
     
     def run_simulation(self):
@@ -230,7 +240,7 @@ class Experiment:
         elif self.cparams.VNAME == '4DVN-PDF':
             
             normparams = self.w2d_dm.get_normparams(stage = 'train')
-            Phi = model_selection(shape_data, self.cparams, normparams).to(DEVICE)
+            Phi = model_selection(shape_data, self.cparams, normparams).to(DEVICE)            
             lit_model = LitModel_OSSE2_Distribution(Phi,
                                                     shape_data,
                                                     land_buoy_coords,
@@ -238,6 +248,11 @@ class Experiment:
                                                     self.cparams,
                                                     real_run,
                                                     start_time = start_time).to(DEVICE)
+            
+            if self.cparams.LOAD_PT_WEIGHTS is not None:
+                model_statedict = self.load_pretrained_params(self.cparams.LOAD_PT_WEIGHTS, run)
+                lit_model.load_ckpt_from_statedict(model_statedict)
+            #end
         #end
         
         ## Get checkpoint, if needed

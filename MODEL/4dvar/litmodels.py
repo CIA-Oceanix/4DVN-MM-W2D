@@ -591,12 +591,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.hd_loss = HellingerDistance()
         
         # Case-specific cparams
-        self.wind_bins = config_params.WIND_BINS
-        self.run = run
+        self.run                    = run
         self.automatic_optimization = True
-        self.has_any_nan = False
-        self.shape_data = shape_data
-        self.wind_bins = config_params.WIND_BINS
+        self.has_any_nan            = False
+        self.shape_data             = shape_data
+        self.wind_bins              = config_params.WIND_BINS
+        self.pretrained_prior       = config_params.LOAD_PT_WEIGHTS
         
         # Initialize gradient solver (LSTM)
         self.shape_data = shape_data
@@ -642,6 +642,72 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         #end
         
         return loss, outs
+    #end
+    
+    def configure_optimizers(self):
+        
+        params = list()
+        
+        if self.hparams.inversion == 'gs':
+            
+            # Gradient Solver and Variational Cost parameters
+            params.append(
+                {'params'       : self.model.model_Grad.parameters(),
+                 'lr'           : self.hparams.mgrad_lr,
+                 'weight_decay' : self.hparams.mgrad_wd}
+                )
+            params.append(
+                {'params'       : self.model.model_VarCost.parameters(),
+                 'lr'           : self.hparams.varcost_lr,
+                 'weight_decay' : self.hparams.varcost_wd}
+            )
+        #end
+        
+        # Parameters of trainable fields-to-histogram map
+        # These parameters are considered as trainable either way
+        params.append(
+            {'params'       : self.model.Phi.Phi_fields_to_hist.parameters(),
+             'lr'           : self.hparams.prior_lr,
+             'weight_decay' : self.hparams.prior_wd}
+        )
+        
+        # If UNet parameters are not loaded as pretrained model, 
+        # append parameters of UNet to fir them as well
+        # These parameters are optional
+        if self.pretrained_prior is None:
+            params.append(
+                {'params'       : self.model.Phi.Phi_fields_hr.parameters(),
+                 'lr'           : self.hparams.prior_lr,
+                 'weight_decay' : self.hparams.prior_wd}    
+            )
+        #end
+        
+        if self.hparams.mm_obsmodel:
+            
+            # Parameters of the trainable Observation Operator
+            print('Multi-modal obs model')
+            params.append(
+                {'params'        : self.model.model_H.parameters(),
+                  'lr'           : self.hparams.mod_h_lr,
+                  'weight_decay' : self.hparams.mod_h_wd}
+            )
+        else:
+            print('Single-modal obs model')
+        #end
+        
+        optimizers = torch.optim.Adam(params)
+        return optimizers
+    #end
+    
+    def load_ckpt_from_statedict(self, Phi_statedict):
+        
+        Phi_dict = dict()
+        for key in Phi_statedict.keys():
+            if key.startswith('model.Phi.'):
+                Phi_dict.update({key.replace('model.Phi.', '') : Phi_statedict[key]})
+            #end
+        #end
+        self.model.Phi.Phi_fields_hr.load_state_dict(Phi_dict)
     #end
     
     def training_epoch_end(self, outputs):
@@ -713,11 +779,11 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         batch_size, timesteps, height, width = wind_lr_gt.shape
         
         # Mask data
-        mask_, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
-        mask = torch.cat([mask_lr, mask_hr_dx1], dim = 1)
-        # batch_input = torch.cat([wind_lr, wind_an], dim = 1)
-        # batch_input = batch_input * mask
-        batch_input = wind_hr_gt
+        mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
+        # mask = torch.cat([mask_lr, mask_hr_dx1], dim = 1)
+        batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
+        batch_input = batch_input * mask
+        # batch_input = wind_hr_gt
         
         # Inversion
         if phase == 'train':

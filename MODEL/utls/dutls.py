@@ -261,7 +261,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
 
 class WPDFSimuData(Dataset):
     
-    def __init__(self, data_hist, data_field, normalize = False):
+    def __init__(self, data_hist, data_field, normalize = True):
         
         self.data_hist  = data_hist
         
@@ -309,7 +309,7 @@ class WPDFSimuData(Dataset):
 
 class WPDFSimuDataModule(pl.LightningDataModule):
     
-    def __init__(self, path_data, cparams, timesteps = 24, normalize = False):
+    def __init__(self, path_data, cparams, timesteps = 24, normalize = True):
         super(WPDFSimuDataModule, self).__init__()
         
         self.path_data     = path_data

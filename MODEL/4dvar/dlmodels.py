@@ -283,7 +283,7 @@ class DoubleConv_pdf(nn.Module):
 #end
 
 class Downsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, downsample_factor = 2):
+    def __init__(self, in_channels, out_channels, downsample_factor = 4):
         super(Downsample_pdf, self).__init__()
         
         self.down_conv = nn.Sequential(
@@ -312,10 +312,10 @@ class Upsample_pdf(nn.Module):
             self.up_conv = nn.Sequential(
                 nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
                 nn.LeakyReLU(0.1),
-                nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
+                nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, padding = 2)
             )
         #end
-        self.conv = nn.Conv2d(out_channels * 2, outer_channels, kernel_size = 3, padding = 1)
+        self.conv = nn.Conv2d(out_channels * 2, outer_channels, kernel_size = 5, padding = 2)
     #end
     
     def forward(self, scale1_data, scale2_data):
@@ -394,16 +394,14 @@ class UNet1_pdf(nn.Module):
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
-        in_channels     = shape_data[1] * 1
+        in_channels     = shape_data[1] * 3
+        out_channels    = shape_data[1] * 3
         
         # UNet
         self.in_conv    = nn.Conv2d(in_channels, in_channels, kernel_size = 5, padding = 2)
         self.down       = Downsample_pdf(in_channels, 512)
         self.up         = Upsample_pdf(512, in_channels, in_channels, cparams)
-    #end
-    
-    def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
-        return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
+        self.out_conv   = nn.Conv2d(in_channels, out_channels, (5,5), padding = (2,2))
     #end
     
     def forward(self, data):
@@ -414,11 +412,7 @@ class UNet1_pdf(nn.Module):
         x1 = self.in_conv(data)
         x2 = self.down(x1)
         out = self.up(x1, x2)
-        
-        # # interpolate lr
-        # out_lr_intrp = self.interpolate_lr(data[:,:self.timesteps,:,:], self.lr_sfreq)
-        # out = out[:, self.timesteps:, :,:] + out_lr_intrp
-        
+                
         return out
     #end
 #end
@@ -434,14 +428,26 @@ class TrainableFieldsToHist(nn.Module):
         
         in_channels             = shape_data[1] * 1
         out_channels            = 1024
-        self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
+        self.timesteps          = shape_data[1]
+        self.lr_sfreq           = cparams.LR_MASK_SFREQ
+        self.Phi_fields_hr      = UNet1(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
         self.Phi_fields_to_hist = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE)
+    #end
+    
+    def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
+        return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
     #end
     
     def forward(self, data_input):
         
-        # fields_hr = self.Phi_fields_hr(data_input)
-        hist_out  = self.Phi_fields_to_hist(data_input)
+        fields_ = self.Phi_fields_hr(data_input)
+        
+        # interpolate lr
+        fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
+        fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
+        
+        # To histogram
+        hist_out  = self.Phi_fields_to_hist(fields_hr)
         return hist_out
     #end
 #end
