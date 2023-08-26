@@ -348,6 +348,7 @@ class HistogrammizationDirect(nn.Module):
         
         self.nbins      = shape_data[-1]
         self.timesteps  = shape_data[1]
+        output_channels = shape_data[1] * shape_data[-1]
         
         self.conv2d_relu_cascade = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
@@ -358,8 +359,14 @@ class HistogrammizationDirect(nn.Module):
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
-        self.linear_reshape = nn.Conv2d(out_channels, shape_data[1] * shape_data[-1], kernel_size = 3, padding = 1)
-        self.downsample     = nn.MaxPool2d(lr_kernelsize)
+        self.linear_reshape = nn.Conv2d(out_channels, output_channels, kernel_size = 3, padding = 1)
+        # self.downsample     = nn.MaxPool2d(lr_kernelsize)
+        self.downsample = nn.Sequential(
+            nn.Conv2d(output_channels, output_channels, kernel_size = 3, padding = 1),
+            nn.MaxPool2d(5),
+            nn.Conv2d(output_channels, output_channels, kernel_size = 3, padding = 1),
+            nn.MaxPool2d(2)
+        )
         self.normalize      = nn.LogSoftmax(dim = -1)
     #end
     
@@ -426,7 +433,7 @@ class TrainableFieldsToHist(nn.Module):
     def __init__(self, shape_data, cparams):
         super(TrainableFieldsToHist, self).__init__()
         
-        in_channels             = shape_data[1] * 3
+        in_channels             = shape_data[1] * 1
         out_channels            = 1024
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
@@ -443,11 +450,11 @@ class TrainableFieldsToHist(nn.Module):
         fields_ = self.Phi_fields_hr(data_input)
         
         # interpolate lr
-        # fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
-        # fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
+        fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
+        fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(fields_)
+        hist_out  = self.Phi_fields_to_hist(fields_hr)
         return hist_out
     #end
 #end
