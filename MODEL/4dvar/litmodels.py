@@ -797,9 +797,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
         # mask = torch.cat([mask_lr, mask_hr_dx1], dim = 1)
-        # batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
-        # batch_input = batch_input * mask
-        batch_input = wind_hr_gt
+        batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
+        batch_input = batch_input * mask
+        # batch_input = wind_hr_gt
         
         # Inversion
         if phase == 'train':
