@@ -291,7 +291,7 @@ class WPDFSimuData(Dataset):
         normparams = dict()
         data_std  = data.std()
         data = data / data_std
-        normparams.update({'std'  : data_std})
+        normparams.update({'std' : data_std})
         
         self.normparams = normparams
         return data

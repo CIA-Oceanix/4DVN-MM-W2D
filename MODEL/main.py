@@ -178,7 +178,7 @@ class Experiment:
         
         # DATAMODULE : initialize
         if self.cparams.VNAME == '4DVN-W2D':
-            self.w2d_dm = W2DSimuDataModule(self.path_data, self.cparams)
+            self.w2d_dm = W2DSimuDataModule(self.path_data, self.cparams, normalize = False)
         elif self.cparams.VNAME == '4DVN-PDF':
             self.w2d_dm = WPDFSimuDataModule(self.path_data, self.cparams, normalize = True)
         #end
