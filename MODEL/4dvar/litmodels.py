@@ -810,19 +810,19 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         else:
             with torch.no_grad():
                 outputs, reco = self.model.Phi(batch_input)
-                # reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
-                # reco_an = reco[:,48:,:,:]
-                # reco_hr = reco_lr + reco_an
+                reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
+                reco_an = reco[:,48:,:,:]
+                reco_hr = reco_lr + reco_an
             #end
         #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
-                'data' : wind_hist_gt.detach().cpu(),
-                'reco' : outputs.detach().cpu().exp(),
-                # 'wdata': wind_hr_gt.detach().cpu(),
-                # 'wreco': reco_hr.detach().cpu()
+                # 'data' : wind_hist_gt.detach().cpu(),
+                # 'reco' : outputs.detach().cpu().exp(),
+                'wdata': wind_hr_gt.detach().cpu(),
+                'wreco': reco_hr.detach().cpu()
             })
         #end
         
