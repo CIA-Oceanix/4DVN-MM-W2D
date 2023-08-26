@@ -162,7 +162,7 @@ def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, wind_hr, indices, ds_n
     nc_hist_wind_hr.long_name = 'hr model wind probabilities'
     nc_hr_wind                = nc_dataset.createVariable('hr_wind_modulus', np.float32, ('time', 'south-north_hr-grid', 'west-east_hr-grid'))
     nc_hr_wind.units          = 'm s-1'
-    nc_hr_wind.long_name      = 'wind speed modulus'
+    nc_hr_wind.long_name      = 'wind speed (two components)'
     nc_windices               = nc_dataset.createVariable('indices', np.int32, ('time',))
     nc_windices.units         = 'none'
     nc_windices.long_name     = 'indices of wind images'
@@ -172,7 +172,7 @@ def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, wind_hr, indices, ds_n
     nc_time[:]               = time
     nc_mask[:,:]             = mask
     nc_hist_wind_hr[:,:,:,:] = w_hist_hr
-    nc_hr_wind[:,:,:]        = wind_hr
+    nc_hr_wind[:,:,:]        = np.stack(w_hr, axis = -1)
     nc_windices              = indices
     
     print('Dataset save. Closing ...')
@@ -233,14 +233,17 @@ if __name__ == '__main__':
     idx  = np.array(ds['indices'])
     mask = np.array(ds['mask_land'])
     
-    w_hr = np.sqrt(w_hr[:,:,:,0]**2 + w_hr[:,:,:,1]**2)
-    w_hr = torch.Tensor(w_hr)[:, -region_extent:, -region_extent:]
-    lat  = lat[-region_extent:, -region_extent:]
-    lon  = lon[-region_extent:, -region_extent:]
-    mask = mask[-region_extent:, -region_extent:]
+    wm_hr = np.sqrt(w_hr[:,:,:,0]**2 + w_hr[:,:,:,1]**2)
+    wm_hr = torch.Tensor(w_hr)[:, -region_extent:, -region_extent:]
+    lat   = lat[-region_extent:, -region_extent:]
+    lon   = lon[-region_extent:, -region_extent:]
+    mask  = mask[-region_extent:, -region_extent:]
+    u_hr  = w_hr[:,:,:,0][-region_extent:, -region_extent:]
+    v_hr  = w_hr[:,:,:,1][-region_extent:, -region_extent:]
     
     # bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32., 35.])
     # bins = torch.Tensor([0., 3., 6.5, 10., 13.5, 16.5, 20., 25., 30., 35.])
+    bins = cparams.WIND_BINS
     bins = torch.Tensor([0., 5., 15., 25., 35.])
     
     # Downsample HR > LR
@@ -251,7 +254,7 @@ if __name__ == '__main__':
     w_hist_hr = fieldsHR2hist(w_hr, lr_dsfactor, bins, progbars = True)
     
     # Save dataset
-    save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, w_hr, idx, 
+    save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, [u_hr, v_hr], idx, 
                          f'whist-{reso}km', day_start, month_start, year_start, day_end, month_end, year_end)
    
     
