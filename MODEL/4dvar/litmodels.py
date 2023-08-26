@@ -785,12 +785,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Temporal interpolation
         # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
         
-        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs
+        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs, wind_hist
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        winf_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt = self.prepare_batch(data)
+        wind_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr.shape
         
         # Mask data
