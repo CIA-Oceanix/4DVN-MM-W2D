@@ -251,7 +251,7 @@ if __name__ == '__main__':
     timesteps, height_lr, width_lr = w_lr.shape
     
     # Histogrammize
-    w_hist_hr = fieldsHR2hist(w_hr, lr_dsfactor, bins, progbars = True)
+    w_hist_hr = fieldsHR2hist(wm_hr, lr_dsfactor, bins, progbars = True)
     
     # Save dataset
     save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, [u_hr, v_hr], idx, 
