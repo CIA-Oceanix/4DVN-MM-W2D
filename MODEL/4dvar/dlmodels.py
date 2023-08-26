@@ -426,7 +426,7 @@ class TrainableFieldsToHist(nn.Module):
     def __init__(self, shape_data, cparams):
         super(TrainableFieldsToHist, self).__init__()
         
-        in_channels             = shape_data[1] * 1
+        in_channels             = shape_data[1] * 3
         out_channels            = 1024
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
@@ -443,11 +443,11 @@ class TrainableFieldsToHist(nn.Module):
         fields_ = self.Phi_fields_hr(data_input)
         
         # interpolate lr
-        fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
-        fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
+        # fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
+        # fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(fields_hr)
+        hist_out  = self.Phi_fields_to_hist(fields_)
         return hist_out
     #end
 #end
