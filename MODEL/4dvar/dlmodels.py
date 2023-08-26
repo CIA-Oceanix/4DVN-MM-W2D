@@ -363,9 +363,7 @@ class HistogrammizationDirect(nn.Module):
         # self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.downsample = nn.Sequential(
             nn.Conv2d(output_channels, output_channels, kernel_size = 3, padding = 1),
-            nn.MaxPool2d(5),
-            nn.Conv2d(output_channels, output_channels, kernel_size = 3, padding = 1),
-            nn.MaxPool2d(2)
+            nn.MaxPool2d(lr_kernelsize),
         )
         self.normalize      = nn.LogSoftmax(dim = -1)
     #end
