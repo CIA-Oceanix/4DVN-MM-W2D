@@ -234,12 +234,12 @@ if __name__ == '__main__':
     mask = np.array(ds['mask_land'])
     
     wm_hr = np.sqrt(w_hr[:,:,:,0]**2 + w_hr[:,:,:,1]**2)
-    wm_hr = torch.Tensor(w_hr)[:, -region_extent:, -region_extent:]
+    wm_hr = torch.Tensor(wm_hr)[:, -region_extent:, -region_extent:]
     lat   = lat[-region_extent:, -region_extent:]
     lon   = lon[-region_extent:, -region_extent:]
     mask  = mask[-region_extent:, -region_extent:]
-    u_hr  = w_hr[:,:,:,0][-region_extent:, -region_extent:]
-    v_hr  = w_hr[:,:,:,1][-region_extent:, -region_extent:]
+    u_hr  = w_hr[:,:,:,0][:,-region_extent:, -region_extent:]
+    v_hr  = w_hr[:,:,:,1][:,-region_extent:, -region_extent:]
     
     # bins = torch.Tensor([0., 2., 4., 6., 8., 10., 12., 14., 16., 18., 20., 22., 24., 26., 28., 30., 32., 35.])
     # bins = torch.Tensor([0., 3., 6.5, 10., 13.5, 16.5, 20., 25., 30., 35.])
