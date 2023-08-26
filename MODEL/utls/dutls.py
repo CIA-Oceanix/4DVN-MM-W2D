@@ -286,14 +286,16 @@ class WPDFSimuData(Dataset):
     #end
     
     def __getitem__(self, idx):
-        return self.data_hist[idx,:,:,:,:], self.data_field[idx,:,:,:]
+        return self.data_hist[idx,:,:,:,:], (self.data_field[idx,:,:,:,0], self.data_field[idx,:,:,:,1])
     #end
     
     def normalize(self, data):
         
         normparams = dict()
-        data_std  = data.std()
-        data = data / data_std
+        
+        data_std  = np.sqrt(data[:,:,:,:,0]**2 + data[:,:,:,:,1]**2).std()
+        data[:,:,:,:,0] = data[:,:,:,:,0] / data_std
+        data[:,:,:,:,1] = data[:,:,:,:,1] / data_std
         normparams.update({'std' : data_std})
         
         self.normparams = normparams
@@ -362,9 +364,9 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         hwind_val_set   = wind_hist[n_train : n_train + n_val, :,:,:]
         hwind_test_set  = wind_hist[n_train + n_val : n_train + n_val + n_test, :,:,:]
         
-        mwind_train_set = wind_hr[:n_train, :,:]
-        mwind_val_set   = wind_hr[n_train : n_train + n_val, :,:]
-        mwind_test_set  = wind_hr[n_train + n_val : n_train + n_val + n_test, :,:]
+        mwind_train_set = wind_hr[:n_train, :,:,:]
+        mwind_val_set   = wind_hr[n_train : n_train + n_val, :,:,:]
+        mwind_test_set  = wind_hr[n_train + n_val : n_train + n_val + n_test, :,:,:]
         
         hwind_train_set = self.extract_time_series(hwind_train_set, 36, n_train // 24,  'hist')
         hwind_val_set   = self.extract_time_series(hwind_val_set,   36, n_val // 24,    'hist')
@@ -400,7 +402,7 @@ class WPDFSimuDataModule(pl.LightningDataModule):
             if mod == 'hist':
                 new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-3:]))
             elif mod == 'field':
-                new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-2:]))
+                new_wind = np.zeros((num_subseries - 2, ts_length, *wind_data.shape[-3:]))
             #end
             
             for t in range(num_subseries - 2):
