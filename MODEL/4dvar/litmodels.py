@@ -674,7 +674,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # If UNet parameters are not loaded as pretrained model, 
         # append parameters of UNet to fir them as well
         # These parameters are optional
-        if self.pretrained_prior is None:
+        if True:
             params.append(
                 {'params'       : self.model.Phi.Phi_fields_hr.parameters(),
                  'lr'           : self.hparams.prior_lr,
