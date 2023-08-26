@@ -312,21 +312,21 @@ class PathManager:
     
     def save_model_output(self, outputs, mask_land, cparams, train_losses, val_losses, run):
         
-        # data = torch.cat([item['data'] for item in outputs], dim = 0)
-        # reco = torch.cat([item['reco'] for item in outputs], dim = 0)
-        wdata = torch.cat([item['wdata'] for item in outputs], dim = 0)
-        wreco = torch.cat([item['wreco'] for item in outputs], dim = 0)
+        data = torch.cat([item['data'] for item in outputs], dim = 0)
+        reco = torch.cat([item['reco'] for item in outputs], dim = 0)
+        # wdata = torch.cat([item['wdata'] for item in outputs], dim = 0)
+        # wreco = torch.cat([item['wreco'] for item in outputs], dim = 0)
         # print(data.shape)
         # print(reco.shape)
         
         reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
         if run == 0:
-            # reco_ncd['data'][0,:,:,:,:] = data
-            reco_ncd['wdata'][0,:,:,:,:] = wdata
+            reco_ncd['data'][0,:,:,:,:] = data
+            # reco_ncd['wdata'][0,:,:,:,:] = wdata
             reco_ncd['mask'][0,:,:] = mask_land.cpu()
         #end
-        # reco_ncd['reco'][run,:,:,:,:] = reco
-        reco_ncd['wreco'][run,:,:,:,:] = wreco
+        reco_ncd['reco'][run,:,:,:,:] = reco
+        # reco_ncd['wreco'][run,:,:,:,:] = wreco
         reco_ncd.close()
         
         with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:
