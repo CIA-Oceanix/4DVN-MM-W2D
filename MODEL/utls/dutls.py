@@ -266,6 +266,7 @@ class WPDFSimuData(Dataset):
         self.data_hist  = data_hist
         
         if normalize:
+            print('\nDATA PREPROCESSING: divide by (modulus) std')
             data_field = self.normalize(data_field)
             self.data_field = data_field
         else:
