@@ -732,42 +732,66 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
-        wind_hist, wind_hr = batch
-        batch_size, timesteps, height_lr, width_lr, hbins = wind_hist.shape
-        _,_, height_hr, width_hr = wind_hr.shape
+        wind_hist, (data_hr_u, data_hr_v) = batch
+        data_hr_gt = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
-        # Downsample wind speed fields
-        wind_lr = self.spatial_downsample_interpolate(wind_hr)
+        # Modulus obtained as modulus of LR components
+        data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
+        data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
+        data_lr_gt = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
         
-        # Persistences !!!
-        wind_hr_obs = self.get_persistence(wind_hr, 'hr', longer_series = True)
-        wind_lr_obs = self.get_persistence(wind_lr, 'lr', longer_series = True)
+        data_lr_obs = data_lr_gt.clone()
         
-        if self.hparams.hr_mask_sfreq is None:
-            wind_an_obs = wind_lr_obs
-        else:
-            wind_an_obs = (wind_hr_obs - wind_lr_obs)
+        # Alternative : persistence models
+        data_lr_obs = self.get_persistence(data_lr_obs, 'lr', longer_series = True)
+        data_hr_obs = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
+        
+        # NOTE: is in-situ time series are actually measured, these positions
+        # in the persistence model must be filled with in-situ time series
+        # These loops are ugly as fuck but necessary for the experiment on buoys shuffling
+        if self.hparams.hr_mask_mode == 'buoys':
+            xp_buoys, yp_buoys, logical_flag = self.buoy_position[:,0], self.buoy_position[:,1], self.buoy_position[:,2]
+            for i in range(xp_buoys.shape[0]):
+                if logical_flag[i] == 1:
+                    data_hr_obs[:,:, xp_buoys[i], yp_buoys[i]] = data_hr_gt[:,:, xp_buoys[i], yp_buoys[i]]
+                #end
+            #end
         #end
+        
+        # Obtain anomaly
+        if self.hparams.hr_mask_sfreq is None:
+            # Cases : baselines (interpolation of LR and super-resolution)
+            # that is, when no HR data is observed whatsoever
+            data_an_obs = data_lr_obs
+        else:
+            # All the other cases
+            data_an_obs = (data_hr_obs - data_lr_obs)
+        #end
+        
+        # Isolate the 24 central timesteps
+        data_lr_gt  = data_lr_gt[:, timewindow_start : timewindow_end, :,:]
+        data_lr_obs = data_lr_obs[:, timewindow_start : timewindow_end, :,:]
+        data_hr_gt  = data_hr_gt[:, timewindow_start : timewindow_end, :,:]
+        data_an_obs = data_an_obs[:, timewindow_start : timewindow_end, :,:]
+        data_hr_obs = data_hr_obs[:, timewindow_start : timewindow_end, :,:]
         
         if True:
-            wind_lr_obs[:,-1,:,:] = wind_lr[:,-1,:,:]
+            # This modification makes persistence and naive initializations to match
+            # That is, we assume to "close" each time series with u(23h, day0) = u(0h, day1)
+            # Activate it to implemen this (then initializations with persistence and naive match)
+            data_lr_obs[:,-1,:,:] = data_lr_gt[:,-1,:,:]
         #end
         
-        # Crop central timesteps
-        wind_hr_obs   = wind_hr_obs[:, timewindow_start : timewindow_end, :,:]
-        wind_lr_obs   = wind_lr_obs[:, timewindow_start : timewindow_end, :,:]
-        wind_an_obs   = wind_an_obs[:, timewindow_start : timewindow_end, :,:]
-        wind_hr       = wind_hr[:, timewindow_start : timewindow_end, :,:]
-        wind_lr       = wind_lr[:, timewindow_start : timewindow_end, :,:]
-        wind_hist     = wind_hist[:, timewindow_start : timewindow_end, :,:,:]
+        # Temporal interpolation
+        # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
         
-        return wind_hr_obs, wind_lr_obs, wind_an_obs, wind_hr, wind_lr, wind_hist
+        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        wind_hr, wind_lr, wind_an, wind_hr_gt, wind_lr_gt, wind_hist_gt = self.prepare_batch(data)
-        batch_size, timesteps, height, width = wind_lr_gt.shape
+        winf_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt = self.prepare_batch(data)
+        batch_size, timesteps, height, width = wind_lr.shape
         
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
