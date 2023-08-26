@@ -20,9 +20,11 @@ class W2DSimuDataset_WindComponents(Dataset):
     def __init__(self, data, normalize, case_wmod):
         
         if normalize:
+            print('\nDATA PREPROCESSING: normalize by std')
             wind2D = self.normalize(data, case_wmod)
             self.wind2D = wind2D
         else:
+            print('\nNO DATA PREPROCESSING (normalization)')
             self.wind2D = data
             self.normparams = {}
         #end
@@ -270,6 +272,7 @@ class WPDFSimuData(Dataset):
             data_field = self.normalize(data_field)
             self.data_field = data_field
         else:
+            print('\nNO DATA PREPROCESSING (normalization)')
             self.data_field = data_field
             self.normparams = {}
         #end
