@@ -247,7 +247,7 @@ if __name__ == '__main__':
     bins = torch.Tensor([0., 5., 15., 25., 35.])
     
     # Downsample HR > LR
-    w_lr = F.avg_pool2d(w_hr.reshape(1, *tuple(w_hr.shape)), kernel_size = lr_dsfactor).squeeze(0)
+    w_lr = F.avg_pool2d(wm_hr.reshape(1, *tuple(wm_hr.shape)), kernel_size = lr_dsfactor).squeeze(0)
     timesteps, height_lr, width_lr = w_lr.shape
     
     # Histogrammize
@@ -263,7 +263,7 @@ if __name__ == '__main__':
     means_hist_computed = torch.zeros(w_lr.shape)
     errors = torch.zeros(w_lr.shape)
     print(w_hist_hr.shape)
-    for t in tqdm(range(w_hr.shape[0]),  desc = 'Timesteps ', position = 0, leave = True):
+    for t in tqdm(range(wm_hr.shape[0]),  desc = 'Timesteps ', position = 0, leave = True):
         for i in range(height_lr):
             for j in range(width_lr):
                 mean = hist_mean_computation(w_hist_hr[t,i,j], xbins)
@@ -282,8 +282,8 @@ if __name__ == '__main__':
     ax[1].scatter(means_hist_computed.flatten().numpy(), w_lr.flatten().numpy())
     ax[1].set_xlabel('Means (histograms) [m/s]')
     ax[1].set_ylabel('Means (LR avg pool 2d) [m/s]')
-    ax[1].set_xticks(np.linspace(0, w_hr.max(), 5))
-    ax[1].set_yticks(np.linspace(0, w_hr.max(), 5))
+    ax[1].set_xticks(np.linspace(0, wm_hr.max(), 5))
+    ax[1].set_yticks(np.linspace(0, wm_hr.max(), 5))
     ax[1].plot(np.linspace(0, 20, 5), np.linspace(0, 20, 5), c = 'k', ls = '--', lw = 2)
     fig.tight_layout()
     fig.savefig('./plots/avg_error_means_avgpool_and_histmean.png', format = 'png', dpi = 300, bbox_inches = 'tight')
