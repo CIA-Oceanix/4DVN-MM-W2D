@@ -774,6 +774,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         data_hr_gt  = data_hr_gt[:, timewindow_start : timewindow_end, :,:]
         data_an_obs = data_an_obs[:, timewindow_start : timewindow_end, :,:]
         data_hr_obs = data_hr_obs[:, timewindow_start : timewindow_end, :,:]
+        wind_hist   = wind_hist[:, timewindow_start : timewindow_end, :,:]
         
         if True:
             # This modification makes persistence and naive initializations to match
