@@ -304,7 +304,7 @@ class Upsample_pdf(nn.Module):
         self.up_conv = nn.Sequential(
             nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
             nn.LeakyReLU(0.1),
-            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, padding = 2)
+            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2)
         )
         self.conv = nn.Conv2d(out_channels * 2, outer_channels, kernel_size = 5, padding = 2)
     #end
@@ -351,11 +351,7 @@ class HistogrammizationDirect(nn.Module):
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
         self.linear_reshape = nn.Conv2d(out_channels, output_channels, kernel_size = 3, padding = 1)
-        # self.downsample     = nn.MaxPool2d(lr_kernelsize)
-        self.downsample = nn.Sequential(
-            nn.Conv2d(output_channels, output_channels, kernel_size = 3, padding = 1),
-            nn.MaxPool2d(lr_kernelsize),
-        )
+        self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.normalize      = nn.LogSoftmax(dim = -1)
     #end
     
