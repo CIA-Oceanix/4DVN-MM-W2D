@@ -63,55 +63,6 @@ class Squeeze(nn.Module):
 ##### DEEP LEARNING MODELS ####################################################
 ###############################################################################
 
-class MLP(nn.Module):
-    def __init__(self, cparams, shape_data):
-        super(MLP, self).__init__()
-        
-        batch_size, ts_length, dim_h, dim_w = shape_data
-        if not cparams.WIND_MODULUS:
-            dim_w *= 2
-        #end
-        self.net = nn.Sequential(
-            nn.Linear(dim_h * dim_w, 200),
-            nn.LeakyReLU(0.1),
-            nn.Linear(200, dim_h * dim_w)
-        )
-    #end
-    
-    def forward(self, data):
-        
-        batch_size, ts_length, dim_h, dim_w = data.shape
-        data_flat = data.reshape(batch_size, ts_length, dim_h * dim_w)
-        reco_flat = self.net(data_flat)
-        reco = reco_flat.reshape(batch_size, ts_length, dim_h, dim_w)
-        return reco
-    #end
-#end
-
-
-class ResNet(nn.Module):
-    
-    def __init__(self, shape_data, config_params):
-        super(ResNet, self).__init__()
-        
-        self.rnet = nn.Sequential(
-            nn.Conv2d(72, 50, (3,3), padding = 1, stride = 1, bias = False),
-            nn.BatchNorm2d(50),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(50, 72, (3,3), padding = 1, stride = 1)
-        )
-        
-        self.shortcut = nn.Identity()
-    #end
-    
-    def forward(self, data):
-        
-        out = self.rnet(data)
-        out = out.add(self.shortcut(data))
-        return out
-    #end
-#end
-
 
 class ConvNet(nn.Module):
     
@@ -159,34 +110,6 @@ class ConvAutoEncoder(nn.Module):
         code = self.encoder(data)
         reco = self.decoder(code)
         return reco
-    #end
-#end
-
-class UNet(nn.Module):
-    
-    def __init__(self, shape_data, config_params):
-        super(UNet, self).__init__()
-        
-        ts_length = shape_data[1] * 3
-        
-        self.encoder1 = nn.Conv2d(ts_length, 64, kernel_size = 5, padding = 2)
-        self.nl1 = nn.LeakyReLU(0.1)
-        # self.nl1 = nn.Identity()
-        self.bottleneck = nn.Conv2d(64, 64, kernel_size = 5, padding = 2)
-        self.nl2 = nn.LeakyReLU(0.1)
-        # self.nl2 = nn.Identity()
-        self.decoder1 = nn.Conv2d(64 * 2, 32, kernel_size = 5, padding = 2)
-        self.conv = nn.Conv2d(32, ts_length, kernel_size = 5, padding = 2)
-    #end
-    
-    def forward(self, x):
-        
-        enc1 = self.nl1(self.encoder1(x))
-        bottleneck = self.bottleneck(enc1)
-        dec1 = torch.cat([enc1, bottleneck], dim = 1)
-        dec1 = self.decoder1(dec1)
-        y = self.conv(self.nl2(dec1))
-        return y
     #end
 #end
 
@@ -266,57 +189,6 @@ class UNet1(nn.Module):
 #end
 
 
-class DoubleConv_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(DoubleConv_pdf, self).__init__()
-        
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
-        )
-    #end
-    
-    def forward(self, data):
-        return self.conv(data)
-    #end
-#end
-
-class Downsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, downsample_factor = 4):
-        super(Downsample_pdf, self).__init__()
-        
-        self.down_conv = nn.Sequential(
-            nn.MaxPool2d(downsample_factor),
-            DoubleConv_pdf(in_channels, out_channels)
-        )
-    #end
-    
-    def forward(self, data):
-        return self.down_conv(data)
-    #end
-#end
-
-class Upsample_pdf(nn.Module):
-    def __init__(self, in_channels, out_channels, outer_channels, cparams):
-        super(Upsample_pdf, self).__init__()
-        
-        self.up_conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
-            nn.LeakyReLU(0.1),
-            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2)
-        )
-        self.conv = nn.Conv2d(out_channels * 2, outer_channels, kernel_size = 5, padding = 2)
-    #end
-    
-    def forward(self, scale1_data, scale2_data):
-        
-        scale2_data_upscaled = self.up_conv(scale2_data)
-        data = torch.cat([scale1_data, scale2_data_upscaled], dim = 1)
-        return self.conv(data)
-    #end
-#end
-
 class DepthwiseConv2d(nn.Sequential):
     def __init__(self, in_channels, out_channels, kernel_size, padding, stride = 1):
         super(DepthwiseConv2d, self).__init__(
@@ -380,6 +252,57 @@ class HistogrammizationDirect(nn.Module):
     #end
 #end
 
+class DoubleConv_pdf(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(DoubleConv_pdf, self).__init__()
+        
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1)
+        )
+    #end
+    
+    def forward(self, data):
+        return self.conv(data)
+    #end
+#end
+
+class Downsample_pdf(nn.Module):
+    def __init__(self, in_channels, out_channels, downsample_factor = 4):
+        super(Downsample_pdf, self).__init__()
+        
+        self.down_conv = nn.Sequential(
+            nn.MaxPool2d(downsample_factor),
+            DoubleConv_pdf(in_channels, out_channels)
+        )
+    #end
+    
+    def forward(self, data):
+        return self.down_conv(data)
+    #end
+#end
+
+class Upsample_pdf(nn.Module):
+    def __init__(self, in_channels, out_channels, outer_channels, cparams):
+        super(Upsample_pdf, self).__init__()
+        
+        self.up_conv = nn.Sequential(
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size = 2, stride = 2),
+            nn.LeakyReLU(0.1),
+            nn.ConvTranspose2d(out_channels, out_channels, kernel_size = 2, stride = 2)
+        )
+        self.conv = nn.Conv2d(out_channels * 2, outer_channels, kernel_size = 5, padding = 2)
+    #end
+    
+    def forward(self, scale1_data, scale2_data):
+        
+        scale2_data_upscaled = self.up_conv(scale2_data)
+        data = torch.cat([scale1_data, scale2_data_upscaled], dim = 1)
+        return self.conv(data)
+    #end
+#end
+
 class UNet1_pdf(nn.Module):
     # Now this will change a bit
     # Soon to deprecate this ugly monster and update to a more flexible and elegant solution
@@ -432,9 +355,10 @@ class TrainableFieldsToHist(nn.Module):
     
     def forward(self, data_input):
         
+        # Reconstruction of spatial wind speed fields
         fields_ = self.Phi_fields_hr(data_input)
         
-        # interpolate lr
+        # Interpolate lr part of reconstructions
         fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
         fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
         
@@ -829,10 +753,14 @@ def model_selection(shape_data, config_params, normparams = None, components = F
         return ConvNet_pdf(shape_data, config_params, normparams)
     
     elif config_params.PRIOR == 'RN':
-        return ResNet(shape_data, config_params)
+        # return ResNet(shape_data, config_params)
+        # DEPRECATED
+        raise ValueError('RN is deprecated')
     
     elif config_params.PRIOR == 'UN':
-        return UNet(shape_data, config_params)
+        # return UNet(shape_data, config_params)
+        # DEPRECATED
+        raise ValueError('UN is deprecated')
     
     elif config_params.PRIOR == 'UN1':
         return UNet1(shape_data, config_params)
@@ -844,12 +772,13 @@ def model_selection(shape_data, config_params, normparams = None, components = F
         return UNet4(shape_data[1] * 3, shape_data[1] * 3)
     
     elif config_params.PRIOR == 'MLP':
-        return MLP(config_params, shape_data)
+        # return MLP(config_params, shape_data)
+        # DEPRECATED
+        raise ValueError('MLP is deprecated')
     
     elif config_params.PRIOR == 'FPN':
         # return FokkerPlankNet(shape_data, config_params)
         raise ValueError('FPN deprecated')
-        return None
     
     else:
         raise NotImplementedError('No valid prior')
