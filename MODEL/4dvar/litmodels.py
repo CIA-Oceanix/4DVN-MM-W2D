@@ -597,6 +597,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.shape_data             = shape_data
         self.wind_bins              = config_params.WIND_BINS
         self.pretrained_prior       = config_params.LOAD_PT_WEIGHTS
+        self.hparams.prior_hist_lr  = config_params.PHI_HIST_LR
+        self.hparams.prior_hist_wd  = config_params.PHI_HIST_WD
         
         # Initialize gradient solver (LSTM)
         self.shape_data = shape_data
@@ -667,8 +669,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # These parameters are considered as trainable either way
         params.append(
             {'params'       : self.model.Phi.Phi_fields_to_hist.parameters(),
-             'lr'           : self.hparams.prior_lr,
-             'weight_decay' : self.hparams.prior_wd}
+             'lr'           : self.hparams.prior_hist_lr,
+             'weight_decay' : self.hparams.prior_hist_wd}
         )
         
         # If UNet parameters are not loaded as pretrained model, 
@@ -679,7 +681,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             params.append(
                 {'params'       : self.model.Phi.Phi_fields_hr.parameters(),
                  'lr'           : self.hparams.prior_lr,
-                 'weight_decay' : self.hparams.prior_wd}    
+                 'weight_decay' : self.hparams.prior_wd}
             )
         #end
         
