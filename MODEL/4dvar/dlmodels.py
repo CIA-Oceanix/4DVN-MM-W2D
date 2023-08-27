@@ -214,8 +214,6 @@ class HistogrammizationDirect(nn.Module):
         self.conv2d_relu_cascade = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, 256, kernel_size = (3,3), padding = 1),
-            nn.ReLU(),
             DepthwiseConv2d(256, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
@@ -323,7 +321,7 @@ class UNet1_pdf(nn.Module):
         x2 = self.down(x1)
         out = self.up(x1, x2)
                 
-        return out
+        return out, x2
     #end
 #end
 
@@ -350,7 +348,7 @@ class TrainableFieldsToHist(nn.Module):
     def forward(self, data_input):
         
         # Reconstruction of spatial wind speed fields
-        fields_ = self.Phi_fields_hr(data_input)
+        fields_, latent = self.Phi_fields_hr(data_input)
         
         # Interpolate lr part of reconstructions
         fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
