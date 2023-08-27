@@ -188,7 +188,6 @@ class UNet1(nn.Module):
     #end
 #end
 
-
 class DepthwiseConv2d(nn.Sequential):
     def __init__(self, in_channels, out_channels, kernel_size, padding, stride = 1):
         super(DepthwiseConv2d, self).__init__(
@@ -204,7 +203,6 @@ class DepthwiseConv2d(nn.Sequential):
     #end
 #end
 
-
 class HistogrammizationDirect(nn.Module):
     def __init__(self, in_channels, out_channels, shape_data, lr_kernelsize):
         super(HistogrammizationDirect, self).__init__()
@@ -218,11 +216,9 @@ class HistogrammizationDirect(nn.Module):
             nn.ReLU(),
             DepthwiseConv2d(256, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, 256, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(256, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, 256, kernel_size = (3,3), padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
@@ -308,8 +304,6 @@ class Upsample_pdf(nn.Module):
 #end
 
 class UNet1_pdf(nn.Module):
-    # Now this will change a bit
-    # Soon to deprecate this ugly monster and update to a more flexible and elegant solution
     def __init__(self, shape_data, cparams):
         super(UNet1_pdf, self).__init__()
         
@@ -325,9 +319,6 @@ class UNet1_pdf(nn.Module):
     
     def forward(self, data):
         
-        batch_size, _, height, width = data.shape
-        
-        # UNet
         x1 = self.in_conv(data)
         x2 = self.down(x1)
         out = self.up(x1, x2)
@@ -335,7 +326,6 @@ class UNet1_pdf(nn.Module):
         return out
     #end
 #end
-
 
 class TrainableFieldsToHist(nn.Module):
     # Note: quando tutto questo sarà incorporato in 4DVarNet, non cambierà nulla
@@ -346,7 +336,7 @@ class TrainableFieldsToHist(nn.Module):
         super(TrainableFieldsToHist, self).__init__()
         
         in_channels             = shape_data[1] * 1
-        out_channels            = 512
+        out_channels            = 1024
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
         self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
@@ -371,7 +361,6 @@ class TrainableFieldsToHist(nn.Module):
         return hist_out
     #end
 #end
-
 
 class ConvNet_pdf(nn.Module):
     def __init__(self, shape_data, cparams, w_nparams):
