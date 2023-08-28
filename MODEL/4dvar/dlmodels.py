@@ -196,9 +196,12 @@ class DepthwiseConv2d(nn.Sequential):
                       padding     = padding,
                       stride      = stride,
                       groups      = in_channels,
-                      bias        = True),
-            nn.Conv2d(in_channels, out_channels,
-                      kernel_size = 1)
+                      bias        = True
+            ),
+            nn.Conv2d(in_channels, 
+                      out_channels,
+                      kernel_size = 1
+            )
         )
     #end
 #end
@@ -334,7 +337,7 @@ class TrainableFieldsToHist(nn.Module):
         super(TrainableFieldsToHist, self).__init__()
         
         in_channels             = shape_data[1] * 1
-        out_channels            = 1024
+        out_channels            = 512
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
         self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
