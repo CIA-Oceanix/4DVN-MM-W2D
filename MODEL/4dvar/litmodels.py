@@ -808,14 +808,11 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if phase == 'train':
             with torch.set_grad_enabled(True):
                 batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
-                outputs = self.model.Phi(batch_input)
+                outputs, reco_hr = self.model.Phi(batch_input)
             #end
         else:
             with torch.no_grad():
-                outputs = self.model.Phi(batch_input)
-                # reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
-                # reco_an = reco[:,48:,:,:]
-                # reco_hr = reco_lr + reco_an
+                outputs, reco_hr = self.model.Phi(batch_input)
             #end
         #end
         
@@ -829,10 +826,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             })
         #end
         
-        loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - outputs.exp()))
+        loss_reco_hr  = self.l2_loss((reco_hr - wind_hr_gt), mask = None)
+        # loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - outputs.exp()))
         loss_kld      = 1.0 * self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
         # loss_hd       = 1.0 * self.hd_loss(wind_hist_gt, outputs.exp())
-        loss = loss_kld #+ loss_mse_hist #+ loss_hd
+        loss = loss_kld 
+        loss += loss_reco_hr
         
         return dict({'loss' : loss}), outputs
     #end
