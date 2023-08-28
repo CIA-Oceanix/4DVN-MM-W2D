@@ -215,11 +215,11 @@ class HistogrammizationDirect(nn.Module):
         output_channels = shape_data[1] * shape_data[-1]
         
         self.conv2d_relu_cascade = nn.Sequential(
-            DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(in_channels, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, 256, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(512, 512, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
@@ -337,7 +337,7 @@ class TrainableFieldsToHist(nn.Module):
         super(TrainableFieldsToHist, self).__init__()
         
         in_channels             = shape_data[1] * 1
-        out_channels            = 1024
+        out_channels            = 512
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
         self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
