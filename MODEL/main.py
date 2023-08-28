@@ -160,9 +160,9 @@ class Experiment:
         checkpoint_path = glob.glob(checkpoint_name)[0]
         ckpt_model      = open(checkpoint_path, 'rb')
         print('\n\nCHECKPOINT (PRE-TRAINED MODEL) : {}\n\n'.format(checkpoint_path))
-        model_statedict = torch.load(ckpt_model, map_location = DEVICE)['state_dict']
+        model_fields_statedict = torch.load(ckpt_model, map_location = DEVICE)['state_dict']
         
-        return model_statedict
+        return model_fields_statedict
     #end
     
     def run_simulation(self):
