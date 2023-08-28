@@ -648,11 +648,13 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def configure_optimizers(self):
         
+        # Gather model parameters
         params = list()
         
         if self.hparams.inversion == 'gs':
             
             # Gradient Solver and Variational Cost parameters
+            # Used only for 4DVarNet gradient solver training
             params.append(
                 {'params'       : self.model.model_Grad.parameters(),
                  'lr'           : self.hparams.mgrad_lr,
@@ -674,7 +676,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         )
         
         # If UNet parameters are not loaded as pretrained model, 
-        # append parameters of UNet to fir them as well
+        # append parameters of UNet to fit them as well
         # These parameters are optional
         # if self.pretrained_prior is None:
         if True:
@@ -699,8 +701,19 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             print('Single-modal obs model')
         #end
         
-        optimizers = torch.optim.Adam(params)
-        return optimizers
+        # Define optimizer
+        optimizer = torch.optim.Adam(params)
+        
+        # LEARNING RATE SCHEDULER
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = [100, 150], gamma = 0.1)
+        
+        # Return dictionary
+        optimizer_scheduler_dict = {
+            'optimizer'    : optimizer,
+            'lr_scheduler' : scheduler
+        }
+        
+        return optimizer_scheduler_dict
     #end
     
     def load_ckpt_from_statedict(self, Phi_statedict):
