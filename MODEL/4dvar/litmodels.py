@@ -705,7 +705,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         optimizer = torch.optim.Adam(params)
         
         # LEARNING RATE SCHEDULER
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = [120], gamma = 0.5)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = [120, 170], gamma = 0.5)
         
         # Return dictionary
         optimizer_scheduler_dict = {
