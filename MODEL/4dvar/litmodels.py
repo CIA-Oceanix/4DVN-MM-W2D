@@ -1,5 +1,6 @@
 import sys
 sys.path.append('../utls')
+sys.path.append('./utls')
 
 import torch
 import pytorch_lightning as pl
@@ -680,7 +681,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # These parameters are optional
         # if self.pretrained_prior is None:
         if True:
-            print('RE-TRAIN PRIOR (fields) PARAMETERS')
             params.append(
                 {'params'       : self.model.Phi.Phi_fields_hr.parameters(),
                  'lr'           : self.hparams.prior_lr,
@@ -802,7 +802,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Temporal interpolation
         # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
-        
+
         return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs, wind_hist
     #end
     
