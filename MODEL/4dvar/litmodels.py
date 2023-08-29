@@ -716,27 +716,15 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return optimizer_scheduler_dict
     #end
     
-    def load_ckpt_from_statedict(self, Phi_statedict, prior):
+    def load_ckpt_from_statedict(self, Phi_statedict):
         
-        if prior == 'Phi_fields_hr':
-            Phi_dict = dict()
-            for key in Phi_statedict.keys():
-                if key.startswith('model.Phi.'):
-                    Phi_dict.update({key.replace('model.Phi.', '') : Phi_statedict[key]})
-                #end
+        Phi_dict = dict()
+        for key in Phi_statedict.keys():
+            if key.startswith('model.Phi.'):
+                Phi_dict.update({key.replace('model.Phi.', '') : Phi_statedict[key]})
             #end
-            self.model.Phi.Phi_fields_hr.load_state_dict(Phi_dict)
-        elif prior == 'Phi_fields_to_hist':
-            Phi_dict = dict()
-            for key in Phi_statedict.keys():
-                if key.startswith('model.Phi.Phi_fields_to_hist'):
-                    Phi_dict.update({key.replace('model.Phi.Phi_fields_to_hist.', '') : Phi_statedict[key]})
-                #end
-            #end
-            self.model.Phi.Phi_fields_to_hist.load_state_dict(Phi_dict)
-        else:
-            raise ValueError('Not a valid module')
         #end
+        self.model.Phi.Phi_fields_hr.load_state_dict(Phi_dict)
     #end
     
     def training_epoch_end(self, outputs):

@@ -252,9 +252,6 @@ class Experiment:
             if self.cparams.LOAD_PT_WEIGHTS is not None:
                 model_statedict = self.load_pretrained_params(self.cparams.LOAD_PT_WEIGHTS, run)
                 lit_model.load_ckpt_from_statedict(model_statedict, 'Phi_fields_hr')
-
-                model_statedict = self.load_pretrained_params(self.model_name, run, name_add = '-backup')
-                lit_model.load_ckpt_from_statedict(model_statedict, 'Phi_fields_to_hist')
             #end
         #end
         
