@@ -828,10 +828,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             #end
         else:
             with torch.no_grad():
-                outputs, reco_hr = self.model.Phi(batch_input)
+                outputs, reco_ = self.model.Phi(batch_input)
                 
                 reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
-                reco_an = reco_hr[:,48:,:,:]
+                reco_an = reco_[:,48:,:,:]
                 reco_hr = reco_lr + 1.0 * reco_an
             #end
         #end
@@ -869,7 +869,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         ## Regularization
         if not self.hparams.inversion == 'bl':
             
-            regularization = self.l2_loss( (outputs - self.model.Phi(outputs)), mask = None )
+            regularization = self.l2_loss( (outputs - self.model.Phi.Phi_fields_hr(reco_)), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
         
