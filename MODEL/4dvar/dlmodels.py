@@ -351,7 +351,7 @@ class TrainableFieldsToHist(nn.Module):
     def forward(self, data_input):
         
         # Reconstruction of spatial wind speed fields
-        fields_, latent = self.Phi_fields_hr(data_input)
+        fields_ = self.Phi_fields_hr(data_input)
         
         # # Interpolate lr part of reconstructions
         fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
