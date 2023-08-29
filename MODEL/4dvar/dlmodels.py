@@ -325,7 +325,7 @@ class UNet1_pdf(nn.Module):
         x3  = self.up(x1, x2)
         out = self.out_conv(x3)
                 
-        return out, x2
+        return out
     #end
 #end
 
