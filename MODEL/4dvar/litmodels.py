@@ -853,9 +853,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Compute loss
         ## Reconstruction loss
-        loss_lr = self.l2_loss( (reco_lr - wind_lr_gt), mask = None )
+        # loss_lr = self.l2_loss( (reco_lr - wind_lr_gt), mask = None )
         loss_hr = self.l2_loss( (reco_hr - wind_hr_gt), mask = None )
-        loss = self.hparams.weight_lres * loss_lr + self.hparams.weight_hres * loss_hr
+        loss = loss_hr
         
         ## Loss on gradients
         grad_data = torch.gradient(wind_hr_gt, dim = (3,2))
@@ -864,12 +864,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss_grad_y = self.l2_loss((grad_data[0] - grad_reco[0]), mask = None)
         loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
         
-        ## Regularization
-        if not self.hparams.inversion == 'bl':
-            
-            regularization = self.l2_loss( (reco_ - self.model.Phi.Phi_fields_hr(reco_)[0]), mask = None )
-            loss += regularization * self.hparams.reg_coeff
-        #end
         
         if loss.isnan():
             raise ValueError('Loss is nan')
