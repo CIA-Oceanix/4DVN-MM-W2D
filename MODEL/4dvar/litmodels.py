@@ -827,47 +827,23 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         else:
             with torch.no_grad():
                 outputs, reco_hr = self.model.Phi(batch_input)
-                
-                # reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
-                # reco_an = reco_[:,48:,:,:]
-                # reco_hr = reco_lr + 1.0 * reco_an
             #end
         #end
         
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
-                # 'data' : wind_hist_gt.detach().cpu(),
-                # 'reco' : outputs.detach().cpu().exp(),
-                'wdata': wind_hr_gt.detach().cpu(),
-                'wreco': reco_hr.detach().cpu()
+                'data' : wind_hist_gt.detach().cpu(),
+                'reco' : outputs.detach().cpu().exp(),
+                # 'wdata': wind_hr_gt.detach().cpu(),
+                # 'wreco': reco_hr.detach().cpu()
             })
         #end
         
         # loss_reco_hr  = self.l2_loss((reco_hr - wind_hr_gt), mask = None)
-        # loss_mse_hist = 1.0 * self.l2_loss((wind_hist_gt - outputs.exp()))
-        # loss_kld      = 1.0 * self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
-        # loss_hd       = 1.0 * self.hd_loss(wind_hist_gt, outputs.exp())
-        # loss = loss_kld 
-        # loss += loss_reco_hr
+        loss_kld      = 1.0 * self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
+        loss = loss_kld 
         
-        # Compute loss
-        ## Reconstruction loss
-        # loss_lr = self.l2_loss( (reco_lr - wind_lr_gt), mask = None )
-        loss_hr = self.l2_loss( (reco_hr - wind_hr_gt), mask = None )
-        loss = loss_hr
-        
-        ## Loss on gradients
-        grad_data = torch.gradient(wind_hr_gt, dim = (3,2))
-        grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        loss_grad_x = self.l2_loss((grad_data[1] - grad_reco[1]), mask = None)
-        loss_grad_y = self.l2_loss((grad_data[0] - grad_reco[0]), mask = None)
-        loss += (loss_grad_x + loss_grad_y) * self.hparams.grad_coeff
-        
-        
-        if loss.isnan():
-            raise ValueError('Loss is nan')
-        #end
         
         return dict({'loss' : loss}), outputs
     #end
