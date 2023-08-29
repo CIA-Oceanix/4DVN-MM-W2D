@@ -154,9 +154,9 @@ class Experiment:
         return lit_model
     #end
     
-    def load_pretrained_params(self, pretrained_model, run):
+    def load_pretrained_params(self, pretrained_model, run, name_add = ''):
         
-        checkpoint_name = os.path.join(self.path_model, pretrained_model, 'ckpt', f'run{run}-' + pretrained_model + '-epoch=*.ckpt')
+        checkpoint_name = os.path.join(self.path_model, pretrained_model + name_add, 'ckpt', f'run{run}-' + pretrained_model + '-epoch=*.ckpt')
         checkpoint_path = glob.glob(checkpoint_name)[0]
         ckpt_model      = open(checkpoint_path, 'rb')
         print('\n\nCHECKPOINT (PRE-TRAINED MODEL) : {}\n\n'.format(checkpoint_path))
@@ -251,7 +251,10 @@ class Experiment:
             
             if self.cparams.LOAD_PT_WEIGHTS is not None:
                 model_statedict = self.load_pretrained_params(self.cparams.LOAD_PT_WEIGHTS, run)
-                lit_model.load_ckpt_from_statedict(model_statedict)
+                lit_model.load_ckpt_from_statedict(model_statedict, 'Phi_fields_hr')
+
+                model_statedict = self.load_pretrained_params(self.model_name, run, name_add = '-backup')
+                lit_model.load_ckpt_from_statedict(model_statedict, 'Phi_fields_to_hist')
             #end
         #end
         
