@@ -754,36 +754,14 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         wind_hist, (data_hr_u, data_hr_v) = batch
         data_hr_gt = (data_hr_u.pow(2) + data_hr_v.pow(2)).sqrt()
         
-        if False:
-            # Downsample to obtain ERA5-like data
-            data_lr_gt = self.spatial_downsample_interpolate(data_hr_gt)
-        else:
-            # Modulus obtained as modulus of LR components
-            data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
-            data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
-            data_lr_gt = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
-        #end
-        
-        # Bias: random phase shift or amplitude remodulation
-        # Note: this is really one simuated data thing. With real data
-        # there are no issues related to +/- Delta t
-        # (thanks goodness real data are themselves biased)
-        if self.hparams.lr_sampl_delay:
-            data_lr_obs = self.get_data_lr_delay(data_lr_gt.clone(), timesteps, timewindow_start)
-        elif self.hparams.lr_intensity:
-            data_lr_obs = self.get_data_lr_alpha(data_lr_gt.clone(), timesteps, timewindow_start)
-        else:
-            data_lr_obs = data_lr_gt.clone()
-        #end
+        # Modulus obtained as modulus of LR components
+        data_lr_u = self.spatial_downsample_interpolate(data_hr_u)
+        data_lr_v = self.spatial_downsample_interpolate(data_hr_v)
+        data_lr_gt = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
         
         # Alternative : persistence models
-        if False:
-            data_lr_obs = data_lr_obs.clone()
-            data_hr_obs = data_hr_gt.clone()
-        else:
-            data_lr_obs = self.get_persistence(data_lr_obs, 'lr', longer_series = True)
-            data_hr_obs = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
-        #end
+        data_lr_obs = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
+        data_hr_obs = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
         
         # NOTE: is in-situ time series are actually measured, these positions
         # in the persistence model must be filled with in-situ time series
