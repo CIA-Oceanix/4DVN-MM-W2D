@@ -826,11 +826,11 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             #end
         else:
             with torch.no_grad():
-                outputs, reco_ = self.model.Phi(batch_input)
+                outputs, reco_hr = self.model.Phi(batch_input)
                 
-                reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
-                reco_an = reco_[:,48:,:,:]
-                reco_hr = reco_lr + 1.0 * reco_an
+                # reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
+                # reco_an = reco_[:,48:,:,:]
+                # reco_hr = reco_lr + 1.0 * reco_an
             #end
         #end
         
