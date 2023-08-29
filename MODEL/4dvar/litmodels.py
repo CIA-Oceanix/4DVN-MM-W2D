@@ -809,7 +809,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
-        print('LITMODULE DISTRIBUTIONS')
         
         wind_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr.shape
