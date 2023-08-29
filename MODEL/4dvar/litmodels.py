@@ -678,8 +678,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # If UNet parameters are not loaded as pretrained model, 
         # append parameters of UNet to fit them as well
         # These parameters are optional
-        if self.pretrained_prior is None:
-        # if True:
+        # if self.pretrained_prior is None:
+        if True:
             print('RE-TRAIN PRIOR (fields) PARAMETERS')
             params.append(
                 {'params'       : self.model.Phi.Phi_fields_hr.parameters(),
@@ -814,9 +814,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
         # mask = torch.cat([mask_lr, mask_hr_dx1], dim = 1)
-        batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
-        batch_input = batch_input * mask
-        # batch_input = wind_hr_gt
+        # batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
+        # batch_input = batch_input * mask
+        batch_input = wind_hr_gt
         
         # Inversion
         if phase == 'train':
@@ -833,10 +833,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Save reconstructions
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
-                # 'data' : wind_hist_gt.detach().cpu(),
-                # 'reco' : outputs.detach().cpu().exp(),
-                'wdata': wind_hr_gt.detach().cpu(),
-                'wreco': reco_hr.detach().cpu()
+                'data' : wind_hist_gt.detach().cpu(),
+                'reco' : outputs.detach().cpu().exp(),
+                # 'wdata': wind_hr_gt.detach().cpu(),
+                # 'wreco': reco_hr.detach().cpu()
             })
         #end
         
