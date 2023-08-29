@@ -869,7 +869,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         ## Regularization
         if not self.hparams.inversion == 'bl':
             
-            regularization = self.l2_loss( (outputs - self.model.Phi.Phi_fields_hr(reco_)), mask = None )
+            regularization = self.l2_loss( (reco_ - self.model.Phi.Phi_fields_hr(reco_)[0]), mask = None )
             loss += regularization * self.hparams.reg_coeff
         #end
         
