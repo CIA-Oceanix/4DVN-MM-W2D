@@ -831,7 +831,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 outputs, reco_hr = self.model.Phi(batch_input)
                 
                 reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
-                reco_an = outputs[:,48:,:,:]
+                reco_an = reco_hr[:,48:,:,:]
                 reco_hr = reco_lr + 1.0 * reco_an
             #end
         #end
