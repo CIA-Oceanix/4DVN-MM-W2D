@@ -826,7 +826,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             #end
         else:
             with torch.no_grad():
-                outputs, reco_hr = self.model.Phi(batch_input)
+                outputs, reco_hr = self.model.Phi(batch_input, wind_hr_gt)
             #end
         #end
         
