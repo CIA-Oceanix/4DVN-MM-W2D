@@ -270,7 +270,6 @@ def make_hist(data_, bins, normalized = True):
         bins = torch.Tensor(bins)
     #end
     
-    # h = torch.histogram(data_, bins = bins)
     h = get_histogram(data_, bins = bins)
     h = torch.autograd.Variable(h)
     
