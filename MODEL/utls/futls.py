@@ -285,7 +285,8 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     Takes as input tensors of dimension
         (batch_size, timesteps, height, width)
     '''
-    
+    print('EMPIRICAL TO HISTOGRAM')
+
     def lr_dim(dim, ks_):
         return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
     #end

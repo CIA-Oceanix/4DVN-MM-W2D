@@ -12,6 +12,10 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn-white')
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import sys
+sys.path.append('../MODEL/utls')
+import futls as fs
+
 import argparse
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.getcwd(), 'config.env'))
@@ -219,10 +223,9 @@ if __name__ == '__main__':
     print('Kernel size (LR) : {}'.format(lr_dsfactor))
     print('##################################')
     
-    dataset_name = cparams.DATASET_NAME
     # dataset_name = 'wds_uv_01-01-2021_01-03-2021.nc'
-    ds = nc.Dataset(os.path.join(PATH_DATA, f'{dataset_name}'))
-    day_start, month_start, year_start, day_end, month_end, year_end = get_dataset_days_extrema(dataset_name)
+    ds = nc.Dataset(os.path.join(PATH_DATA, f'{cparams.DATASET_NAME_W2D}'))
+    day_start, month_start, year_start, day_end, month_end, year_end = get_dataset_days_extrema(cparams.DATASET_NAME_W2D)
     
     lr_dim = np.floor( (region_extent - lr_dsfactor) / lr_dsfactor + 1 )
     reso = np.int32( 3 * region_extent / lr_dim )
@@ -253,8 +256,12 @@ if __name__ == '__main__':
     timesteps, height_lr, width_lr = w_lr.shape
     
     # Histogrammize
-    w_hist_hr = fieldsHR2hist(wm_hr, lr_dsfactor, bins, progbars = True)
-    
+    _wm_hr = wm_hr.reshape(-1, 24, *tuple(wm_hr.shape[-2:]))
+    print(_wm_hr.shape)
+    w_hist_hr = fs.fieldsHR2hist(_wm_hr, lr_dsfactor, bins, progbars = True)
+    w_hist_hr = w_hist_hr.reshape(-1, height_lr, width_lr, bins.__len__()-1)
+    print(w_hist_hr.shape)
+
     # Save dataset
     save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, [u_hr, v_hr], idx, 
                          f'whist-{reso}km', day_start, month_start, year_start, day_end, month_end, year_end)
