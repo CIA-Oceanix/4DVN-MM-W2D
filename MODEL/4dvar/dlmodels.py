@@ -326,7 +326,7 @@ class UNet1_pdf(nn.Module):
         x2  = self.down(x1)
         x3  = self.up(x1, x2)
         out = self.out_conv(x3)
-                
+        
         return out
     #end
 #end
@@ -361,7 +361,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(wind_gt, wind_hist_gt)
+        hist_out  = self.Phi_fields_to_hist(fields_hr, wind_hist_gt)
         return hist_out, fields_hr
     #end
 #end
