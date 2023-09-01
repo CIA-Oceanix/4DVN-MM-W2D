@@ -254,11 +254,17 @@ def get_persistency_model(data, frequency):
     return persistence
 #end
 
-def get_histogram(data, bins, to_beaufort_scale = False):
+def get_histogram(data, bins, to_beaufort_scale = False, histogrammization_op = 'pytorch'):
     
-    histogram = torch.zeros(bins.shape[0] - 1)
-    for eidx in range(bins.__len__() - 1):
-        histogram[eidx] = torch.numel(data[(data > bins[eidx]) & (data <= bins[eidx + 1])])
+    if histogrammization_op == 'handcrafted':
+        histogram = torch.zeros(bins.shape[0] - 1)
+        for eidx in range(bins.__len__() - 1):
+            histogram[eidx] = torch.numel(data[(data > bins[eidx]) & (data <= bins[eidx + 1])])
+        #end
+    elif histogrammization_op == 'pytorch':
+        histogram = torch.histogram(data, bins = bins)[0]
+    else:
+        raise NotImplementedError('Not implemented. Likely mistyped')
     #end
     
     return histogram
@@ -271,7 +277,8 @@ def make_hist(data_, bins, normalized = True):
     #end
     
     # h = get_histogram(data_, bins = bins)
-    h = torch.histogram(data_, bins = bins)[0]
+    # h = torch.histogram(data_, bins = bins)[0]
+    h = get_histogram(data_, bins, histogrammization_op = 'pytorch')
     h = torch.autograd.Variable(h)
     
     if normalized:
@@ -281,7 +288,7 @@ def make_hist(data_, bins, normalized = True):
     #end
 #end
 
-def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
+def fieldsHR2hist_v1(data_field, kernel_size, bins, progbars = False):
     '''
     Takes as input tensors of dimension
         (batch_size, timesteps, height, width)
@@ -342,6 +349,46 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     #end
     
     return data_hist
+#end
+
+def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
+
+    def split(array, nrows, ncols):
+        '''
+        Split a matrix into sub-matrices.
+        Thanks: https://stackoverflow.com/questions/11105375/how-to-split-a-matrix-into-4-blocks-using-numpy
+        NOTE: nrows and ncols are the number of rows and columns of EACH SUB-BLOCK, not the number of 
+        rows and columns in which the main matrix is decomposed!!!
+        '''
+        
+        r, h = array.shape
+        return (array.reshape(h//nrows, nrows, -1, ncols).swapaxes(1, 2).reshape(-1, nrows, ncols))
+    #end
+    
+    batch_size, timesteps, height_hr, width_hr = data_field.shape
+    downsampled_img_shape = tuple((np.int32(height_hr // kernel_size), np.int32(width_hr // kernel_size)))
+    data_field = data_field.reshape(-1, height_hr, width_hr)
+
+    fields_list = [data_field[t,:,:] for t in range(batch_size * timesteps)]
+    histograms = torch.zeros(batch_size, timesteps, *downsampled_img_shape, bins.__len__()-1).reshape(-1, *downsampled_img_shape, bins.__len__()-1)
+
+    for t in tqdm(range(batch_size * timesteps), desc = 'Batches x Timesteps : ', position = 0, leave = True):
+
+        field_splitted = split(fields_list[t], kernel_size, kernel_size)
+
+        for n in range(field_splitted.shape[0]):
+            # PAY CLOSE ATTENTION TO THIS:
+            # divmod has as first argument the SEQUENTIAL index of the sub-blocks collection
+            # and as second argument the number of COLUMNS. Since it has to moduloize according
+            # to the width of the array
+            i,j = divmod(n, downsampled_img_shape[1])
+            h = make_hist(field_splitted[n,:,:].flatten(), bins = bins, normalized = True)
+            histograms[t,i,j,:] = h
+        #end
+    #end
+
+    histograms = histograms.reshape(batch_size, timesteps, *downsampled_img_shape, bins.__len__()-1)
+    return histograms
 #end
 
 def fieldsLR2hist(data_field, bins):
