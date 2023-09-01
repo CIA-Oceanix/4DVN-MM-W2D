@@ -270,7 +270,7 @@ def get_histogram(data, bins, to_beaufort_scale = False, histogrammization_op = 
     return histogram
 #end
 
-def make_hist(data_, bins, normalized = True):
+def make_hist(data_, bins, normalized = True, histogrammization_op = 'pytorch'):
     
     if bins.__class__ is not torch.Tensor:
         bins = torch.Tensor(bins)
@@ -278,7 +278,7 @@ def make_hist(data_, bins, normalized = True):
     
     # h = get_histogram(data_, bins = bins)
     # h = torch.histogram(data_, bins = bins)[0]
-    h = get_histogram(data_, bins, histogrammization_op = 'pytorch')
+    h = get_histogram(data_, bins, histogrammization_op = histogrammization_op)
     h = torch.autograd.Variable(h)
     
     if normalized:
@@ -384,7 +384,7 @@ def fieldsHR2hist_V1(data_field, kernel_size, bins, progbars = False):
             # and as second argument the number of COLUMNS. Since it has to moduloize according
             # to the width of the array
             i,j = divmod(n, downsampled_img_shape[1])
-            h = make_hist(field_splitted[n,:,:].flatten(), bins = bins, normalized = True)
+            h = make_hist(field_splitted[n,:,:].flatten(), bins = bins, normalized = True, histogrammization_op = 'handcrafted')
             histograms[t,i,j,:] = h
         #end
     #end
