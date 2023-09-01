@@ -225,6 +225,7 @@ class HistogrammizationDirect(nn.Module):
         )
         self.linear_reshape = nn.Conv2d(out_channels, output_channels, kernel_size = 3, padding = 1)
         self.downsample     = nn.MaxPool2d(lr_kernelsize)
+        self.shortcut       = nn.Identity()
         self.normalize      = nn.LogSoftmax(dim = -1)
     #end
     
@@ -241,12 +242,13 @@ class HistogrammizationDirect(nn.Module):
         return out
     #end
     
-    def forward(self, data_fields_hr):
+    def forward(self, data_fields_hr, wind_hist_gt):
         
         out = self.conv2d_relu_cascade(data_fields_hr)
         out = self.linear_reshape(out)
         out = self.downsample(out)
         out = self.reshape(out)
+        out = torch.add(out, wind_hist_gt)
         out = self.normalize(out)
         
         return out
@@ -349,7 +351,7 @@ class TrainableFieldsToHist(nn.Module):
         return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
     #end
     
-    def forward(self, data_input, wind_gt):
+    def forward(self, data_input, wind_gt, wind_hist_gt):
         
         # Reconstruction of spatial wind speed fields
         fields_ = self.Phi_fields_hr(data_input)
@@ -359,7 +361,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(wind_gt)
+        hist_out  = self.Phi_fields_to_hist(wind_gt, wind_hist_gt)
         return hist_out, fields_hr
     #end
 #end

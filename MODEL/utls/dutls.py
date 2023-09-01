@@ -327,7 +327,7 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         self.test_days     = cparams.TEST_DAYS
         self.val_days      = cparams.VAL_DAYS
         self.timesteps     = timesteps
-        self.data_name     = cparams.DATASET_NAME
+        self.data_name     = cparams.DATASET_NAME_PDF
         self.shapeData     = None
         self.normalize     = normalize
         self.wind_modulus  = cparams.WIND_MODULUS
