@@ -384,7 +384,7 @@ def fieldsHR2hist_V1(data_field, kernel_size, bins, progbars = False):
             # and as second argument the number of COLUMNS. Since it has to moduloize according
             # to the width of the array
             i,j = divmod(n, downsampled_img_shape[1])
-            h = make_hist(field_splitted[n,:,:].flatten(), bins = bins, normalized = True, histogrammization_op = 'handcrafted')
+            h = make_hist(field_splitted[n,:,:].flatten(), bins = bins, normalized = True, histogrammization_op = 'pytorch')
             histograms[t,i,j,:] = h
         #end
     #end
