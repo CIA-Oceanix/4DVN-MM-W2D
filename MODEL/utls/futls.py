@@ -288,7 +288,7 @@ def make_hist(data_, bins, normalized = True):
     #end
 #end
 
-def fieldsHR2hist_v1(data_field, kernel_size, bins, progbars = False):
+def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
     '''
     Takes as input tensors of dimension
         (batch_size, timesteps, height, width)
@@ -351,7 +351,9 @@ def fieldsHR2hist_v1(data_field, kernel_size, bins, progbars = False):
     return data_hist
 #end
 
-def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
+def fieldsHR2hist_V1(data_field, kernel_size, bins, progbars = False):
+    '''Gives the same as fieldsHR2hist, is a bit more elegant and sophisticated but slower.
+    Stated otherwise, is almost useless, mannaggia alla curia'''
 
     def split(array, nrows, ncols):
         '''
