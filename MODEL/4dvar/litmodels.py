@@ -639,8 +639,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         for n in range(self.hparams.n_fourdvar_iter):
             
             loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
-            # if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
-                # state_init = outs.detach()
+            if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
+                state_init = outs.detach()
             #end
         #end
         
@@ -739,18 +739,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def test_epoch_end(self, outputs):
         
-        reco_hist, wind_hist_gt, reco_hr, wind_hr_gt, iteration = outputs
-
-        # Save reconstructions
-        if iteration == self.hparams.n_fourdvar_iter-1:
-            self.save_samples({
-                'data' : wind_hist_gt.detach().cpu(),
-                'reco' : reco_hist.detach().cpu().exp(),
-                'wdata': wind_hr_gt.detach().cpu(),
-                'wreco': reco_hr.detach().cpu()
-            })
-        #end
-
         print('TEST END. Downsample mask')
         self.downsample_mask()
     #end
@@ -839,29 +827,31 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             with torch.set_grad_enabled(True):
                 batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
                 outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, wind_hist_gt)
+                reco_hr = reco_lr + reco_an
             #end
         else:
             with torch.no_grad():
                 outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, wind_hist_gt)
+                reco_hr = reco_lr + reco_an
             #end
         #end
         
-        # # Save reconstructions
-        # if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
-        #     self.save_samples({
-        #         'data' : wind_hist_gt.detach().cpu(),
-        #         'reco' : outputs.detach().cpu().exp(),
-        #         'wdata': wind_hr_gt.detach().cpu(),
-        #         'wreco': reco_hr.detach().cpu()
-        #     })
-        # #end
+        # Save reconstructions
+        if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
+            self.save_samples({
+                'data' : wind_hist_gt.detach().cpu(),
+                'reco' : outputs.detach().cpu().exp(),
+                'wdata': wind_hr_gt.detach().cpu(),
+                'wreco': reco_hr.detach().cpu()
+            })
+        #end
         
         # Compute loss
-        reco_hr       = reco_lr + reco_an
         loss_reco_hr  = self.l2_loss((reco_hr - wind_hr_gt), mask = None)
+        loss_reco_lr  = self.l2_loss((reco_lr - wind_lr_gt), mask = None)
         loss_kld      = 1.0 * self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
-        loss = loss_kld + loss_reco_hr
+        loss = loss_kld + loss_reco_hr + loss_reco_lr
         
-        return dict({'loss' : loss}), [outputs, wind_hist_gt, reco_hr, wind_hr_gt, iteration]
+        return dict({'loss' : loss}), outputs
     #end
 #end
