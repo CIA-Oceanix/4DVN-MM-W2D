@@ -358,11 +358,12 @@ class TrainableFieldsToHist(nn.Module):
         
         # Interpolate lr part of reconstructions
         fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
-        fields_hr = fields_[:, 2 * self.timesteps:, :,:] + fields_lr_intrp
+        fields_anomaly  = fields_[:, 2 * self.timesteps, :,:]
+        fields_hr = fields_anomaly + fields_lr_intrp
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr, wind_hist_gt)
-        return hist_out, fields_hr
+        return hist_out, fields_lr_intrp, fields_anomaly
     #end
 #end
 
