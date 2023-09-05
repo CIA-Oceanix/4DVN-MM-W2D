@@ -640,7 +640,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             
             loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
             if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
-                state_init = outs.detach()
+                # state_init = outs.detach()
             #end
         #end
         
