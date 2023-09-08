@@ -249,6 +249,7 @@ class HistogrammizationDirect(nn.Module):
         out = self.linear_reshape(out)
         out = self.downsample(out)
         out = self.reshape(out)
+        out = self.normalize(out)
         out = torch.add(out, wind_hist_gt)
         out = self.normalize(out)
         
