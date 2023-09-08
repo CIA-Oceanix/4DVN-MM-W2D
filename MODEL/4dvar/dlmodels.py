@@ -364,7 +364,7 @@ class TrainableFieldsToHist(nn.Module):
         # To histogram
         hist_out  = self.Phi_fields_to_hist(wind_gt, wind_hist_gt)
         # return hist_out, fields_lr_intrp, fields_anomaly
-        return hist_out, None, None
+        return hist_out, torch.zeros(data_input.shape), torch.zeros(data_input.shape)
     #end
 #end
 
