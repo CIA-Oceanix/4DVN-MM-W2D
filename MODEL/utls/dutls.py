@@ -78,7 +78,7 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.val_days      = cparams.VAL_DAYS
         self.timesteps     = timesteps
         self.normalize     = normalize
-        self.data_name     = cparams.DATASET_NAME
+        self.data_name     = cparams.DATASET_NAME_W2D
         self.shapeData     = None
         self.wind_modulus  = cparams.WIND_MODULUS
         self.Dataset_class = W2DSimuDataset_WindComponents
