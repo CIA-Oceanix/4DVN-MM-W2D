@@ -205,7 +205,7 @@ class LitModel_Base(pl.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         
-        metrics, out = self.forward(batch, batch_idx, phase = 'train')
+        metrics, out,_ = self.forward(batch, batch_idx, phase = 'train')
         val_loss = metrics['loss']
         self.log('val_loss', val_loss)
         
@@ -639,13 +639,13 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         state_init = None
         for n in range(self.hparams.n_fourdvar_iter):
             
-            loss, outs = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
+            loss, outs, hd = self.compute_loss(batch, batch_idx, iteration = n, phase = phase, init_state = state_init)
             if not self.hparams.inversion == 'bl': # because baseline does not return tensor output
                 state_init = outs.detach()
             #end
         #end
         
-        return loss, outs
+        return loss, outs, hd
     #end
     
     def save_hd_metric(self, hd_metric_end_epoch):
@@ -658,9 +658,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def training_step(self, batch, batch_idx):
         
-        metrics, out = self.forward(batch, batch_idx, phase = 'train')
+        metrics, out, hdist = self.forward(batch, batch_idx, phase = 'train')
         loss = metrics['loss']
-        hdist = metrics['hd']
         estimated_time = self.get_estimated_time()
         
         self.log('loss', loss,           on_step = True,  on_epoch = True, prog_bar = True)
@@ -672,10 +671,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def training_epoch_end(self, outputs):
         
+        print('\n\nIn training epoch end\n')
+        print(outputs)
         loss = torch.stack([out['loss'] for out in outputs]).mean()
-        hd   = torch.stack([out['hd'] for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'train')
-        self.save_hd_metric(hd)
     #end
     
     def configure_optimizers(self):
@@ -879,10 +878,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss = self.l2_loss((outputs - wind_hist_gt), mask = None)
         
         # Monitor Hellinger Distance
-        hdistance = 0.0#self.hd_loss(wind_hist_gt.detach(), outputs.detach())
-        print()
-        print(hdistance)
+        hdistance = self.hd_loss(wind_hist_gt.detach().clone(), outputs.detach().clone())
+        self.save_hd_metric(hdistance)
         
-        return dict({'loss' : loss, 'hd' : hdistance}), outputs
+        return dict({'loss' : loss}), outputs, hdistance
     #end
 #end
