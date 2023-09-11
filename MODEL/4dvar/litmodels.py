@@ -658,6 +658,15 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return self.__train_losses, self.__val_losses, self.__hd_metric
     #end
     
+    def save_epoch_loss(self, loss, epoch, quantity):
+        
+        if quantity == 'train':
+            self.__train_losses[epoch] = loss.item()
+        elif quantity == 'val':
+            self.__val_losses[epoch] = loss.item()
+        #end
+    #end
+    
     def training_step(self, batch, batch_idx):
         
         metrics, out, hdist = self.forward(batch, batch_idx, phase = 'train')
