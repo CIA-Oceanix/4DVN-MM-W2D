@@ -762,12 +762,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.model.Phi.Phi_fields_hr.load_state_dict(Phi_dict)
     #end
     
-    def training_epoch_end(self, outputs):
-        torch.cuda.empty_cache()
-        loss = torch.stack([out['loss'] for out in outputs]).mean()
-        self.save_epoch_loss(loss, self.current_epoch, 'train')
-    #end
-    
     def test_epoch_end(self, outputs):
         
         print('TEST END. Downsample mask')
@@ -886,6 +880,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Monitor Hellinger Distance
         hdistance = self.hd_loss(wind_hist_gt.detach(), outputs.detach())
+        print()
+        print(hdistance)
         
         return dict({'loss' : loss, 'hd' : hdistance}), outputs
     #end
