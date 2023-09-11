@@ -356,17 +356,17 @@ class TrainableFieldsToHist(nn.Module):
     def forward(self, data_input, wind_gt, wind_hist_gt):
         
         # Reconstruction of spatial wind speed fields
-        # fields_ = self.Phi_fields_hr(data_input)
-        # 
+        fields_ = self.Phi_fields_hr(data_input)
+        
         # Interpolate lr part of reconstructions
-        # fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
-        # fields_anomaly  = fields_[:, 2 * self.timesteps:, :,:]
-        # fields_hr = fields_anomaly + fields_lr_intrp
+        fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
+        fields_anomaly  = fields_[:, 2 * self.timesteps:, :,:]
+        fields_hr = fields_anomaly + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(wind_gt, wind_hist_gt)
-        # return hist_out, fields_lr_intrp, fields_anomaly
-        return hist_out, torch.zeros(data_input.shape), torch.zeros(data_input.shape)
+        hist_out  = self.Phi_fields_to_hist(fields_hr, wind_hist_gt)
+        return hist_out, fields_lr_intrp, fields_anomaly
+        # return hist_out, torch.zeros(data_input.shape), torch.zeros(data_input.shape)
     #end
 #end
 
