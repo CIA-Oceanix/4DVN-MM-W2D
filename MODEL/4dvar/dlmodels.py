@@ -249,7 +249,8 @@ class HistogrammizationDirect(nn.Module):
         out = self.linear_reshape(out)
         out = self.downsample(out)
         out = self.reshape(out)
-        out = torch.add(out, wind_hist_gt)
+        hgt = torch.log(wind_hist_gt)
+        out = torch.add(out, hgt)
         out = self.normalize(out)
         
         return out
@@ -365,7 +366,7 @@ class TrainableFieldsToHist(nn.Module):
         # To histogram
         hist_out  = self.Phi_fields_to_hist(wind_gt, wind_hist_gt)
         # return hist_out, fields_lr_intrp, fields_anomaly
-        return wind_hist_gt, torch.zeros(data_input.shape), torch.zeros(data_input.shape)
+        return hist_out, torch.zeros(data_input.shape), torch.zeros(data_input.shape)
     #end
 #end
 
