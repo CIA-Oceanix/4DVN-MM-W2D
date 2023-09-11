@@ -321,8 +321,8 @@ class Experiment:
             self.path_manager.save_model_output(lit_model.get_saved_samples(),
                                                 lit_model.mask_land,
                                                 self.cparams,
-                                                *lit_model.get_learning_curves(),
-                                                run)
+                                                run,
+                                                *lit_model.get_learning_curves())
             lit_model.remove_saved_outputs()
             
             print('\nTraining and test successful')

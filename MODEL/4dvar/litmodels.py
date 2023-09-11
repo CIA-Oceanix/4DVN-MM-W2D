@@ -600,6 +600,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.pretrained_prior       = config_params.LOAD_PT_WEIGHTS
         self.hparams.prior_hist_lr  = config_params.PHI_HIST_LR
         self.hparams.prior_hist_wd  = config_params.PHI_HIST_WD
+        self.__hd_metric            = np.zeros(config_params.EPOCHS)
         
         # Initialize gradient solver (LSTM)
         self.shape_data = shape_data
@@ -645,6 +646,36 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         #end
         
         return loss, outs
+    #end
+    
+    def save_hd_metric(self, hd_metric_end_epoch):
+        self.__hd_metric[self.current_epoch] = hd_metric_end_epoch
+    #end
+    
+    def get_learning_curves(self):
+        return self.__train_losses, self.__val_losses, self.__hd_metric
+    #end
+    
+    def training_step(self, batch, batch_idx):
+        
+        metrics, out = self.forward(batch, batch_idx, phase = 'train')
+        loss = metrics['loss']
+        hdist = metrics['hd']
+        estimated_time = self.get_estimated_time()
+        
+        self.log('loss', loss,           on_step = True,  on_epoch = True, prog_bar = True)
+        self.log('time', estimated_time, on_step = False, on_epoch = True, prog_bar = True)
+        self.log('hdist', hdist,         on_step = False, on_epoch = True, prog_bar = True)
+        
+        return loss
+    #end
+    
+    def training_epoch_end(self, outputs):
+        
+        loss = torch.stack([out['loss'] for out in outputs]).mean()
+        hd   = torch.stack([out['hd'] for out in outputs]).mean()
+        self.save_epoch_loss(loss, self.current_epoch, 'train')
+        self.save_hd_metric(hd)
     #end
     
     def configure_optimizers(self):
@@ -852,7 +883,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # loss_kld      = 1.0 * self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
         # loss = loss_kld #+ loss_reco_hr + loss_reco_lr
         loss = self.l2_loss((outputs - wind_hist_gt), mask = None)
-
-        return dict({'loss' : loss}), outputs
+        
+        # Monitor Hellinger Distance
+        hdistance = self.hd_loss(wind_hist_gt.detach(), outputs.detach())
+        
+        return dict({'loss' : loss, 'hd' : hdistance}), outputs
     #end
 #end

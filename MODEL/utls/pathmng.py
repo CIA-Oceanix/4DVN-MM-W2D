@@ -310,7 +310,7 @@ class PathManager:
         f.close()
     #end
     
-    def save_model_output(self, outputs, mask_land, cparams, train_losses, val_losses, run):
+    def save_model_output(self, outputs, mask_land, cparams, run, train_losses, val_losses, hd_distances = None):
         
         data = torch.cat([item['data'] for item in outputs], dim = 0)
         reco = torch.cat([item['reco'] for item in outputs], dim = 0)
@@ -334,7 +334,11 @@ class PathManager:
         f.close()
         
         with open(os.path.join(self.path_modeloutput, 'learning_curves.pkl'), 'wb') as f:
-            pickle.dump({'train' : train_losses, 'val' : val_losses}, f)
+            if hd_distances is None:
+                pickle.dump({'train' : train_losses, 'val' : val_losses}, f)
+            else:
+                pickle.dump({'train' : train_losses, 'val' : val_losses, 'hdist' : hd_distances}, f)
+            #end
         f.close()
     #end
 #end
