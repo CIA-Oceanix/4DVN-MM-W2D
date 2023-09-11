@@ -253,7 +253,7 @@ class HistogrammizationDirect(nn.Module):
         out = torch.add(out, hgt)
         out = self.normalize(out)
         
-        return out.exp()
+        return out
     #end
 #end
 
