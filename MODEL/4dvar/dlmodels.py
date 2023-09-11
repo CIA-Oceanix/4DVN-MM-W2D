@@ -215,11 +215,9 @@ class HistogrammizationDirect(nn.Module):
         output_channels = shape_data[1] * shape_data[-1]
         
         self.conv2d_relu_cascade = nn.Sequential(
-            DepthwiseConv2d(in_channels, 512, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(512, 512, kernel_size = (3,3), padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
