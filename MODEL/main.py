@@ -157,6 +157,7 @@ class Experiment:
     def load_pretrained_params(self, pretrained_model, run, name_add = ''):
         
         checkpoint_name = os.path.join(self.path_model, pretrained_model + name_add, 'ckpt', f'run{run}-' + pretrained_model + '-epoch=*.ckpt')
+        print(checkpoint_name)
         checkpoint_path = glob.glob(checkpoint_name)[0]
         ckpt_model      = open(checkpoint_path, 'rb')
         print('\n\nCHECKPOINT (PRE-TRAINED MODEL) : {}\n\n'.format(checkpoint_path))
