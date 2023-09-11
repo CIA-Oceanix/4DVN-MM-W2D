@@ -804,12 +804,23 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def downsample_mask(self):
         
-        mask_land = self.mask_land
-        mask_downsampled = torch.nn.functional.avg_pool2d(mask_land.unsqueeze(0).unsqueeze(0), self.hparams.lr_kernel_size)
+        mask_downsampled = self.get_downsampled_mask()
+        self.mask_land = mask_downsampled
+    #end
+    
+    def get_downsampled_mask(self, mask = None):
+        
+        if mask is None:
+            mask_land = self.mask_land
+            mask_downsampled = torch.nn.functional.avg_pool2d(mask_land.unsqueeze(0).unsqueeze(0), self.hparams.lr_kernel_size)
+        else:
+            mask_downsampled = torch.nn.functional.avg_pool2d(mask, self.hparams.lr_kernel_size)
+        #end
+        
         mask_downsampled[mask_downsampled <= 0.5] = 0
         mask_downsampled[mask_downsampled > 0.5]  = 1
         
-        self.mask_land = mask_downsampled
+        return mask_downsampled
     #end
     
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
@@ -876,22 +887,29 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
-        # mask = torch.cat([mask_lr, mask_hr_dx1], dim = 1)
+        
+        # Downsampled mask: mask HR on the low-resolution grid
+        mask_hr_dx1_on_lr_grid = self.get_downsampled_mask(mask_hr_dx1).unsqueeze(-1)
+        
+        # Concatenate low-resolution and anomaly (wind fields) and apply mask
         batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
         batch_input = batch_input * mask
         # batch_input = wind_hr_gt
+        
+        # Apply mask to high-resolution ground-truth histograms
+        wind_hist = wind_hist_gt * mask_hr_dx1_on_lr_grid
         
         # Inversion
         if phase == 'train':
             with torch.set_grad_enabled(True):
                 batch_input  = torch.autograd.Variable(batch_input, requires_grad = True)
-                wind_hist_gt = torch.autograd.Variable(wind_hist_gt, requires_grad = True)
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, wind_hist_gt)
+                wind_hist = torch.autograd.Variable(wind_hist, requires_grad = True)
+                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hist)
                 reco_hr = reco_lr + reco_an
             #end
         else:
             with torch.no_grad():
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, wind_hist_gt)
+                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hist)
                 reco_hr = reco_lr + reco_an
             #end
         #end
