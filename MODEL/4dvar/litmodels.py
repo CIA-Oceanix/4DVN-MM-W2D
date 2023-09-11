@@ -900,7 +900,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
                 'data' : wind_hist_gt.detach().cpu(),
-                'reco' : outputs.detach().cpu(),
+                'reco' : outputs.detach().cpu().exp(),
                 'wdata': wind_hr_gt.detach().cpu(),
                 'wreco': reco_hr.detach().cpu()
             })
@@ -914,7 +914,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # loss = self.l2_loss((outputs - wind_hist_gt), mask = None)
         
         # Monitor Hellinger Distance
-        hdistance = self.hd_loss(wind_hist_gt.detach().clone(), outputs.detach().clone())
+        hdistance = self.hd_loss(wind_hist_gt.detach().clone(), outputs.detach().clone().exp())
         self.save_hd_metric(hdistance)
         
         return dict({'loss' : loss}), outputs, hdistance
