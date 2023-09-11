@@ -879,7 +879,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss = self.l2_loss((outputs - wind_hist_gt), mask = None)
         
         # Monitor Hellinger Distance
-        hdistance = self.hd_loss(wind_hist_gt.detach(), outputs.detach())
+        hdistance = 0.0#self.hd_loss(wind_hist_gt.detach(), outputs.detach())
         print()
         print(hdistance)
         
