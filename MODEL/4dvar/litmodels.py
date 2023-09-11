@@ -900,6 +900,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Apply mask to high-resolution ground-truth histograms
         wind_hist = wind_hist_gt #* mask_hr_dx1_on_lr_grid
+        # wind_hist = wind_hist_obs
         
         # Inversion
         if phase == 'train':
