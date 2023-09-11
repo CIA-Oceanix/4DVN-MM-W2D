@@ -891,7 +891,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
         
         # Downsampled mask: mask HR on the low-resolution grid
-        mask_hr_dx1_on_lr_grid = self.get_downsampled_mask(mask_hr_dx1).unsqueeze(-1)
+        # mask_hr_dx1_on_lr_grid = self.get_downsampled_mask(mask_hr_dx1).unsqueeze(-1)
         
         # Concatenate low-resolution and anomaly (wind fields) and apply mask
         batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
@@ -899,19 +899,19 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # batch_input = wind_hr_gt
         
         # Apply mask to high-resolution ground-truth histograms
-        wind_hist = wind_hist_gt #* mask_hr_dx1_on_lr_grid
+        # wind_hist = wind_hist_gt #* mask_hr_dx1_on_lr_grid
         
         # Inversion
         if phase == 'train':
             with torch.set_grad_enabled(True):
                 batch_input  = torch.autograd.Variable(batch_input, requires_grad = True)
-                wind_hist = torch.autograd.Variable(wind_hist, requires_grad = True)
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hist)
+                wind_hist = torch.autograd.Variable(wind_hist_obs, requires_grad = True)
+                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hist_obs)
                 reco_hr = reco_lr + reco_an
             #end
         else:
             with torch.no_grad():
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hist)
+                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hist_obs)
                 reco_hr = reco_lr + reco_an
             #end
         #end
