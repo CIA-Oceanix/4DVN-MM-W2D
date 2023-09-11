@@ -602,7 +602,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.hparams.prior_hist_wd  = config_params.PHI_HIST_WD
         self.__hd_metric            = np.zeros(config_params.EPOCHS)
         self.__train_losses         = np.zeros(config_params.EPOCHS)
-        self.__test_losses          = np.zeros(config_params.EPOCHS)
+        self.__val_losses           = np.zeros(config_params.EPOCHS)
         
         # Initialize gradient solver (LSTM)
         self.shape_data = shape_data
