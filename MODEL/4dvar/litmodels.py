@@ -662,11 +662,27 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss = metrics['loss']
         estimated_time = self.get_estimated_time()
         
-        self.log('loss',      loss,           on_step = False, on_epoch = True, prog_bar = True)
+        self.log('loss',      loss,           on_step = True,  on_epoch = True, prog_bar = True)
         self.log('time_left', estimated_time, on_step = False, on_epoch = True, prog_bar = True)
         self.log('h_dist',    hdist,          on_step = False, on_epoch = True, prog_bar = True)
         
         return loss
+    #end
+    
+    def test_step(self, batch, batch_idx):
+        
+        with torch.no_grad():
+            metrics, outs, hd = self.forward(batch, batch_idx, phase = 'test')
+            
+            test_loss = metrics['loss']
+            self.log('test_loss', test_loss.item())
+            self.log('test_hd',   hd.item())
+        #end
+        
+        batch_size = batch[0].shape[0]
+        
+        self.save_test_loss(test_loss, batch_size)
+        return metrics, outs
     #end
     
     def configure_optimizers(self):
@@ -873,10 +889,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         hdistance = self.hd_loss(wind_hist_gt.detach().clone(), outputs.detach().clone())
         self.save_hd_metric(hdistance)
         
-        if phase == 'train':
-            return dict({'loss' : loss}), outputs, hdistance
-        else:
-            return dict({'loss' : loss}), outputs
-        #end
+        return dict({'loss' : loss}), outputs, hdistance
     #end
 #end
