@@ -243,14 +243,15 @@ class HistogrammizationDirect(nn.Module):
         return out
     #end
     
-    def forward(self, data_fields_hr, wind_hist_gt):
+    def forward(self, data_fields_hr, wind_hist):
         
         out = self.conv2d_relu_cascade(data_fields_hr)
         out = self.linear_reshape(out)
         out = self.downsample(out)
         out = self.reshape(out)
-        hgt = torch.log(wind_hist_gt)
-        out = torch.add(out, hgt)
+        wh  = torch.log(wind_hist)
+        wh[wh < -999] = 0.
+        out = torch.add(out, wh)
         out = self.normalize(out)
         
         return out
