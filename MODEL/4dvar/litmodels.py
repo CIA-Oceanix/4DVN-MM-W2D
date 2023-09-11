@@ -834,8 +834,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         data_lr_gt = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
         
         # Alternative : persistence models
-        data_lr_obs = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
-        data_hr_obs = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
+        data_lr_obs   = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
+        data_hr_obs   = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
+        wind_hist_obs = self.get_persistence(wind_hist, 'hr', longer_series = True)
         
         # NOTE: is in-situ time series are actually measured, these positions
         # in the persistence model must be filled with in-situ time series
@@ -866,6 +867,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         data_an_obs = data_an_obs[:, timewindow_start : timewindow_end, :,:]
         data_hr_obs = data_hr_obs[:, timewindow_start : timewindow_end, :,:]
         wind_hist   = wind_hist[:, timewindow_start : timewindow_end, :,:]
+        wind_hist_obs = wind_hist_obs[:, timewindow_start : timewindow_end, :,:]
         
         if True:
             # This modification makes persistence and naive initializations to match
@@ -877,12 +879,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Temporal interpolation
         # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
 
-        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs, wind_hist
+        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs, wind_hist, wind_hist_obs
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        wind_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt = self.prepare_batch(data)
+        wind_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt, wind_hist_obs = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr.shape
         
         # Mask data
