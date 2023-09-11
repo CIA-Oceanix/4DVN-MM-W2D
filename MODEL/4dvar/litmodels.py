@@ -884,7 +884,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Inversion
         if phase == 'train':
             with torch.set_grad_enabled(True):
-                batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
+                batch_input  = torch.autograd.Variable(batch_input, requires_grad = True)
+                wind_hist_gt = torch.autograd.Variable(wind_hist_gt, requires_grad = True)
                 outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, wind_hist_gt)
                 reco_hr = reco_lr + reco_an
             #end
