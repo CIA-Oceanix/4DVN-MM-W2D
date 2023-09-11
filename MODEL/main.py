@@ -250,7 +250,7 @@ class Experiment:
                                                     start_time = start_time).to(DEVICE)
             
             if self.cparams.LOAD_PT_WEIGHTS is not None:
-                model_statedict = self.load_pretrained_params(self.cparams.LOAD_PT_WEIGHTS, run, name_add = '-backup')
+                model_statedict = self.load_pretrained_params(self.cparams.LOAD_PT_WEIGHTS, run, name_add = '')
                 lit_model.load_ckpt_from_statedict(model_statedict)
             #end
         #end
