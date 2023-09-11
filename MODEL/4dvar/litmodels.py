@@ -600,7 +600,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.pretrained_prior       = config_params.LOAD_PT_WEIGHTS
         self.hparams.prior_hist_lr  = config_params.PHI_HIST_LR
         self.hparams.prior_hist_wd  = config_params.PHI_HIST_WD
-        self.__hd_metric            = list()
+        self.__hd_metric            = np.zeros(config_params.EPOCHS)
         self.__train_losses         = np.zeros(config_params.EPOCHS)
         self.__val_losses           = np.zeros(config_params.EPOCHS)
         
@@ -651,7 +651,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     #end
     
     def save_hd_metric(self, hd_metric_end_epoch):
-        self.__hd_metric.append(hd_metric_end_epoch.item())
+        self.__hd_metric[self.current_epoch] = hd_metric_end_epoch
     #end
     
     def get_learning_curves(self):
