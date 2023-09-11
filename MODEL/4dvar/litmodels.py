@@ -845,7 +845,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Alternative : persistence models
         data_lr_obs   = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
         data_hr_obs   = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
-        wind_hist_obs = self.get_persistence(wind_hist, 'hr', longer_series = True)
+        wind_hist_obs = self.get_persistence(wind_hist,  'lr', longer_series = True)
         
         # NOTE: is in-situ time series are actually measured, these positions
         # in the persistence model must be filled with in-situ time series
