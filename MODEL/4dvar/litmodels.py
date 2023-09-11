@@ -197,6 +197,7 @@ class LitModel_Base(pl.LightningModule):
         return loss
     #end
     
+    # quel porco di dio
     def training_epoch_end(self, outputs):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
