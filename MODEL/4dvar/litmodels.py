@@ -900,7 +900,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
         
         # Downsampled mask: mask HR on the low-resolution grid
-        # mask_hr_dx1_on_lr_grid = self.get_downsampled_mask(mask_hr_dx1).unsqueeze(-1)
+        mask_hr_dx1_on_lr_grid = self.get_downsampled_mask(mask_hr_dx1).unsqueeze(-1)
         
         # Concatenate low-resolution and anomaly (wind fields) and apply mask
         batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
@@ -911,7 +911,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if True:
             wind_hist = wind_hist_gt #* mask_hr_dx1_on_lr_grid
         else:
-            wind_hist = wind_hist_obs
+            wind_hist = wind_hist_obs * mask_hr_dx1_on_lr_grid
             wind_hist[wind_hist == 0] = 1e-9
         #end
         
