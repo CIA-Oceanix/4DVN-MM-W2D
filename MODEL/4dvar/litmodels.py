@@ -662,7 +662,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss = metrics['loss']
         estimated_time = self.get_estimated_time()
         
-        self.log('loss',      loss,           on_step = True,  on_epoch = True, prog_bar = True)
+        self.log('loss',      loss,           on_step = False, on_epoch = True, prog_bar = True)
         self.log('time_left', estimated_time, on_step = False, on_epoch = True, prog_bar = True)
         self.log('h_dist',    hdist,          on_step = False, on_epoch = True, prog_bar = True)
         
@@ -873,6 +873,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         hdistance = self.hd_loss(wind_hist_gt.detach().clone(), outputs.detach().clone())
         self.save_hd_metric(hdistance)
         
-        return dict({'loss' : loss}), outputs, hdistance
+        if phase == 'train':
+            return dict({'loss' : loss}), outputs, hdistance
+        else:
+            return dict({'loss' : loss}), outputs
+        #end
     #end
 #end
