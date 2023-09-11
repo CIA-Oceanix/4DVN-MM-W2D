@@ -669,6 +669,22 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return loss
     #end
     
+    def training_epoch_end(self, outputs):
+        
+        loss = torch.stack([out['loss'] for out in outputs]).mean()
+        self.save_epoch_loss(loss, self.current_epoch, 'train')
+    #end
+    
+    def validation_epoch_end(self, outputs):
+        
+        loss = torch.stack([out for out in outputs]).mean()
+        self.save_epoch_loss(loss, self.current_epoch, 'val')
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        #end
+    #end
+    
     def test_step(self, batch, batch_idx):
         
         with torch.no_grad():
