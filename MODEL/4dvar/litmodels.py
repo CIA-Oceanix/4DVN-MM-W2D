@@ -651,7 +651,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     #end
     
     def save_hd_metric(self, hd_metric_end_epoch):
-        self.__hd_metric.append(hd_metric_end_epoch)
+        self.__hd_metric.append(hd_metric_end_epoch.item())
     #end
     
     def get_learning_curves(self):
