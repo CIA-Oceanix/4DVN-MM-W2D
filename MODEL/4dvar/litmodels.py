@@ -662,19 +662,11 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss = metrics['loss']
         estimated_time = self.get_estimated_time()
         
-        self.log('loss', loss,           on_step = True,  on_epoch = True, prog_bar = True)
-        self.log('time', estimated_time, on_step = False, on_epoch = True, prog_bar = True)
-        self.log('hdist', hdist,         on_step = False, on_epoch = True, prog_bar = True)
+        self.log('loss',      loss,           on_step = True,  on_epoch = True, prog_bar = True)
+        self.log('time_left', estimated_time, on_step = False, on_epoch = True, prog_bar = True)
+        self.log('h_dist',    hdist,          on_step = False, on_epoch = True, prog_bar = True)
         
         return loss
-    #end
-    
-    def training_epoch_end(self, outputs):
-        
-        print('\n\nIn training epoch end\n')
-        print(outputs)
-        loss = torch.stack([out['loss'] for out in outputs]).mean()
-        self.save_epoch_loss(loss, self.current_epoch, 'train')
     #end
     
     def configure_optimizers(self):
