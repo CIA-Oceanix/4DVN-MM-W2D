@@ -845,7 +845,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Alternative : persistence models
         data_lr_obs   = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
         data_hr_obs   = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
-        wind_hist_obs = self.get_persistence(wind_hist,  'lr', longer_series = True)
+        # wind_hist_obs = self.get_persistence(wind_hist,  'lr', longer_series = True)
         
         # NOTE: is in-situ time series are actually measured, these positions
         # in the persistence model must be filled with in-situ time series
@@ -876,7 +876,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         data_an_obs = data_an_obs[:, timewindow_start : timewindow_end, :,:]
         data_hr_obs = data_hr_obs[:, timewindow_start : timewindow_end, :,:]
         wind_hist   = wind_hist[:, timewindow_start : timewindow_end, :,:]
-        wind_hist_obs = wind_hist_obs[:, timewindow_start : timewindow_end, :,:]
+        # wind_hist_obs = wind_hist_obs[:, timewindow_start : timewindow_end, :,:]
         
         if True:
             # This modification makes persistence and naive initializations to match
@@ -888,39 +888,27 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Temporal interpolation
         # data_lr_obs = self.interpolate_channelwise(data_lr_obs, timesteps)
 
-        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs, wind_hist, wind_hist_obs
+        return data_lr_gt, data_lr_obs, data_hr_gt, data_an_obs, data_hr_obs, wind_hist
     #end
     
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
-        wind_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt, wind_hist_obs = self.prepare_batch(data)
+        wind_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt = self.prepare_batch(data)
         batch_size, timesteps, height, width = wind_lr.shape
         
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
-        
-        # Downsampled mask: mask HR on the low-resolution grid
-        mask_hr_dx1_on_lr_grid = self.get_downsampled_mask(mask_hr_dx1).unsqueeze(-1)
         
         # Concatenate low-resolution and anomaly (wind fields) and apply mask
         batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
         batch_input = batch_input * mask
         # batch_input = wind_hr_gt
         
-        # Apply mask to high-resolution ground-truth histograms
-        if True:
-            wind_hist = wind_hist_gt #* mask_hr_dx1_on_lr_grid
-        else:
-            wind_hist = wind_hist_obs
-            # wind_hist = wind_hist_gt * mask_hr_dx1_on_lr_grid
-            # wind_hist[wind_hist == 0] = 1e-9
-        #end
-        
         # Inversion
         if phase == 'train':
             with torch.set_grad_enabled(True):
                 batch_input  = torch.autograd.Variable(batch_input, requires_grad = True)
-                wind_hist = torch.autograd.Variable(wind_hist, requires_grad = True)
+                wind_hist = torch.autograd.Variable(wind_hist_gt, requires_grad = True)
                 outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hist)
                 reco_hr = reco_lr + reco_an
             #end

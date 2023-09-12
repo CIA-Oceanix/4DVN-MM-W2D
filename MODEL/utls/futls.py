@@ -288,12 +288,14 @@ def make_hist(data_, bins, normalized = True, histogrammization_op = 'pytorch'):
     #end
 #end
 
-def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
+def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = True):
     '''
     Takes as input tensors of dimension
         (batch_size, timesteps, height, width)
     '''
-    print('EMPIRICAL TO HISTOGRAM')
+    if verbose:
+        print('EMPIRICAL TO HISTOGRAM')
+    #end
 
     def lr_dim(dim, ks_):
         return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
