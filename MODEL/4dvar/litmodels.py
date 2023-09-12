@@ -908,11 +908,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # batch_input = wind_hr_gt
         
         # Apply mask to high-resolution ground-truth histograms
-        if False:
+        if True:
             wind_hist = wind_hist_gt #* mask_hr_dx1_on_lr_grid
         else:
-            wind_hist = wind_hist_gt * mask_hr_dx1_on_lr_grid
-            wind_hist[wind_hist == 0] = 1e-9
+            wind_hist = wind_hist_obs
+            # wind_hist = wind_hist_gt * mask_hr_dx1_on_lr_grid
+            # wind_hist[wind_hist == 0] = 1e-9
         #end
         
         # Inversion
