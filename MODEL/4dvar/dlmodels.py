@@ -251,9 +251,10 @@ class HistogrammizationDirect(nn.Module):
         out = self.reshape(out)
         
         # Residual block
-        wind_hist_log = torch.log(wind_hist)
-        out_sigmoided = self.out_nlinearity(out).log()
-        out_transf    = torch.add(out_sigmoided, wind_hist_log)
+        # wind_hist_log = torch.log(wind_hist)
+        out_sigmoided = self.out_nlinearity(out)
+        out_transf    = torch.add(out_sigmoided, wind_hist)
+        out_transf    = torch.log(out_transf)
         out_norm      = self.normalize(out_transf)
         
         return out_norm
