@@ -207,12 +207,14 @@ class DepthwiseConv2d(nn.Sequential):
 #end
 
 class HistogrammizationDirect(nn.Module):
-    def __init__(self, in_channels, out_channels, shape_data, lr_kernelsize):
+    def __init__(self, in_channels, out_channels, shape_data, lr_kernelsize, wind_bins):
         super(HistogrammizationDirect, self).__init__()
         
-        self.nbins      = shape_data[-1]
-        self.timesteps  = shape_data[1]
-        output_channels = shape_data[1] * shape_data[-1]
+        self.lr_kernelsize = lr_kernelsize
+        self.wind_bins     = wind_bins
+        self.nbins         = shape_data[-1]
+        self.timesteps     = shape_data[1]
+        output_channels    = shape_data[1] * shape_data[-1]
         
         self.conv2d_relu_cascade = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
@@ -249,7 +251,8 @@ class HistogrammizationDirect(nn.Module):
         out = self.reshape(out)
         
         # Residual block
-        out_res  = out + torch.log(wind_hist)
+        wind_hist_empirical = fs.fieldsHR2hist(data_fields_hr, self.lr_kernelsize, self.wind_bins)
+        out_res  = out + torch.log(wind_hist_empirical)
         out_norm = self.normalize(out_res)
         
         return out_norm
@@ -345,7 +348,7 @@ class TrainableFieldsToHist(nn.Module):
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
         self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
-        self.Phi_fields_to_hist = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE)
+        self.Phi_fields_to_hist = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE, cparams.WIND_BINS)
     #end
     
     def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
