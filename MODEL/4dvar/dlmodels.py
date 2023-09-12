@@ -257,6 +257,8 @@ class HistogrammizationDirect(nn.Module):
         if torch.any(out_transf < 0):
             print('ATTENZIONE')
         out_transf    = torch.log(out_transf)
+        if torch.any(out_transf < 0):
+            print('qualche out di log < 0')
         out_norm      = self.normalize(out_transf)
         
         return out_norm
