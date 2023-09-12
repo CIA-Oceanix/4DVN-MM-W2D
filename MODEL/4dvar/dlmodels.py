@@ -248,7 +248,7 @@ class HistogrammizationDirect(nn.Module):
         out = self.linear_reshape(out)
         out = self.downsample(out)
         out = self.reshape(out)
-        wh  = -1. * torch.log(wind_hist)
+        wh  = torch.log(1 + wind_hist)
         # wh[wh < -999] = -999
         out = torch.add(out, wh)
         out = self.normalize(out)
