@@ -225,8 +225,6 @@ class HistogrammizationDirect(nn.Module):
         self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.shortcut       = nn.Identity()
         self.normalize      = nn.LogSoftmax(dim = -1)
-        self.out_nlinearity = nn.Sigmoid()
-        # self.normalize      = nn.Softmax(dim = -1)
     #end
     
     def reshape(self, data):
@@ -251,10 +249,8 @@ class HistogrammizationDirect(nn.Module):
         out = self.reshape(out)
         
         # Residual block
-        # wind_hist_log = torch.log(wind_hist)
-        out_sigmoided = self.out_nlinearity(out)
-        out_transf    = torch.log(out_sigmoided) + torch.log(wind_hist)
-        out_norm      = self.normalize(out_transf)
+        out_res  = out + torch.log(wind_hist)
+        out_norm = self.normalize(out_res)
         
         return out_norm
     #end
