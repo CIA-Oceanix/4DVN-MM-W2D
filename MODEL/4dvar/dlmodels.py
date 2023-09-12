@@ -225,7 +225,7 @@ class HistogrammizationDirect(nn.Module):
         self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.shortcut       = nn.Identity()
         self.normalize      = nn.LogSoftmax(dim = -1)
-        self.relu           = nn.ReLU()
+        self.out_nlinearity = nn.Sigmoid()
         # self.normalize      = nn.Softmax(dim = -1)
     #end
     
@@ -244,15 +244,19 @@ class HistogrammizationDirect(nn.Module):
     
     def forward(self, data_fields_hr, wind_hist):
         
+        # histograms regressor
         out = self.conv2d_relu_cascade(data_fields_hr)
         out = self.linear_reshape(out)
         out = self.downsample(out)
         out = self.reshape(out)
-        # wh  = torch.log(wind_hist)
-        out = torch.add(out, wind_hist)
-        out = self.normalize(out.log())
         
-        return out
+        # Residual block
+        wind_hist_log = torch.log(wind_hist)
+        out_sigmoided = self.out_nlinearity(out)
+        out_transf    = torch.add(out_sigmoided, wind_hist_log)
+        out_norm      = self.normalize(out_transf)
+        
+        return out_norm
     #end
 #end
 
