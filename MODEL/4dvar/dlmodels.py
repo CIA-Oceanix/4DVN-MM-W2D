@@ -255,10 +255,12 @@ class HistogrammizationDirect(nn.Module):
         out_sigmoided = self.out_nlinearity(out)
         out_transf    = out_sigmoided + wind_hist
         if torch.any(out_transf < 0):
-            print('ATTENZIONE')
+            print('qualche < 0 in out')
+        if torch.any(out_transf == 0):
+            print('qualche 0 in out')
         out_transf    = torch.log(out_transf)
         if torch.any(out_transf.isnan()):
-            print('qualche out di log < 0')
+            print('qualche out di log is nan')
         out_norm      = self.normalize(out_transf)
         
         return out_norm
