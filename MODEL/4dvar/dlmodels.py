@@ -254,6 +254,8 @@ class HistogrammizationDirect(nn.Module):
         # wind_hist_log = torch.log(wind_hist)
         out_sigmoided = self.out_nlinearity(out)
         out_transf    = torch.add(out_sigmoided, wind_hist)
+        if torch.any(out_transf < 0):
+            print('ATTENZIONE')
         out_transf    = torch.log(out_transf)
         out_norm      = self.normalize(out_transf)
         
