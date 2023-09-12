@@ -254,6 +254,8 @@ class HistogrammizationDirect(nn.Module):
         # wind_hist_log = torch.log(wind_hist)
         out_sigmoided = self.out_nlinearity(out)
         out_transf    = out_sigmoided + wind_hist
+        if out_sigmoided.min() < 0:
+            print('QUALCHE in sigmoided < 0')
         if torch.any(out_transf < 0):
             print('qualche < 0 in out')
         if torch.any(out_transf == 0):
