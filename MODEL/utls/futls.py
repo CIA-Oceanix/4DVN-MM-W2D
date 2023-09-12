@@ -279,7 +279,7 @@ def make_hist(data_, bins, normalized = True, histogrammization_op = 'pytorch'):
     # h = get_histogram(data_, bins = bins)
     # h = torch.histogram(data_, bins = bins)[0]
     h = get_histogram(data_, bins, histogrammization_op = histogrammization_op)
-    h = torch.autograd.Variable(h)
+    # h = torch.autograd.Variable(h)
     
     if normalized:
         return h.div(h.sum())
