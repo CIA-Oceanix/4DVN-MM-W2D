@@ -273,7 +273,7 @@ def get_histogram(data, bins, to_beaufort_scale = False, histogrammization_op = 
 def make_hist(data_, bins, normalized = True, histogrammization_op = 'pytorch'):
     
     if bins.__class__ is not torch.Tensor:
-        bins = torch.Tensor(bins)
+        bins = torch.Tensor(bins).cpu()
     #end
     
     # h = get_histogram(data_, bins = bins)
@@ -303,12 +303,12 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
     
     batch_size, timesteps, heigth, width = data_field.shape
     height_lr, width_lr = lr_dim(heigth, kernel_size), lr_dim(width, kernel_size)
-    data_hist = torch.zeros((batch_size, timesteps, height_lr, width_lr, bins.__len__() - 1))
+    data_hist = torch.zeros((batch_size, timesteps, height_lr, width_lr, bins.__len__() - 1)).cpu()
     
     # loop to prepare histogram data
     
     if progbars:
-        progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ', position = 0, leave = True)
+        progbar_batches   = tqdm(range(batch_size), desc = 'Batches', position = 0, leave = True)
     else:
         progbar_batches   = range(batch_size)
     #end
