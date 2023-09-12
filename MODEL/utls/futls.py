@@ -308,7 +308,7 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
     # loop to prepare histogram data
     
     if progbars:
-        progbar_batches   = tqdm(range(batch_size), desc = 'Batches', position = 0, leave = True)
+        progbar_batches   = tqdm(range(batch_size), desc = 'Batches', position = 0, leave = False)
     else:
         progbar_batches   = range(batch_size)
     #end
