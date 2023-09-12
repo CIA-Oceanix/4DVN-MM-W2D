@@ -253,16 +253,7 @@ class HistogrammizationDirect(nn.Module):
         # Residual block
         # wind_hist_log = torch.log(wind_hist)
         out_sigmoided = self.out_nlinearity(out)
-        out_transf    = out_sigmoided + wind_hist
-        if out_sigmoided.min() < 0:
-            print('QUALCHE in sigmoided < 0')
-        if torch.any(out_transf < 0):
-            print('qualche < 0 in out')
-        if torch.any(out_transf == 0):
-            print('qualche 0 in out')
-        out_transf    = torch.log(out_transf)
-        if torch.any(out_transf.isnan()):
-            print('qualche out di log is nan')
+        out_transf    = torch.log(out_sigmoided) + torch.log(wind_hist)
         out_norm      = self.normalize(out_transf)
         
         return out_norm
