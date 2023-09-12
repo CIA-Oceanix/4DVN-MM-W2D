@@ -251,7 +251,7 @@ class HistogrammizationDirect(nn.Module):
         out = self.reshape(out)
         
         # Residual block
-        wind_hist_empirical = fs.fieldsHR2hist(data_fields_hr.clone().detach().cpu(), self.lr_kernelsize, self.wind_bins, progbars = False, verbose = False)
+        wind_hist_empirical = fs.fieldsHR2hist(data_fields_hr.clone().detach(), self.lr_kernelsize, self.wind_bins, progbars = False, verbose = False)
         # wind_hist_empirical = torch.normal(0, 1, (out.shape[0], 24, 20, 20, 4)) + 99
         wind_hist_empirical = wind_hist_empirical.to(DEVICE)
         wind_hist_empirical.requires_grad_(True)
