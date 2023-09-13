@@ -395,6 +395,29 @@ def fieldsHR2hist_V1(data_field, kernel_size, bins, progbars = False):
     return histograms
 #end
 
+def empirical_histogrammize(data_fields, kernel_size, bins):
+    
+    def get_lr_dim(dim, ks_):
+        return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
+    #end
+    
+    batch_size, timesteps, height_hr, width_hr = data_fields.shape
+    height_lr, width_lr = get_lr_dim(height_hr, kernel_size), get_lr_dim(width_hr, kernel_size)
+    
+    hist = torch.zeros((batch_size, timesteps, height_lr, width_lr, bins.__len__()-1))
+    
+    for b_idx in range(bins.__len__()-1):
+        num_items = (data_fields > bins[b_idx]) & (data_fields <= bins[b_idx + 1])
+        summed_items = torch.nn.functional.avg_pool2d(num_items.float(), kernel_size, divisor_override = 1)
+        hist[:,:,:,:,b_idx] = summed_items
+    #end
+    
+    norm_constants = hist.sum(-1)
+    for _bin in range(bins.__len__()-1):
+        hist[:,:,:,:, _bin] = hist[:,:,:,:, _bin] / norm_constants
+    return hist
+#end
+
 def fieldsLR2hist(data_field, bins):
     
     batch_size, timesteps, height, width = data_field.shape
