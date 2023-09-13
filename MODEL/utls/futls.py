@@ -337,11 +337,6 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
                     hist = make_hist(this_wind_pixel, bins, histogrammization_op = 'pytorch')
                     data_hist[m,t,i,j,:] = hist
                     
-                    # if torch.any(data_hist.isnan()):
-                    #     print()
-                    #     print('Nans')
-                    # #end
-                    
                     j_start = j_end
                 #end
                 
@@ -353,47 +348,6 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
     return data_hist
 #end
 
-def fieldsHR2hist_V1(data_field, kernel_size, bins, progbars = False):
-    '''Gives the same as fieldsHR2hist, is a bit more elegant and sophisticated but slower.
-    Stated otherwise, is almost useless, mannaggia alla curia'''
-
-    def split(array, nrows, ncols):
-        '''
-        Split a matrix into sub-matrices.
-        Thanks: https://stackoverflow.com/questions/11105375/how-to-split-a-matrix-into-4-blocks-using-numpy
-        NOTE: nrows and ncols are the number of rows and columns of EACH SUB-BLOCK, not the number of 
-        rows and columns in which the main matrix is decomposed!!!
-        '''
-        
-        r, h = array.shape
-        return (array.reshape(h//nrows, nrows, -1, ncols).swapaxes(1, 2).reshape(-1, nrows, ncols))
-    #end
-    
-    batch_size, timesteps, height_hr, width_hr = data_field.shape
-    downsampled_img_shape = tuple((np.int32(height_hr // kernel_size), np.int32(width_hr // kernel_size)))
-    data_field = data_field.reshape(-1, height_hr, width_hr)
-
-    fields_list = [data_field[t,:,:] for t in range(batch_size * timesteps)]
-    histograms = torch.zeros(batch_size, timesteps, *downsampled_img_shape, bins.__len__()-1).reshape(-1, *downsampled_img_shape, bins.__len__()-1)
-
-    for t in tqdm(range(batch_size * timesteps), desc = 'Batches x Timesteps : ', position = 0, leave = True):
-
-        field_splitted = split(fields_list[t], kernel_size, kernel_size)
-
-        for n in range(field_splitted.shape[0]):
-            # PAY CLOSE ATTENTION TO THIS:
-            # divmod has as first argument the SEQUENTIAL index of the sub-blocks collection
-            # and as second argument the number of COLUMNS. Since it has to moduloize according
-            # to the width of the array
-            i,j = divmod(n, downsampled_img_shape[1])
-            h = make_hist(field_splitted[n,:,:].flatten(), bins = bins, normalized = True, histogrammization_op = 'pytorch')
-            histograms[t,i,j,:] = h
-        #end
-    #end
-
-    histograms = histograms.reshape(batch_size, timesteps, *downsampled_img_shape, bins.__len__()-1)
-    return histograms
-#end
 
 def empirical_histogrammize(data_fields, kernel_size, bins):
     
@@ -412,42 +366,20 @@ def empirical_histogrammize(data_fields, kernel_size, bins):
         hist[:,:,:,:,b_idx] = summed_items
     #end
     
+    # Catch cells out of values range, if any
+    if torch.any(hist.sum(-1) == 0):
+        ec = torch.nonzero(hist.sum(-1) == 0, as_tuple = False)
+        m,t,i,j = ec[:,0], ec[:,1], ec[:,2], ec[:,3]
+        
+        repl_tensor = torch.zeros(bins.__len__()-1)
+        repl_tensor[0] = hist.sum(-1).max()
+        
+        hist[m,t,i,j] = repl_tensor
+    #end
+    
     norm_constants = hist.sum(-1)
     for _bin in range(bins.__len__()-1):
         hist[:,:,:,:, _bin] = hist[:,:,:,:, _bin] / norm_constants
     return hist
-#end
-
-def fieldsLR2hist(data_field, bins):
-    
-    batch_size, timesteps, height, width = data_field.shape
-    data_hist = torch.zeros((batch_size, timesteps, height, width,  bins.__len__() - 1))
-    
-    if True:
-        progbar_batches   = tqdm(range(batch_size), desc = 'Batches     ', position = 0, leave = True)
-        progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps   ', position = 1, leave = False)
-        progbar_height    = tqdm(range(height),     desc = 'Loop i (lr) ', position = 2, leave = False)
-        progbar_width     = tqdm(range(width),      desc = 'Loop j (lr) ', position = 3, leave = False)
-    else:
-        progbar_batches   = range(batch_size)
-        progbar_timesteps = range(timesteps)
-        progbar_height    = range(height)
-        progbar_width     = range(width)
-    #end
-    
-    for m in progbar_batches:
-        for t in progbar_timesteps:
-            
-            for i in progbar_height:
-                for j in progbar_width:
-                    
-                    hist = make_hist(data_field[m,t,i,j], bins)
-                    data_hist[m,t,i,j,:] = hist
-                #end
-            #end
-        #end
-    #end
-    
-    return data_hist
 #end
 

@@ -747,7 +747,10 @@ def model_selection(shape_data, config_params, normparams = None, components = F
         return ConvAutoEncoder(shape_data, config_params)
     
     elif config_params.PRIOR == 'SNpdf':
-        return ConvNet_pdf(shape_data, config_params, normparams)
+        # DEPRECATED
+        # return ConvNet_pdf(shape_data, config_params, normparams)
+        # soon to remove all these crap
+        raise ValueError('SNpdf is deprecated')
     
     elif config_params.PRIOR == 'RN':
         # return ResNet(shape_data, config_params)
