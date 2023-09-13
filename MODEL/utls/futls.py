@@ -334,7 +334,7 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
                         this_wind_pixel = data_field[m,t, i_start:, j_start:]
                     #end
                     
-                    hist = make_hist(this_wind_pixel, bins, histogrammization_op = 'handcrafted')
+                    hist = make_hist(this_wind_pixel, bins, histogrammization_op = 'pytorch')
                     data_hist[m,t,i,j,:] = hist
                     
                     # if torch.any(data_hist.isnan()):
