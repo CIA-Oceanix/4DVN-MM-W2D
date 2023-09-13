@@ -332,7 +332,7 @@ class HistogrammizationDirect(nn.Module):
                                                self.lr_kernelsize, 
                                                self.wind_bins, 
                                                progbars = False, verbose = False)
-        print('Emp hist: ' ,torch.histogram(data_fields_hr.flatten().detach().cpu(), bins = torch.Tensor(self.wind_bins))[0])
+        print('Emp hist: ' ,torch.histogram(data_fields_hr.detach().cpu().flatten(), bins = torch.Tensor(self.wind_bins).cpu())[0])
         print('Hist: ', wind_hist_empirical.min(), wind_hist_empirical.max())
         wind_hist_empirical = wind_hist_empirical.to(DEVICE)
         wind_hist_empirical.requires_grad_(True)
