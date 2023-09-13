@@ -332,7 +332,25 @@ class HistogrammizationDirect(nn.Module):
                                                self.lr_kernelsize,
                                                self.wind_bins,
                                                progbars = False, verbose = False)
-        print('Pathological positions in hist: ', torch.where(wind_hist_empirical.isnan()))
+        print('Pathological positions in hist: ', torch.nonzero(wind_hist_empirical.isnan()))
+        idx_ = torch.nonzero(wind_hist_empirical.isnan(), as_tuple = False)
+        idx_ = [idx_[:,i] for i in range(idx_.shape[1])]
+        print('Pathological value in hist : ', wind_hist_empirical[idx_])
+        
+        if torch.any(wind_hist_empirical.isnan()):
+            i_lr = idx_[2]; j_lr = idx_[3]
+            i_hr_start = i_lr * self.lr_kernelsize; i_hr_end = i_hr_start + (self.lr_kernelsize - 1)
+            j_hr_start = j_lr * self.lr_kernelsize; j_hr_end = j_hr_start + (self.lr_kernelsize - 1)
+            print('Single hr groups that affect empirical hist (nan)')
+            for p in range(idx_.__len__()):
+                whr_group = data_fields_hr[idx_[0][p], idx_[1][p], i_hr_start[p] : i_hr_end[p], j_hr_start[p] : j_hr_end[p]]
+                print('Extrema      : ', whr_group.min(), whr_group.max())
+                print('Has 0es      : ', torch.any(whr_group == 0))
+                print('Pytorch Hist : ', torch.histogram(whr_group.detach().cpu(), bins = self.wind_bins)[0])
+            #end
+        #end
+        
+        print()
         print('Hist: ', wind_hist_empirical.min(), wind_hist_empirical.max())
         wind_hist_empirical = wind_hist_empirical.to(DEVICE)
         wind_hist_empirical.requires_grad_(True)
