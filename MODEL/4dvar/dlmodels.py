@@ -332,6 +332,7 @@ class HistogrammizationDirect(nn.Module):
                                                self.wind_bins,
                                                progbars = False, verbose = False)
         
+        print()
         print('\n-------START DEBUG PIT-------')
         print('Data: ', data_fields_hr.min(), data_fields_hr.max())
         print('Pathological positions in hist: ', torch.nonzero(wind_hist_empirical.isnan()))
@@ -351,8 +352,6 @@ class HistogrammizationDirect(nn.Module):
                 print('Pytorch Hist : ', torch.histogram(whr_group.detach().cpu(), bins = torch.Tensor(self.wind_bins).cpu())[0])
             #end
         #end
-        
-        print()
         print('Hist: ', wind_hist_empirical.min(), wind_hist_empirical.max())
         print('-------END DEBUG PIT---------\n')
         

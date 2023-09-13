@@ -939,6 +939,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.save_hd_metric(hdistance)
         
         print(loss, hdistance)
+        print()
         return dict({'loss' : loss}), outputs, hdistance
     #end
 #end
