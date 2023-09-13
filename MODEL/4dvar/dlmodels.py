@@ -206,63 +206,6 @@ class DepthwiseConv2d(nn.Sequential):
     #end
 #end
 
-class HistogrammizationDirect(nn.Module):
-    def __init__(self, in_channels, out_channels, shape_data, lr_kernelsize, wind_bins):
-        super(HistogrammizationDirect, self).__init__()
-        
-        self.lr_kernelsize = lr_kernelsize
-        self.wind_bins     = wind_bins
-        self.nbins         = shape_data[-1]
-        self.timesteps     = shape_data[1]
-        output_channels    = shape_data[1] * shape_data[-1]
-        
-        self.conv2d_relu_cascade = nn.Sequential(
-            DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
-        )
-        self.linear_reshape = nn.Conv2d(out_channels, output_channels, kernel_size = 3, padding = 1)
-        self.downsample     = nn.MaxPool2d(lr_kernelsize)
-        self.shortcut       = nn.Identity()
-        self.normalize      = nn.LogSoftmax(dim = -1)
-    #end
-    
-    def reshape(self, data):
-        
-        out = torch.zeros(data.shape[0], self.timesteps, *tuple(data.shape[-2:]), self.nbins)
-        t_start = 0
-        for t in range(self.timesteps-1):
-            t_end = self.nbins * t + self.nbins
-            out[:,t,:,:,:] = torch.movedim(data[:, t_start : t_end,:,:], 1, 3)
-            t_start = t_end
-        #end
-        
-        return out
-    #end
-    
-    def forward(self, data_fields_hr, wind_hist):
-        
-        # histograms regressor
-        out = self.conv2d_relu_cascade(data_fields_hr)
-        out = self.linear_reshape(out)
-        out = self.downsample(out)
-        out = self.reshape(out)
-        
-        # Residual block
-        wind_hist_empirical = fs.fieldsHR2hist(data_fields_hr.clone().detach().cpu(), self.lr_kernelsize, self.wind_bins, progbars = False, verbose = False)
-        # wind_hist_empirical = torch.normal(0, 1, (out.shape[0], 24, 20, 20, 4)) + 99
-        wind_hist_empirical = wind_hist_empirical.to(DEVICE)
-        wind_hist_empirical.requires_grad_(True)
-       # wind_hist_empirical = torch.autograd.Variable(wind_hist_empirical, requires_grad = True).to(DEVICE)
-        out_res  = out + torch.log(wind_hist_empirical)
-        out_norm = self.normalize(out_res)
-        
-        return out_norm
-    #end
-#end
-
 class DoubleConv_pdf(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DoubleConv_pdf, self).__init__()
@@ -339,6 +282,64 @@ class UNet1_pdf(nn.Module):
     #end
 #end
 
+class HistogrammizationDirect(nn.Module):
+    def __init__(self, in_channels, out_channels, shape_data, lr_kernelsize, wind_bins):
+        super(HistogrammizationDirect, self).__init__()
+        
+        self.lr_kernelsize = lr_kernelsize
+        self.wind_bins     = wind_bins
+        self.nbins         = shape_data[-1]
+        self.timesteps     = shape_data[1]
+        output_channels    = shape_data[1] * shape_data[-1]
+        
+        self.conv2d_relu_cascade = nn.Sequential(
+            DepthwiseConv2d(in_channels, 128, kernel_size = (3,3), padding = 1),
+            nn.ReLU(),
+            DepthwiseConv2d(128, out_channels, kernel_size = (3,3), padding = 1),
+            nn.ReLU(),
+            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
+        )
+        self.linear_reshape = nn.Conv2d(out_channels, output_channels, kernel_size = 3, padding = 1)
+        self.downsample     = nn.MaxPool2d(lr_kernelsize)
+        self.shortcut       = nn.Identity()
+        self.normalize      = nn.LogSoftmax(dim = -1)
+    #end
+    
+    def reshape(self, data):
+        
+        out = torch.zeros(data.shape[0], self.timesteps, *tuple(data.shape[-2:]), self.nbins)
+        t_start = 0
+        for t in range(self.timesteps-1):
+            t_end = self.nbins * t + self.nbins
+            out[:,t,:,:,:] = torch.movedim(data[:, t_start : t_end,:,:], 1, 3)
+            t_start = t_end
+        #end
+        
+        return out
+    #end
+    
+    def forward(self, data_fields_hr, wind_hist):
+        
+        # histograms regressor
+        out = self.conv2d_relu_cascade(data_fields_hr.detach())
+        out = self.linear_reshape(out)
+        out = self.downsample(out)
+        out = self.reshape(out)
+        
+        # Residual block
+        wind_hist_empirical = fs.fieldsHR2hist(data_fields_hr.clone().detach().cpu(),
+                                               self.lr_kernelsize, 
+                                               self.wind_bins, 
+                                               progbars = False, verbose = False)
+        wind_hist_empirical = wind_hist_empirical.to(DEVICE)
+        wind_hist_empirical.requires_grad_(True)
+        out_res  = out + torch.log(wind_hist_empirical)
+        out_norm = self.normalize(out_res)
+        
+        return out_norm
+    #end
+#end
+
 class TrainableFieldsToHist(nn.Module):
     # Note: quando tutto questo sarà incorporato in 4DVarNet, non cambierà nulla
     # perchè lo stato x saranno istogrammi che verranno trattati dall'operatore H.
@@ -348,7 +349,7 @@ class TrainableFieldsToHist(nn.Module):
         super(TrainableFieldsToHist, self).__init__()
         
         in_channels             = shape_data[1] * 1
-        out_channels            = 256
+        out_channels            = 128
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
         self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
@@ -372,43 +373,9 @@ class TrainableFieldsToHist(nn.Module):
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr, wind_hist)
         return hist_out, fields_lr_intrp, fields_anomaly
-        # return hist_out, torch.zeros(data_input.shape), torch.zeros(data_input.shape)
     #end
 #end
 
-class ConvNet_pdf(nn.Module):
-    def __init__(self, shape_data, cparams, w_nparams):
-        super(ConvNet_pdf, self).__init__()
-        
-        in_channels    = shape_data[1] * 2
-        out_channels   = shape_data[1] * shape_data[-1]
-        self.nbins     = shape_data[-1]
-        self.timesteps = shape_data[1]
-        self.w_nparams = w_nparams
-        
-        self.net = nn.Sequential(
-            nn.Conv2d(in_channels, 32, kernel_size = (5,5), padding = 2),
-            # nn.LeakyReLU(0.1),
-            nn.Conv2d(32, in_channels, kernel_size = (5,5), padding = 2),
-            nn.LeakyReLU(0.1)
-        )
-        self.downsample = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size = cparams.LR_KERNELSIZE, stride = cparams.LR_KERNELSIZE)
-        )
-        self.normalize = nn.Softmax(dim = -1)
-    #end
-    
-    def forward(self, data):
-        
-        batch_size, _, height, width = data.shape
-        out_hr = self.net(data)
-        out    = self.downsample(out_hr * self.w_nparams['std'])
-        out    = out.reshape(batch_size, self.timesteps, *tuple(out.shape[-2:]), self.nbins)
-        out    = self.normalize(out).clone()
-        
-        return out, out_hr
-    #end
-#end
 
 
 # TIP
