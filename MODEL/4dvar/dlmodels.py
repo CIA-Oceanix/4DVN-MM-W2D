@@ -318,7 +318,7 @@ class HistogrammizationDirect(nn.Module):
         return out
     #end
     
-    def forward(self, data_fields_hr, wind_hist):
+    def forward(self, data_fields_hr):
         
         # histograms regressor
         out = self.conv2d_relu_cascade(data_fields_hr.detach())
@@ -372,7 +372,7 @@ class TrainableFieldsToHist(nn.Module):
         super(TrainableFieldsToHist, self).__init__()
         
         in_channels             = shape_data[1] * 1
-        out_channels            = 128
+        out_channels            = 256
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
         self.Phi_fields_hr      = UNet1_pdf(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
@@ -383,7 +383,7 @@ class TrainableFieldsToHist(nn.Module):
         return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
     #end
     
-    def forward(self, data_input, wind_hist):
+    def forward(self, data_input):
         
         # Reconstruction of spatial wind speed fields
         fields_ = self.Phi_fields_hr(data_input)
@@ -394,7 +394,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_hr = fields_anomaly + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(fields_hr, wind_hist)
+        hist_out  = self.Phi_fields_to_hist(fields_hr)
         return hist_out, fields_lr_intrp, fields_anomaly
     #end
 #end
