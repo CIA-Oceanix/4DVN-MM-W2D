@@ -332,7 +332,7 @@ class HistogrammizationDirect(nn.Module):
                                                self.lr_kernelsize,
                                                self.wind_bins,
                                                progbars = False, verbose = False)
-        print('Emp hist: ' , wind_hist_empirical)
+        print('Pathological positions in hist: ', torch.where(wind_hist_empirical.isnan()))
         print('Hist: ', wind_hist_empirical.min(), wind_hist_empirical.max())
         wind_hist_empirical = wind_hist_empirical.to(DEVICE)
         wind_hist_empirical.requires_grad_(True)
