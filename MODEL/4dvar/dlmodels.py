@@ -353,11 +353,8 @@ class HistogrammizationDirect(nn.Module):
         # print('Hist: ', wind_hist_empirical.min(), wind_hist_empirical.max())
         # print('-------END DEBUG PIT---------\n')
         
-        # wind_hist_empirical = wind_hist_empirical.to(DEVICE)
-        # wind_hist_empirical.requires_grad_(True)
-        
-        
-        
+        print(torch.log(wind_hist_empirical).min(), torch.log(wind_hist_empirical).max())
+        print(out.min(), out.max())
         out_res  = out + torch.log(wind_hist_empirical)
         out_norm = self.normalize(out_res)
         
