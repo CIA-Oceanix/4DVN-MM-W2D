@@ -346,7 +346,7 @@ class HistogrammizationDirect(nn.Module):
                 whr_group = data_fields_hr[idx_[0][p], idx_[1][p], i_hr_start[p] : i_hr_end[p], j_hr_start[p] : j_hr_end[p]]
                 print('Extrema      : ', whr_group.min(), whr_group.max())
                 print('Has 0es      : ', torch.any(whr_group == 0))
-                print('Pytorch Hist : ', torch.histogram(whr_group.detach().cpu(), bins = torch.Tensor(self.wind_bins))[0])
+                print('Pytorch Hist : ', torch.histogram(whr_group.detach().cpu(), bins = torch.Tensor(self.wind_bins).cpu())[0])
             #end
         #end
         
