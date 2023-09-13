@@ -355,8 +355,8 @@ class HistogrammizationDirect(nn.Module):
         
         wind_hist_log = torch.log(wind_hist_empirical)
         wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
-        print(wind_hist_log_finite.min(), wind_hist_log_finite.max())
-        print(out.min(), out.max())
+        wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
+        out = (out - wind_hist_min) / (wind_hist_max - wind_hist_min)
         out_res  = out + wind_hist_log
         out_norm = self.normalize(out_res)
         
