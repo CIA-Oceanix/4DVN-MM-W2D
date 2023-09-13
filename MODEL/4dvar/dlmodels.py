@@ -327,6 +327,7 @@ class HistogrammizationDirect(nn.Module):
         out = self.reshape(out)
         
         # Residual block
+        print(data_fields_hr.min(), data_fields_hr.max())
         wind_hist_empirical = fs.fieldsHR2hist(data_fields_hr.clone().detach().cpu(),
                                                self.lr_kernelsize, 
                                                self.wind_bins, 
