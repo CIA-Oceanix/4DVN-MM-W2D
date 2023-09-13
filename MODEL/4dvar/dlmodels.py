@@ -342,7 +342,7 @@ class HistogrammizationDirect(nn.Module):
             i_hr_start = i_lr * self.lr_kernelsize; i_hr_end = i_hr_start + (self.lr_kernelsize - 1)
             j_hr_start = j_lr * self.lr_kernelsize; j_hr_end = j_hr_start + (self.lr_kernelsize - 1)
             print('Single hr groups that affect empirical hist (nan)')
-            for p in range(idx_.__len__()):
+            for p in range(idx_.__len__()-1):
                 whr_group = data_fields_hr[idx_[0][p], idx_[1][p], i_hr_start[p] : i_hr_end[p], j_hr_start[p] : j_hr_end[p]]
                 print('Extrema      : ', whr_group.min(), whr_group.max())
                 print('Has 0es      : ', torch.any(whr_group == 0))
