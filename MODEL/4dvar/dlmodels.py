@@ -359,7 +359,7 @@ class HistogrammizationDirect(nn.Module):
         wind_hist_min, wind_hist_max = wind_hist_log.min(), wind_hist_log.max()
         out = (out - wind_hist_min) / (wind_hist_max - wind_hist_min)
         
-        out_res  = out + wind_hist_empirical
+        out_res  = out + wind_hist_log
         out_norm = self.normalize(out_res)
         
         return out_norm
