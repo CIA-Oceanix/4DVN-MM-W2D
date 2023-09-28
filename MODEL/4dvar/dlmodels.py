@@ -400,7 +400,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_hr = fields_anomaly + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(data_gt)
+        hist_out  = self.Phi_fields_to_hist(fields_hr)
         return hist_out, fields_lr_intrp, fields_anomaly
     #end
 #end
