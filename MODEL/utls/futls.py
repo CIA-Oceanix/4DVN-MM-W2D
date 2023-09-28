@@ -296,7 +296,7 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
     if verbose:
         print('EMPIRICAL TO HISTOGRAM')
     #end
-
+    
     def lr_dim(dim, ks_):
         return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
     #end

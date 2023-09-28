@@ -321,10 +321,10 @@ class HistogrammizationDirect(nn.Module):
     def forward(self, data_fields_hr):
         
         # histograms regressor
-        out = self.conv2d_relu_cascade(data_fields_hr.detach())
-        out = self.linear_reshape(out)
-        out = self.downsample(out)
-        out = self.reshape(out)
+        out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
+        out_tmp = self.linear_reshape(out_tmp)
+        out_tmp = self.downsample(out_tmp)
+        out_tmp = self.reshape(out_tmp)
         
         # Residual block
         fields_emp_hist = data_fields_hr.clone().detach()
@@ -357,7 +357,7 @@ class HistogrammizationDirect(nn.Module):
         wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
         # wind_hist_log[wind_hist_log < -99999] = -99999
         wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
-        out = (out - wind_hist_min) / (wind_hist_max - wind_hist_min)
+        out = (out_tmp - wind_hist_min) / (wind_hist_max - wind_hist_min)
         
         out_res  = out + wind_hist_log
         out_norm = self.normalize(out_res)
