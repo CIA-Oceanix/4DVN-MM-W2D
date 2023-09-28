@@ -295,9 +295,9 @@ class HistogrammizationDirect(nn.Module):
         self.conv2d_relu_cascade = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, 256, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1)
+            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
         self.linear_reshape = nn.Conv2d(out_channels, hist_out_channels, kernel_size = 3, padding = 1)
         self.downsample     = nn.MaxPool2d(lr_kernelsize)
@@ -331,10 +331,11 @@ class HistogrammizationDirect(nn.Module):
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, self.lr_kernelsize, self.wind_bins)
         
         wind_hist_log = torch.log(wind_hist_empirical)
-        wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
+        # wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
         # wind_hist_log[wind_hist_log < -99999] = -99999
-        wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
-        out = (out_tmp - wind_hist_min) / (wind_hist_max - wind_hist_min)
+        # wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
+        # out = (out_tmp - wind_hist_min) / (wind_hist_max - wind_hist_min)
+        out = out_tmp
         
         out_res  = out + wind_hist_log
         out_norm = self.normalize(out_res)
