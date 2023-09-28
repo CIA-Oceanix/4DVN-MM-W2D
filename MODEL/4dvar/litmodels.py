@@ -901,7 +901,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Concatenate low-resolution and anomaly (wind fields) and apply mask
         batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
-        # batch_input = batch_input * mask
+        batch_input = batch_input * mask
         # batch_input = wind_hr_gt
         
         # Inversion
