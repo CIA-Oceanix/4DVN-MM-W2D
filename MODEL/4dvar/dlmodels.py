@@ -290,16 +290,16 @@ class HistogrammizationDirect(nn.Module):
         self.wind_bins     = wind_bins
         self.nbins         = shape_data[-1]
         self.timesteps     = shape_data[1]
-        output_channels    = shape_data[1] * shape_data[-1]
+        hist_out_channels    = shape_data[1] * shape_data[-1]
         
         self.conv2d_relu_cascade = nn.Sequential(
-            DepthwiseConv2d(in_channels, 512, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(in_channels, 128, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(128, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
+            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1)
         )
-        self.linear_reshape = nn.Conv2d(out_channels, output_channels, kernel_size = 3, padding = 1)
+        self.linear_reshape = nn.Conv2d(out_channels, hist_out_channels, kernel_size = 3, padding = 1)
         self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.shortcut       = nn.Identity()
         self.normalize      = nn.LogSoftmax(dim = -1)
