@@ -330,7 +330,7 @@ class HistogrammizationDirect(nn.Module):
         fields_emp_hist = data_fields_hr.clone().detach()
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, self.lr_kernelsize, self.wind_bins)
         
-        wind_hist_log = torch.log(wind_hist_empirical) + torch.normal(0, 0.01, wind_hist_empirical.shape)
+        wind_hist_log = torch.log(wind_hist_empirical)
         # wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
         # wind_hist_log[wind_hist_log < -99999] = -99999
         # wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
@@ -389,7 +389,7 @@ class TrainableFieldsToHist(nn.Module):
         return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
     #end
     
-    def forward(self, data_input):
+    def forward(self, data_input, data_gt):
         
         # Reconstruction of spatial wind speed fields
         fields_ = self.Phi_fields_hr(data_input)
@@ -400,7 +400,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_hr = fields_anomaly + fields_lr_intrp
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(fields_hr)
+        hist_out  = self.Phi_fields_to_hist(data_gt)
         return hist_out, fields_lr_intrp, fields_anomaly
     #end
 #end

@@ -908,12 +908,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if phase == 'train':
             with torch.set_grad_enabled(True):
                 batch_input  = torch.autograd.Variable(batch_input, requires_grad = True)
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input)
+                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt)
                 reco_hr = reco_lr + reco_an
             #end
         else:
             with torch.no_grad():
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input)
+                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt)
                 reco_hr = reco_lr + reco_an
             #end
         #end
