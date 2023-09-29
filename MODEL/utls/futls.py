@@ -367,15 +367,15 @@ def empirical_histogrammize(data_fields, kernel_size, bins):
     #end
     
     # Catch cells out of values range, if any
-    # if torch.any(hist.sum(-1) == 0):
-    #     ec = torch.nonzero(hist.sum(-1) == 0, as_tuple = False)
-    #     m,t,i,j = ec[:,0], ec[:,1], ec[:,2], ec[:,3]
+    if torch.any(hist.sum(-1) == 0):
+        ec = torch.nonzero(hist.sum(-1) == 0, as_tuple = False)
+        m,t,i,j = ec[:,0], ec[:,1], ec[:,2], ec[:,3]
         
-    #     repl_tensor = torch.zeros(bins.__len__()-1)
-    #     repl_tensor[0] = hist.sum(-1).max()
+        repl_tensor = torch.zeros(bins.__len__()-1)
+        repl_tensor[0] = hist.sum(-1).max()
         
-    #     hist[m,t,i,j] = repl_tensor
-    # #end
+        hist[m,t,i,j] = repl_tensor
+    #end
     
     norm_constants = hist.sum(-1)
     for _bin in range(bins.__len__()-1):
