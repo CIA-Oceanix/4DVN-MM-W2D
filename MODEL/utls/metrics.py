@@ -72,23 +72,30 @@ def Hellinger_distance_(h_target, h_output, reduction_dim = 1, mode = 'trineq'):
         reduction_dim = 0
     #end
     
-    eps = 1e-5
-    b_coefficient = (torch.sqrt(h_target * h_output)).sum(dim = reduction_dim)
-    if torch.any(b_coefficient > 1) or torch.any(b_coefficient < 0):
-        raise ValueError('BC can not be > 1 or < 0')
-    #end
+    # eps = 1e-5
+    # b_coefficient = (torch.sqrt(h_target * h_output)).sum(dim = reduction_dim)
+    # if torch.any(b_coefficient > 1) or torch.any(b_coefficient < 0):
+    #     raise ValueError('BC can not be > 1 or < 0')
+    # #end
     
-    b_coefficient[b_coefficient < eps] = eps
+    # b_coefficient[b_coefficient < eps] = eps
     
-    if mode == 'log':
-        b_distance = -1. * torch.log(b_coefficient)
-    elif mode == 'trineq':
-        b_distance = torch.sqrt(1. - b_coefficient)
-    else:
-        raise NotImplementedError('Metric selected not valid. Consider setting "log" or "trineq"')
-    #end
+    # if mode == 'log':
+    #     b_distance = -1. * torch.log(b_coefficient)
+    # elif mode == 'trineq':
+    #     b_distance = torch.sqrt(1. - b_coefficient)
+    # else:
+    #     raise NotImplementedError('Metric selected not valid. Consider setting "log" or "trineq"')
+    # #end
     
-    return b_distance.mean()
+    # return b_distance.mean()
+    
+    b_coefficient = torch.sqrt( h_target * h_output ).sum(-1)
+    b_coefficient[b_coefficient > 1] = 1.
+    # hellinger_distance = torch.sqrt(1. - b_coefficient)
+    hellinger_distance_avg = torch.sqrt(1. - b_coefficient).mean()
+    
+    return hellinger_distance_avg
 #end
 
 class HellingerDistance(nn.Module):
@@ -111,41 +118,47 @@ class HellingerDistance(nn.Module):
         with :math:`\sum_x P(x) = 1` and :math:`\sum_x Q(x) = 1`.
         '''
         
-        if mask is None:
-            mask = torch.ones(target.shape)
-        #end
+        # if mask is None:
+        #     mask = torch.ones(target.shape)
+        # #end
         
-        if self.n_items:
-            nitems = mask.sum()
-            if nitems == 0:
-                nitems = 1.
-            #end
-        #end
+        # if self.n_items:
+        #     nitems = mask.sum()
+        #     if nitems == 0:
+        #         nitems = 1.
+        #     #end
+        # #end
         
-        # target[target.clone() < 1e-9] = 1e-9
-        # output[output.clone() < 1e-9] = 1e-9
+        # # target[target.clone() < 1e-9] = 1e-9
+        # # output[output.clone() < 1e-9] = 1e-9
         
-        b_coefficient = torch.sqrt( torch.mul(target, output) ).sum(dim = -1)
-        if torch.any(b_coefficient > 1.):
-            b_coefficient[b_coefficient > 1.] = 1.
-        if torch.any(b_coefficient < 0.):
-            b_coefficient[b_coefficient < 0.] = 0.
-        #end
+        # b_coefficient = torch.sqrt( torch.mul(target, output) ).sum(dim = -1)
+        # if torch.any(b_coefficient > 1.):
+        #     b_coefficient[b_coefficient > 1.] = 1.
+        # if torch.any(b_coefficient < 0.):
+        #     b_coefficient[b_coefficient < 0.] = 0.
+        # #end
         
-        if mode == 'hd':
-            hellinger_distance = torch.sqrt(1. - b_coefficient)
-        elif mode == 'bd':
-            hellinger_distance = -1. * torch.log(b_coefficient)
-        #end
-        hellinger_distance = hellinger_distance.unsqueeze(-1).mul(mask)
+        # if mode == 'hd':
+        #     hellinger_distance = torch.sqrt(1. - b_coefficient)
+        # elif mode == 'bd':
+        #     hellinger_distance = -1. * torch.log(b_coefficient)
+        # #end
+        # hellinger_distance = hellinger_distance.unsqueeze(-1).mul(mask)
         
-        if self.n_items:
-            hd_mean = hellinger_distance.sum().div(nitems)
-        else:
-            hd_mean = hellinger_distance.mean()
-        #end
+        # if self.n_items:
+        #     hd_mean = hellinger_distance.sum().div(nitems)
+        # else:
+        #     hd_mean = hellinger_distance.mean()
+        # #end
         
-        return hd_mean
+        # return hd_mean
+        
+        b_coefficient = torch.sqrt( target * output ).sum(-1)
+        b_coefficient[b_coefficient > 1] = 1.
+        hellinger_distance = torch.sqrt(1. - b_coefficient)
+        
+        return hellinger_distance.mean()
     #end
 #end
 
