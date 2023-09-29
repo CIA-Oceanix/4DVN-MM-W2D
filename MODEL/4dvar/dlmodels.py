@@ -397,7 +397,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_ = self.Phi_fields_hr(data_input)
         
         # Interpolate lr part of reconstructions
-        fields_hr, fields_lr, fields_an = self.get_high_resolution(data_gt, fields_)
+        fields_hr, fields_lr, fields_an = self.get_high_resolution(data_input, fields_)
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
