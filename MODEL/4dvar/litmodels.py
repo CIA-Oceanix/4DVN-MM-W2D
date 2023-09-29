@@ -941,6 +941,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Monitor Hellinger Distance
         hdistance = self.hd_loss(wind_hist_gt.detach().clone(), outputs.detach().clone().exp())
         self.save_hd_metric(hdistance)
+        print(hdistance)
         
         # print(loss, hdistance)
         # print()
