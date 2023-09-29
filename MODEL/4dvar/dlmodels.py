@@ -391,14 +391,14 @@ class TrainableFieldsToHist(nn.Module):
         return fields_hr, fields_lr_intrp, fields_anomaly
     #end
     
-    def forward(self, data_input, data_gt):
+    def forward(self, data_input, data_gt, normparams):
         
         # Reconstruction of spatial wind speed fields
         fields_ = self.Phi_fields_hr(data_input)
         
         # Interpolate lr part of reconstructions
         fields_hr, fields_lr, fields_an = self.get_high_resolution(data_input, fields_)
-        fields_hr = fields_hr + data_input[:,48:,:,:]
+        fields_hr = fields_hr * normparams['std']
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
