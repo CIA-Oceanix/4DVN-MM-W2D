@@ -333,7 +333,7 @@ class HistogrammizationDirect(nn.Module):
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, self.lr_kernelsize, self.wind_bins)
         wind_hist_empirical_obs = fs.empirical_histogrammize(data_hr, self.lr_kernelsize, self.wind_bins)
         
-        wind_hist_log = torch.log(wind_hist_empirical + wind_hist_empirical_obs)
+        wind_hist_log = torch.log(wind_hist_empirical)
         # wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
         # wind_hist_log[wind_hist_log < -99999] = -99999
         # wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
