@@ -385,8 +385,8 @@ class TrainableFieldsToHist(nn.Module):
     #end
     
     def get_high_resolution(self, fields_in, fields_out):
-        fields_lr_intrp = self.interpolate_lr(fields_in[:,:self.timesteps,:,:], self.lr_sfreq)
-        fields_anomaly  = fields_out[:, 2 * self.timesteps:, :,:]
+        fields_lr_intrp = self.interpolate_lr(fields_in[:,:24,:,:], self.lr_sfreq)
+        fields_anomaly  = fields_out[:, 48:, :,:]
         fields_hr = fields_anomaly + fields_lr_intrp
         return fields_hr, fields_lr_intrp, fields_anomaly
     #end
@@ -398,7 +398,7 @@ class TrainableFieldsToHist(nn.Module):
         
         # Interpolate lr part of reconstructions
         fields_hr, fields_lr, fields_an = self.get_high_resolution(data_input, fields_)
-        fields_hr = fields_hr * 1
+        fields_hr = fields_hr + data_input[:,24:48,:,:]
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
