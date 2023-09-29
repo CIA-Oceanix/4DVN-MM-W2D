@@ -5,7 +5,6 @@ sys.path.append('../utls')
 import numpy as np
 import torch
 from torch import nn
-from unet import UNet4
 import futls as fs
 
 if torch.cuda.is_available():
@@ -370,23 +369,26 @@ class HistogrammizationDirect(nn.Module):
 #end
 
 class TrainableFieldsToHist(nn.Module):
-    # Note: quando tutto questo sarà incorporato in 4DVarNet, non cambierà nulla
-    # perchè lo stato x saranno istogrammi che verranno trattati dall'operatore H.
-    # Semmai, ci sarà solo da modificare il costo variazionale, che comunque
-    # potrebbe restare L2-norm tra istogrammi. Ma vedremo
-    def __init__(self, shape_data, cparams):
+    def __init__(self, model, shape_data, cparams):
         super(TrainableFieldsToHist, self).__init__()
         
         in_channels             = shape_data[1] * 1
         out_channels            = 512
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
-        self.Phi_fields_hr      = ConvNet(shape_data, cparams)  # HERE: feed `model' as input so it can be other than UNet
+        self.Phi_fields_hr      = model
         self.Phi_fields_to_hist = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE, cparams.WIND_BINS)
     #end
     
     def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
         return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
+    #end
+    
+    def get_high_resolution(self, fields_in, fields_out):
+        fields_lr_intrp = self.interpolate_lr(fields_in[:,:self.timesteps,:,:], self.lr_sfreq)
+        fields_anomaly  = fields_out[:, 2 * self.timesteps:, :,:]
+        fields_hr = fields_anomaly + fields_lr_intrp
+        return fields_hr, fields_lr_intrp, fields_anomaly
     #end
     
     def forward(self, data_input, data_gt):
@@ -395,13 +397,11 @@ class TrainableFieldsToHist(nn.Module):
         fields_ = self.Phi_fields_hr(data_input)
         
         # Interpolate lr part of reconstructions
-        fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
-        fields_anomaly  = fields_[:, 2 * self.timesteps:, :,:]
-        fields_hr = fields_anomaly + fields_lr_intrp
+        fields_hr, fields_lr, fields_an = self.get_high_resolution(data_gt, fields_)
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
-        return hist_out, fields_lr_intrp, fields_anomaly
+        return hist_out, fields_lr, fields_an
     #end
 #end
 
@@ -519,70 +519,6 @@ class ModelObs_MM_mod(ModelObs_MM):
     #end
 #end
 
-class ModelObs_MM_uv(ModelObs_MM_mod):
-    '''
-    Variational cost:
-        U(...) = lr_wind + lr_costh + lr_sinth + 
-                 hr_wind_spatial + hr_wind_situ + 
-                 hr_theta_spatial
-    '''
-    def __init__(self, shape_data, buoys_positions, dim_obs):
-        super(ModelObs_MM_uv, self).__init__(shape_data, buoys_positions, dim_obs)
-        
-        self.dim_obs = dim_obs
-        in_channels = self.shape_data[1]
-        
-        self.net_state_angle = nn.Sequential(
-            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
-            nn.AvgPool2d((7,7)),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(64, 128, kernel_size = (5,5)),
-            nn.MaxPool2d((7,7)),
-            nn.LeakyReLU(0.1),
-        )
-        
-        self.net_data_wind = nn.Sequential(
-            nn.Conv2d(in_channels, 64, kernel_size = (5,5)),
-            nn.AvgPool2d((7,7)),
-            nn.LeakyReLU(0.1),
-            nn.Conv2d(64, 128, kernel_size = (5,5)),
-            nn.MaxPool2d((7,7)),
-            nn.LeakyReLU(0.1),
-        )
-    #end
-    
-    def forward(self, x, y_obs, mask):
-        
-        # Part of wind modulus
-        dy_modulus = ModelObs_MM_mod.forward(self, x[:,:72], y_obs[:,:72], mask[:,:72])
-        
-        # Inclusion of angle data/state
-        ## costh_lr = x[:,72:96]
-        ## senth_lr = x[:,144:168]
-        ## costh_an = x[:,96:120]
-        ## senth_an = x[:,168:192]
-        
-        if torch.all(x[:,168:192] == 0) and torch.all(x[:,96:120] == 0):
-            x_theta_spatial = torch.atan2(x[:,144:168], x[:,72:96])
-        else:
-            x_theta_spatial = torch.atan2(x[:,144:168], x[:,72:96]) + torch.atan2(x[:,168:192], x[:,96:120])
-        #end
-        
-        y_mwind_spatial = (y_obs[:,:24] + y_obs[:,24:48]).mul(mask[:,24:48])
-        
-        # || x_costh_lr - y_costh_lr ||² + || x_sinth_lr - y_sinth_lr ||²
-        dy_costh_lr = (x[:,72:96] - y_obs[:,72:96]).mul(mask[:,:24])
-        dy_sinth_lr = (x[:,144:168] - y_obs[:,144:168]).mul(mask[:,:24])
-        
-        # feature maps
-        feat_theta = self.net_state_angle(x_theta_spatial)
-        feat_mwind = self.net_data_wind(y_mwind_spatial)
-        dy_theta_mwind = (feat_theta - feat_mwind) * 0.
-        
-        return [*dy_modulus, dy_theta_mwind, dy_costh_lr, dy_sinth_lr]
-    #end
-#end
-
 class ModelObs_MM2d(nn.Module):
     def __init__(self, shape_data, dim_obs):
         super(ModelObs_MM2d, self).__init__()
@@ -648,19 +584,6 @@ class ModelObs_MM2d_mod(ModelObs_MM2d):
     #end
 #end
 
-class ModelObs_MM2d_uv(ModelObs_MM2d):
-    def __init__(self, shape_data, dim_obs):
-        super(ModelObs_MM2d_uv, self).__init__(shape_data, dim_obs)
-        
-        self.net_state_angle = None
-        self.net_data_angle = None
-    #end
-    
-    def forward(self, x, y_obs, mask):
-        pass
-    #end
-#end
-
 class ModelObs_MM1d(nn.Module):
     def __init__(self, shape_data, buoys_coords, dim_obs):
         super(ModelObs_MM1d, self).__init__()
@@ -720,20 +643,6 @@ class ModelObs_MM1d_mod(ModelObs_MM1d):
     #end
 #end
 
-class ModelObs_MM1d_uv(ModelObs_MM1d):
-    '''
-    Note: no angle term here. 
-    Only in situ time series with no angle
-    '''
-    def __init__(self, shape_data, buoys_coords, dim_obs):
-        super(ModelObs_MM1d_uv, self).__init__(shape_data, buoys_coords, dim_obs)
-    #end
-    
-    def forward(self, x, y_obs, mask):
-        pass
-    #end
-#end
-
 
 ###############################################################################
 ##### MODEL SELECTION #########################################################
@@ -742,51 +651,22 @@ class ModelObs_MM1d_uv(ModelObs_MM1d):
 def model_selection(shape_data, config_params, normparams = None, components = False):
     
     if config_params.PRIOR == 'SN':
-        if not components:
-            return ConvNet(shape_data, config_params)
-        else:
-            raise ValueError('Wind components case DEPRECATED')
-        #end
+        model = ConvNet(shape_data, config_params)
     #end
     
     elif config_params.PRIOR == 'AE':
-        return ConvAutoEncoder(shape_data, config_params)
-    
-    elif config_params.PRIOR == 'SNpdf':
-        # DEPRECATED
-        # return ConvNet_pdf(shape_data, config_params, normparams)
-        # soon to remove all these crap
-        raise ValueError('SNpdf is deprecated')
-    
-    elif config_params.PRIOR == 'RN':
-        # return ResNet(shape_data, config_params)
-        # DEPRECATED
-        raise ValueError('RN is deprecated')
-    
-    elif config_params.PRIOR == 'UN':
-        # return UNet(shape_data, config_params)
-        # DEPRECATED
-        raise ValueError('UN is deprecated')
+        model = ConvAutoEncoder(shape_data, config_params)
     
     elif config_params.PRIOR == 'UN1':
-        return UNet1(shape_data, config_params)
-        
-    elif config_params.PRIOR == 'UN1pdf':
-        return TrainableFieldsToHist(shape_data, config_params) # Uses UNet.
-    
-    elif config_params.PRIOR == 'UN4':
-        return UNet4(shape_data[1] * 3, shape_data[1] * 3)
-    
-    elif config_params.PRIOR == 'MLP':
-        # return MLP(config_params, shape_data)
-        # DEPRECATED
-        raise ValueError('MLP is deprecated')
-    
-    elif config_params.PRIOR == 'FPN':
-        # return FokkerPlankNet(shape_data, config_params)
-        raise ValueError('FPN deprecated')
+        model = UNet1(shape_data, config_params)
     
     else:
         raise NotImplementedError('No valid prior')
+    #end
+    
+    if config_params.VNAME == '4DVN-PDF':
+        return TrainableFieldsToHist(model, shape_data, config_params)
+    else:
+        return model
     #end
 #end
