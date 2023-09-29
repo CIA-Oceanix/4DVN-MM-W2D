@@ -384,25 +384,20 @@ class TrainableFieldsToHist(nn.Module):
         return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
     #end
     
-    def get_high_resolution(self, fields_in, fields_out):
-        fields_lr_intrp = self.interpolate_lr(fields_in[:,:24,:,:], self.lr_sfreq)
-        fields_anomaly  = fields_out[:, 48:, :,:]
-        fields_hr = fields_anomaly + fields_lr_intrp
-        return fields_hr, fields_lr_intrp, fields_anomaly
-    #end
-    
     def forward(self, data_input, data_gt, normparams):
         
         # Reconstruction of spatial wind speed fields
         fields_ = self.Phi_fields_hr(data_input)
         
         # Interpolate lr part of reconstructions
-        fields_hr, fields_lr, fields_an = self.get_high_resolution(data_input, fields_)
+        fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
+        fields_anomaly  = fields_[:, 2 * self.timesteps:, :,:]
+        fields_hr = fields_anomaly + fields_lr_intrp
         # fields_hr = fields_hr * normparams['std']
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
-        return hist_out, fields_lr, fields_an
+        return hist_out, fields_lr_intrp, fields_anomaly
     #end
 #end
 
