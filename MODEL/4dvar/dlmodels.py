@@ -319,7 +319,7 @@ class HistogrammizationDirect(nn.Module):
         return out
     #end
     
-    def forward(self, data_fields_hr):
+    def forward(self, data_fields_hr, data_obs):
         
         # histograms regressor
         out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
@@ -328,10 +328,12 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.reshape(out_tmp)
         
         # Residual block
+        data_hr = (data_obs[:,:24,:,:] + data_obs[:,24:48,:,:]).clone().detach()
         fields_emp_hist = data_fields_hr.clone().detach()
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, self.lr_kernelsize, self.wind_bins)
+        wind_hist_empirical_obs = fs.empirical_histogrammize(data_hr, self.lr_kernelsize, self.wind_bins)
         
-        wind_hist_log = torch.log(wind_hist_empirical)
+        wind_hist_log = torch.log(wind_hist_empirical + wind_hist_empirical_obs)
         # wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
         # wind_hist_log[wind_hist_log < -99999] = -99999
         # wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
@@ -402,7 +404,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_hr, fields_lr, fields_an = self.get_high_resolution(data_input, fields_)
         
         # To histogram
-        hist_out  = self.Phi_fields_to_hist(fields_hr)
+        hist_out  = self.Phi_fields_to_hist(fields_hr, data_input)
         return hist_out, fields_lr, fields_an
     #end
 #end
