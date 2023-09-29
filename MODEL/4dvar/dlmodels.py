@@ -294,7 +294,9 @@ class HistogrammizationDirect(nn.Module):
         self.conv2d_relu_cascade = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(256, 512, kernel_size = (3,3), padding = 1),
+            nn.ReLU(),
+            DepthwiseConv2d(512, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
@@ -336,7 +338,7 @@ class HistogrammizationDirect(nn.Module):
         # out = (out_tmp - wind_hist_min) / (wind_hist_max - wind_hist_min)
         out = out_tmp
         
-        out_res  = out + wind_hist_log
+        out_res  = 0 + wind_hist_log
         out_norm = self.normalize(out_res)
         
         return out_norm
@@ -398,7 +400,6 @@ class TrainableFieldsToHist(nn.Module):
         
         # Interpolate lr part of reconstructions
         fields_hr, fields_lr, fields_an = self.get_high_resolution(data_input, fields_)
-        fields_hr = fields_hr + data_input[:,24:48,:,:]
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
