@@ -939,7 +939,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         loss = self.l2_loss((outputs.exp() - wind_hist_gt), mask = None)
         
         # Monitor Hellinger Distance
-        hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), outputs.detach().cpu().exp())
+        b_coefficient = torch.sqrt( wind_hist_gt.cpu() * outputs.detach().cpu().exp() ).sum(-1)
+        b_coefficient[b_coefficient > 1] = 1.
+        hdistance = torch.sqrt(1. - b_coefficient).mean()
+        # hdistance = HellingerDistance(wind_hist_gt.detach().cpu(), outputs.detach().cpu().exp())
         self.save_hd_metric(hdistance)
         
         return dict({'loss' : loss}), outputs, hdistance

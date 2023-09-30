@@ -325,46 +325,17 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.downsample(out_tmp)
         out_tmp = self.reshape(out_tmp)
         
-        # Residual block
+        # HR fields to hist empirical
         fields_emp_hist = data_fields_hr.clone().detach()
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, self.lr_kernelsize, self.wind_bins)
-        
         wind_hist_log = torch.log(wind_hist_empirical)
-        # wind_hist_log_finite = wind_hist_log[wind_hist_log > -999]
-        # wind_hist_log[wind_hist_log < -99999] = -99999
-        # wind_hist_min, wind_hist_max = wind_hist_log_finite.min(), wind_hist_log_finite.max()
-        # out = (out_tmp - wind_hist_min) / (wind_hist_max - wind_hist_min)
-        out = out_tmp
         
+        # Residual connection
+        out      = out_tmp
         out_res  = out * 0. + wind_hist_log
         out_norm = self.normalize(out_res)
         
         return out_norm
-    #end
-    
-    def debug(self, data_fields_hr, wind_hist_empirical):
-        print()
-        print('\n-------START DEBUG PIT-------')
-        print('Data: ', data_fields_hr.min(), data_fields_hr.max())
-        print('Pathological positions in hist: ', torch.nonzero(wind_hist_empirical.isnan()))
-        idx_ = torch.nonzero(wind_hist_empirical.isnan(), as_tuple = False)
-        idx_ = [idx_[:,i] for i in range(idx_.shape[1])]
-        print('Pathological value in hist : ', wind_hist_empirical[idx_])
-        
-        if torch.any(wind_hist_empirical.isnan()):
-            i_lr = idx_[2]; j_lr = idx_[3]
-            i_hr_start = i_lr * self.lr_kernelsize; i_hr_end = i_hr_start + (self.lr_kernelsize - 1)
-            j_hr_start = j_lr * self.lr_kernelsize; j_hr_end = j_hr_start + (self.lr_kernelsize - 1)
-            print('Single hr groups that affect empirical hist (nan)')
-            for p in range(idx_.__len__()-1):
-                whr_group = data_fields_hr[idx_[0][p], idx_[1][p], i_hr_start[p] : i_hr_end[p], j_hr_start[p] : j_hr_end[p]]
-                print('Extrema      : ', whr_group.min(), whr_group.max())
-                print('Has 0es      : ', torch.any(whr_group == 0))
-                print('Pytorch Hist : ', torch.histogram(whr_group.detach().cpu(), bins = torch.Tensor(self.wind_bins).cpu())[0])
-            #end
-        #end
-        print('Hist: ', wind_hist_empirical.min(), wind_hist_empirical.max())
-        print('-------END DEBUG PIT---------\n')
     #end
 #end
 
