@@ -156,11 +156,11 @@ if __name__ == '__main__':
     lr_dim = np.floor( (region_extent - lr_dsfactor) / lr_dsfactor + 1 )
     reso = np.int32( 3 * region_extent / lr_dim )
     
-    w_hr = np.array(ds['wind'])[:np.int32(24 * 36)]
+    w_hr = np.array(ds['wind'])#[:np.int32(24 * 36)]
     lat  = np.array(ds['lat'])
     lon  = np.array(ds['lon'])
-    time = np.array(ds['time'])[:np.int32(24 * 36)]
-    idx  = np.array(ds['indices'])[:np.int32(24 * 36)]
+    time = np.array(ds['time'])#[:np.int32(24 * 36)]
+    idx  = np.array(ds['indices'])#[:np.int32(24 * 36)]
     mask = np.array(ds['mask_land'])
     
     u_hr  = w_hr[:,:,:,0][:,-region_extent:, -region_extent:]
