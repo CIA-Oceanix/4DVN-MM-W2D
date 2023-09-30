@@ -683,6 +683,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     def training_epoch_end(self, outputs):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
+        hd   = torch.stack([out['hdistance'] for out in outputs]).mean()
+        print('TRAIN EPOCH END. HD = {:.4f}'.format(hd))
         self.save_epoch_loss(loss, self.current_epoch, 'train')
     #end
     
@@ -942,6 +944,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), outputs.detach().cpu().exp())
         self.save_hd_metric(hdistance)
         
-        return dict({'loss' : loss}), outputs, hdistance
+        return dict({'loss' : loss, 'hdistance' : hdistance}), outputs, hdistance
     #end
 #end
