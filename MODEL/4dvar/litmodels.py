@@ -650,8 +650,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return loss, outs, hd
     #end
     
-    def save_hd_metric(self, hd_metric_end_epoch):
-        self.__hd_metric[self.current_epoch] = hd_metric_end_epoch
+    def save_hd_metric(self, hd_metric_end_epoch, epoch):
+        self.__hd_metric[epoch] = hd_metric_end_epoch
     #end
     
     def get_learning_curves(self):
@@ -683,9 +683,9 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     
     def training_epoch_end(self, outputs):
         
-        loss = torch.stack([out['loss'] for out in outputs]).mean()
-        hd   = torch.stack([out['hdist'] for out in outputs]).mean()
-        print('TRAIN EPOCH END. HD = {:.4f}'.format(hd))
+        loss  = torch.stack([out['loss'] for out in outputs]).mean()
+        hdist = torch.stack([out['hdist'] for out in outputs]).mean()
+        self.save_hd_metric(hdist, self.current_epoch)
         self.save_epoch_loss(loss, self.current_epoch, 'train')
     #end
     
@@ -943,7 +943,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Monitor Hellinger Distance
         hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), outputs.detach().cpu().exp())
-        self.save_hd_metric(hdistance)
         
         return dict({'loss' : loss, 'hdistance' : hdistance}), outputs, hdistance
     #end
