@@ -274,7 +274,7 @@ class WPDFSimuData(Dataset):
         else:
             print('NO DATA PREPROCESSING (normalization)')
             self.data_field = data_field
-            self.normparams = {}
+            self.normparams = {'std' : 1.}
         #end
         
         self.nitems = self.data_hist.shape[0]
