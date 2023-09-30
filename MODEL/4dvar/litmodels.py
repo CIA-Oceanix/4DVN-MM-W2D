@@ -843,7 +843,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         data_lr_gt = (data_lr_u.pow(2) + data_lr_v.pow(2)).sqrt()
         
         # Alternative : persistence models
-        if False:
+        if True:
             data_lr_obs   = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
             data_hr_obs   = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
             # wind_hist_obs = self.get_persistence(wind_hist,  'lr', longer_series = True)
