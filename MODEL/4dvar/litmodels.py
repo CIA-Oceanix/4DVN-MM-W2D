@@ -677,13 +677,14 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.log('time_left', estimated_time, on_step = False, on_epoch = True, prog_bar = True)
         self.log('h_dist',    hdist,          on_step = False, on_epoch = True, prog_bar = True)
         
-        return loss
+        # return loss
+        return {'loss' : loss, 'hdist' : hdist}
     #end
     
     def training_epoch_end(self, outputs):
         
         loss = torch.stack([out['loss'] for out in outputs]).mean()
-        hd   = torch.stack([out['hdistance'] for out in outputs]).mean()
+        hd   = torch.stack([out['hdist'] for out in outputs]).mean()
         print('TRAIN EPOCH END. HD = {:.4f}'.format(hd))
         self.save_epoch_loss(loss, self.current_epoch, 'train')
     #end
