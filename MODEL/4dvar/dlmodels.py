@@ -332,7 +332,7 @@ class HistogrammizationDirect(nn.Module):
         
         # Residual connection
         out      = out_tmp
-        out_res  = out * 0. + wind_hist_log
+        out_res  = out * 1. + wind_hist_log
         out_norm = self.normalize(out_res)
         
         return out_norm
