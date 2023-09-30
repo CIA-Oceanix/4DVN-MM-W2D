@@ -393,7 +393,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
         fields_anomaly  = fields_[:, 2 * self.timesteps:, :,:]
         fields_hr = fields_anomaly + fields_lr_intrp
-        # fields_hr = fields_hr * normparams['std']
+        fields_hr = fields_hr * normparams['std']
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
