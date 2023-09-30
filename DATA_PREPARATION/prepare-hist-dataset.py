@@ -56,79 +56,6 @@ def imshow_cb(ax_subplot, img, title, cmap = 'viridis', vmax = None, vmin = None
     return ax_subplot
 #end
 
-def get_histogram(data, bins, to_beaufort_scale = False):
-    
-    histogram = torch.zeros(bins.shape[0] - 1)
-    for eidx in range(bins.__len__() - 1):
-        histogram[eidx] = torch.numel(data[(data > bins[eidx]) & (data <= bins[eidx + 1])])
-    #end
-    
-    return histogram
-#end
-
-def make_hist(data_, bins, normalized = True):
-    
-    if bins.__class__ is not torch.Tensor:
-        bins = torch.Tensor(bins)
-    #end
-    
-    h = get_histogram(data_, bins = bins)
-    
-    if normalized:
-        return h.div(h.sum())
-    else:
-        return h
-    #end
-#end
-
-def fieldsHR2hist(data_field, kernel_size, bins, progbars = False):
-    '''
-    Takes as input tensors of dimension
-        (batch_size, timesteps, height, width)
-    '''
-    
-    def lr_dim(dim, ks_):
-        return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
-    #end
-    
-    timesteps, heigth, width = data_field.shape
-    height_lr, width_lr = lr_dim(heigth, kernel_size), lr_dim(width, kernel_size)
-    data_hist_hr = torch.zeros((timesteps, height_lr, width_lr, bins.__len__() - 1))
-    
-    # loop to prepare histogram data
-    progbar_timesteps = tqdm(range(timesteps),  desc = 'Timesteps ', position = 0, leave = True)
-    
-    for t in progbar_timesteps:
-        
-        i_start = 0
-        for i in range(height_lr):
-            
-            j_start = 0
-            for j in range(width_lr):
-                
-                i_end = i_start + kernel_size
-                j_end = j_start + kernel_size
-                
-                try:
-                    this_wind_pixel = data_field[t, i_start:i_end ,j_start:j_end]
-                except:
-                    this_wind_pixel = data_field[t, i_start:, j_start:]
-                #end
-                
-                hist_hr = make_hist(this_wind_pixel, bins)
-                data_hist_hr[t,i,j,:] = hist_hr
-                
-                j_start = j_end
-            #end
-            
-            i_start = i_end
-        #end
-    #end
-    
-    return data_hist_hr
-#end
-
-
 def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, wind_hr, indices, ds_name, 
 			  day_start, month_start, year_start,
 			  day_end, month_end, year_end):
@@ -186,7 +113,6 @@ def save_netCDF4_dataset(lat, lon, time, mask, w_hist_hr, wind_hr, indices, ds_n
 #end
 
 def hist_mean_computation(hist, bins):
-    
     return (bins * hist).sum()
 #end
 
@@ -230,11 +156,11 @@ if __name__ == '__main__':
     lr_dim = np.floor( (region_extent - lr_dsfactor) / lr_dsfactor + 1 )
     reso = np.int32( 3 * region_extent / lr_dim )
     
-    w_hr = np.array(ds['wind'])
+    w_hr = np.array(ds['wind'])[:np.int32(24 * 36)]
     lat  = np.array(ds['lat'])
     lon  = np.array(ds['lon'])
-    time = np.array(ds['time'])
-    idx  = np.array(ds['indices'])
+    time = np.array(ds['time'])[:np.int32(24 * 36)]
+    idx  = np.array(ds['indices'])[:np.int32(24 * 36)]
     mask = np.array(ds['mask_land'])
     
     u_hr  = w_hr[:,:,:,0][:,-region_extent:, -region_extent:]
@@ -258,7 +184,8 @@ if __name__ == '__main__':
     # Histogrammize
     _wm_hr = wm_hr.reshape(-1, 24, *tuple(wm_hr.shape[-2:]))
     print(_wm_hr.shape)
-    w_hist_hr = fs.fieldsHR2hist(_wm_hr, lr_dsfactor, bins, progbars = True)
+    # w_hist_hr = fs.fieldsHR2hist(_wm_hr, lr_dsfactor, bins, progbars = True)
+    w_hist_hr = fs.empirical_histogrammize(_wm_hr, lr_dsfactor, bins)
     w_hist_hr = w_hist_hr.reshape(-1, height_lr, width_lr, bins.__len__()-1)
     print(w_hist_hr.shape)
 
