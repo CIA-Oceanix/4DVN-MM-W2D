@@ -327,7 +327,10 @@ class HistogrammizationDirect(nn.Module):
         
         # HR fields to hist empirical
         fields_emp_hist = data_fields_hr.clone().detach()
-        wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, self.lr_kernelsize, self.wind_bins)
+        wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, 
+                                                         self.lr_kernelsize, 
+                                                         self.wind_bins,
+                                                         laplace_smoothing = True)
         wind_hist_log = torch.log(wind_hist_empirical)
         
         # Residual connection

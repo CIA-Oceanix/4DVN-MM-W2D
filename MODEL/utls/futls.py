@@ -349,7 +349,7 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
 #end
 
 
-def empirical_histogrammize(data_fields, kernel_size, bins):
+def empirical_histogrammize(data_fields, kernel_size, bins, laplace_smoothing = False):
     
     def get_lr_dim(dim, ks_):
         return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
@@ -375,6 +375,10 @@ def empirical_histogrammize(data_fields, kernel_size, bins):
         repl_tensor[0] = hist.sum(-1).max()
         
         hist[m,t,i,j] = repl_tensor
+    #end
+    
+    if laplace_smoothing:
+        hist += 1e-6
     #end
     
     norm_constants = hist.sum(-1)
