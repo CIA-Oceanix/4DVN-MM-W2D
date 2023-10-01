@@ -119,7 +119,7 @@ class KLDivLoss(torch.nn.Module):
         # kld = kld.sum(-1)
         # kld = kld.mean(dim = (-2, -1))
         # kld = kld.sum(-1)
-        return kld.sum(-1).mean()
+        return -kld.sum(-1).mean()
     #end
 #end
 
