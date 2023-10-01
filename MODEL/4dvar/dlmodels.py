@@ -289,12 +289,10 @@ class HistogrammizationDirect(nn.Module):
         self.wind_bins     = wind_bins
         self.nbins         = shape_data[-1]
         self.timesteps     = shape_data[1]
-        hist_out_channels    = shape_data[1] * shape_data[-1]
+        hist_out_channels  = shape_data[1] * shape_data[-1]
         
         self.conv2d_relu_cascade = nn.Sequential(
             DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(256, 256, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
@@ -338,7 +336,7 @@ class HistogrammizationDirect(nn.Module):
         
         # Residual connection
         out      = out_tmp
-        out_res  = out * 1. + wind_hist_log
+        out_res  = out + wind_hist_log
         out_norm = self.normalize(out_res)
         
         return out_norm
@@ -350,7 +348,7 @@ class TrainableFieldsToHist(nn.Module):
         super(TrainableFieldsToHist, self).__init__()
         
         in_channels             = shape_data[1] * 1
-        out_channels            = 512
+        out_channels            = 256
         self.timesteps          = shape_data[1]
         self.lr_sfreq           = cparams.LR_MASK_SFREQ
         self.Phi_fields_hr      = model
@@ -370,7 +368,6 @@ class TrainableFieldsToHist(nn.Module):
         fields_lr_intrp = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
         fields_anomaly  = fields_[:, 2 * self.timesteps:, :,:]
         fields_hr = fields_anomaly + fields_lr_intrp
-        # fields_hr = fields_hr * normparams['std']
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
