@@ -97,7 +97,7 @@ class KLDivLoss(torch.nn.Module):
         super(KLDivLoss, self).__init__()
     #end
     
-    def forward(self, target, output):
+    def forward(self, output, target, log_target = False):
         
         if target.__class__ is not torch.Tensor:
             target = torch.Tensor(target)
@@ -105,11 +105,21 @@ class KLDivLoss(torch.nn.Module):
             output = torch.Tensor(output)
         #end
         
-        target[target < 1e-9] = 1e-9
-        output[output < 1e-9] = 1e-9
-        kld = (target.mul( target.log() - output.log() )).sum(dim = -1)
-        kld = kld.mean()
-        return kld
+        batch_size, timesteps, height, width, bins = target.shape
+        target = target.reshape(batch_size * timesteps * height * width, bins)
+        output = output.reshape(batch_size * timesteps * height * width, bins)
+        
+        target[target < 1e-6] = 1e-6
+        if not log_target:
+            kld = target * (target.log() - output)
+        else:
+            kld = target.exp() * (target - output)
+        #end
+        
+        # kld = kld.sum(-1)
+        # kld = kld.mean(dim = (-2, -1))
+        # kld = kld.sum(-1)
+        return kld.sum(-1).mean()
     #end
 #end
 

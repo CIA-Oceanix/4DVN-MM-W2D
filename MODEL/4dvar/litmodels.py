@@ -589,6 +589,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         self.l2_loss = L2_Loss()
         self.l1_loss = L1_Loss()
         self.kl_loss = torch.nn.KLDivLoss(log_target = False, reduction = 'batchmean')
+        self.kl_loss_mc = KLDivLoss()
         self.hd_loss = HellingerDistance()
         
         # Case-specific cparams
@@ -937,7 +938,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         #end
         
         # Compute loss
-        loss = self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
+        # loss = self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
+        loss = self.kl_loss_mc(outputs, wind_hist_gt)
         # loss = self.l2_loss((outputs.exp() - wind_hist_gt), mask = None)
         
         # Monitor Hellinger Distance
