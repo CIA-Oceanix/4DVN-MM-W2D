@@ -325,8 +325,6 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.linear_reshape(out_tmp)
         out_tmp = self.downsample(out_tmp)
         out_tmp = self.reshape(out_tmp)
-        out_tmp = self.relu(out_tmp)
-        out_tmp = torch.log(out_tmp)
         
         # HR fields to hist empirical
         fields_emp_hist = data_fields_hr.clone().detach()
