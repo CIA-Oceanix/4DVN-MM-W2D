@@ -300,6 +300,7 @@ class HistogrammizationDirect(nn.Module):
         )
         self.linear_reshape = nn.Conv2d(out_channels, hist_out_channels, kernel_size = 3, padding = 1)
         self.downsample     = nn.MaxPool2d(lr_kernelsize)
+        self.relu           = nn.ReLU()
         self.shortcut       = nn.Identity()
         self.normalize      = nn.LogSoftmax(dim = -1)
     #end
@@ -324,6 +325,7 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.linear_reshape(out_tmp)
         out_tmp = self.downsample(out_tmp)
         out_tmp = self.reshape(out_tmp)
+        out_tmp = self.relu(out_tmp)
         
         # HR fields to hist empirical
         fields_emp_hist = data_fields_hr.clone().detach()
