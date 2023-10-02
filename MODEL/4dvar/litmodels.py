@@ -928,6 +928,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         #end
         
         # Save reconstructions
+        # Denormalization does not take effect if normalize has been set to False
+        # when initializing the datamodule. std is set to 1 in that case
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
                 'data' : wind_hist_gt.detach().cpu(),
