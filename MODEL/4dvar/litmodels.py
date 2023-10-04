@@ -782,8 +782,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Define optimizer
         optimizer = torch.optim.Adam(params)
         
-        # LEARNING RATE SCHEDULER
-        # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = [50], gamma = 0.5)
+        # Learning rate scheduler
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode = 'min', factor = 0.25)
     
         # Return dictionary
@@ -850,7 +849,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         if True:
             data_lr_obs   = self.get_persistence(data_lr_gt, 'lr', longer_series = True)
             data_hr_obs   = self.get_persistence(data_hr_gt, 'hr', longer_series = True)
-            # wind_hist_obs = self.get_persistence(wind_hist,  'lr', longer_series = True)
         else:
             data_lr_obs   = data_lr_gt
             data_hr_obs   = data_hr_gt
@@ -885,7 +883,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         data_an_obs = data_an_obs[:, timewindow_start : timewindow_end, :,:]
         data_hr_obs = data_hr_obs[:, timewindow_start : timewindow_end, :,:]
         wind_hist   = wind_hist[:, timewindow_start : timewindow_end, :,:]
-        # wind_hist_obs = wind_hist_obs[:, timewindow_start : timewindow_end, :,:]
         
         if True:
             # This modification makes persistence and naive initializations to match
