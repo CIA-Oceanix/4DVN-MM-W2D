@@ -927,13 +927,16 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             #end
         #end
         
+        # Transform output in exp, if necessary
+        outputs = outputs.exp()
+        
         # Save reconstructions
         # Denormalization does not take effect if normalize has been set to False
         # when initializing the datamodule. std is set to 1 in that case
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
                 'data' : wind_hist_gt.detach().cpu(),
-                'reco' : outputs.detach().cpu().exp(),
+                'reco' : outputs.detach().cpu(),
                 'wdata': wind_hr_gt.detach().cpu() * self.normparams['std'],
                 'wreco': reco_hr.detach().cpu() * self.normparams['std']
             })
@@ -942,10 +945,10 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Compute loss
         # loss = self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
         # loss = self.kl_loss_mc(outputs, wind_hist_gt)
-        loss = self.l2_loss((outputs.exp() - wind_hist_gt), mask = None)
+        loss = self.l2_loss((outputs - wind_hist_gt), mask = None)
         
         # Monitor Hellinger Distance
-        hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), outputs.detach().cpu().exp())
+        hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), outputs.detach().cpu())
         
         return dict({'loss' : loss, 'hdistance' : hdistance}), outputs, hdistance
     #end
