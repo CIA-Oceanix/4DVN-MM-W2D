@@ -903,7 +903,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         wind_lr_gt, wind_lr, wind_hr_gt, wind_an, wind_hr, wind_hist_gt = self.prepare_batch(data)
-        batch_size, timesteps, height, width = wind_lr.shape
         
         # Mask data
         mask, mask_lr, mask_hr_dx1,_ = self.get_osse_mask(wind_hr.shape)
@@ -911,45 +910,44 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Concatenate low-resolution and anomaly (wind fields) and apply mask
         batch_input = torch.cat([wind_lr, wind_an, wind_an], dim = 1)
         batch_input = batch_input * mask
-        # batch_input = wind_hr_gt
         
         # Inversion
         if phase == 'train':
             with torch.set_grad_enabled(True):
-                batch_input  = torch.autograd.Variable(batch_input, requires_grad = True)
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
-                reco_hr = reco_lr + reco_an
+                batch_input                     = torch.autograd.Variable(batch_input, requires_grad = True)
+                wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
+                reco_hr                         = reco_lr + reco_an
             #end
         else:
             with torch.no_grad():
-                outputs, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
-                reco_hr = reco_lr + reco_an
+                wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
+                reco_hr                         = reco_lr + reco_an
             #end
         #end
         
         # Transform output in exp, if necessary
-        outputs = outputs.exp()
+        # wind_hist_out = wind_hist_out.exp()
         
         # Save reconstructions
         # Denormalization does not take effect if normalize has been set to False
         # when initializing the datamodule. std is set to 1 in that case
         if phase == 'test' and iteration == self.hparams.n_fourdvar_iter-1:
             self.save_samples({
-                'data' : wind_hist_gt.detach().cpu(),
-                'reco' : outputs.detach().cpu(),
-                'wdata': wind_hr_gt.detach().cpu() * self.normparams['std'],
-                'wreco': reco_hr.detach().cpu() * self.normparams['std']
+                'data'  : wind_hist_gt.detach().cpu(),
+                'reco'  : wind_hist_out.detach().cpu(),
+                'wdata' : wind_hr_gt.detach().cpu() * self.normparams['std'],
+                'wreco' : reco_hr.detach().cpu() * self.normparams['std']
             })
         #end
         
         # Compute loss
         # loss = self.kl_loss(outputs, wind_hist_gt).div(outputs.shape[2] * outputs.shape[3])
         # loss = self.kl_loss_mc(outputs, wind_hist_gt)
-        loss = self.l2_loss((outputs - wind_hist_gt), mask = None)
+        loss = self.l2_loss((wind_hist_out - wind_hist_gt), mask = None)
         
         # Monitor Hellinger Distance
-        hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), outputs.detach().cpu())
+        hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), wind_hist_out.detach().cpu())
         
-        return dict({'loss' : loss, 'hdistance' : hdistance}), outputs, hdistance
+        return dict({'loss' : loss, 'hdistance' : hdistance}), wind_hist_out, hdistance
     #end
 #end
