@@ -443,9 +443,7 @@ class Solver_Grad_4DVarNN(nn.Module):
                  alphaObs = 1.,
                  alphaReg = 1.,
                  stochastic = False,
-                 varcost_learnable_params = False,
-                 histogrammize = None, 
-                 lr_sampling_freq = None):
+                 varcost_learnable_params = False):
         
         super(Solver_Grad_4DVarNN, self).__init__()
         
@@ -469,9 +467,6 @@ class Solver_Grad_4DVarNN(nn.Module):
                                             learnable_params = varcost_learnable_params)
         
         self.stochastic    = stochastic
-        self.histogrammize = histogrammize
-        self.lr_sfrequency = lr_sampling_freq
-        
         self.var_cost_values = list()
         
         with torch.no_grad():
@@ -481,18 +476,7 @@ class Solver_Grad_4DVarNN(nn.Module):
     
     def forward(self, x, yobs, mask):
         
-        # return self.solve(x_0 = x, obs = yobs, mask = mask)
-        x_final = self.solve(x_0 = x, obs = yobs, mask = mask)
-        if self.histogrammize is None:
-            return x_final
-        else:
-            x_lr = x_final[:,:24,:,:]
-            x_lr = fs.interpolate_along_channels(x_lr, yobs, self.lr_sfrequency, 24)
-            x_an = x_final[:,48:,:,:]
-            x_hr = x_lr + x_an
-            x_hist = self.histogrammize(x_hr)
-            return x_hist
-        #end
+        return self.solve(x_0 = x, obs = yobs, mask = mask)
     #end
     
     def solve(self, x_0, obs, mask):

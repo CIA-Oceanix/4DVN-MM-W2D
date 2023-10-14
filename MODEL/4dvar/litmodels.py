@@ -616,6 +616,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Choice of observation model
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
         
+        histogrammize = fs.empirical_histogrammize
+        
         # Instantiation of the gradient solver
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             Phi,                                                            # Prior
@@ -633,7 +635,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             alphaObs = alpha_obs,                                           # alpha observations
             alphaReg = alpha_reg,                                           # alpha regularization
             varcost_learnable_params = self.hparams.learn_varcost_params,   # learnable varcost params
-            histogrammize = None                                            # hist or field output
+            histogrammize = histogrammize                                   # hist or field output
         )
         
     #end
@@ -910,18 +912,18 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         batch_input = batch_input * mask
         
         # Inversion
-        if phase == 'train':
-            with torch.set_grad_enabled(True):
-                batch_input                     = torch.autograd.Variable(batch_input, requires_grad = True)
-                wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
-                reco_hr                         = reco_lr + reco_an
-            #end
-        else:
-            with torch.no_grad():
-                wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
-                reco_hr                         = reco_lr + reco_an
-            #end
+        # if phase == 'train':
+        with torch.set_grad_enabled(True):
+            batch_input                     = torch.autograd.Variable(batch_input, requires_grad = True)
+            wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
+            reco_hr                         = reco_lr + reco_an
         #end
+        # else:
+        #     with torch.no_grad():
+        #         wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
+        #         reco_hr                         = reco_lr + reco_an
+        #     #end
+        # #end
         
         # Transform output in exp, if necessary
         # wind_hist_out = wind_hist_out.exp()
