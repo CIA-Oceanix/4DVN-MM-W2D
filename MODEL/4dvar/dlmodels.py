@@ -371,7 +371,7 @@ class TrainableFieldsToHist(nn.Module):
         fields_an  = fields_[:, 2 * self.timesteps:, :,:]
         fields_hr = fields_an + fields_lr
         # fields_hr, fields_lr, fields_an = fs.hr_from_lr_an(fields_, self.lr_sfreq, self.timesteps)
-        # fields_hr = fields_hr * normparams['std'] # if not normalize, std is 1
+        fields_hr = fields_hr * normparams['std'] # if not normalize, std is 1
         
         # To histogram
         hist_out  = self.Phi_fields_to_hist(fields_hr)
