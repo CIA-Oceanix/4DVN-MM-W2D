@@ -939,7 +939,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         if self.current_epoch in [0, 24, 49]:
             batch_hist = {'data' : wind_hist_gt.detach().cpu(), 'reco' : wind_hist_out.detach().cpu()}
-            torch.save( batch_hist, open(f'./histograms-epoch-{self.current_epoch}.pkl', 'wb') )
+            torch.save( batch_hist, open(f'./postprocessing/histograms-epoch-{self.current_epoch}.pkl', 'wb') )
         #end
         
         # Compute loss
