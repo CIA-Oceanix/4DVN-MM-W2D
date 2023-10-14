@@ -487,7 +487,7 @@ class Solver_Grad_4DVarNN(nn.Module):
             return x_final
         else:
             x_lr = x_final[:,:24,:,:]
-            x_lr = fs.interpolate_along_channels(x_lr, self.lr_sfrequency, 24)
+            x_lr = fs.interpolate_along_channels(x_lr, yobs, self.lr_sfrequency, 24)
             x_an = x_final[:,48:,:,:]
             x_hr = x_lr + x_an
             x_hist = self.histogrammize(x_hr)

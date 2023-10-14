@@ -220,15 +220,15 @@ def interpolate_along_channels(data, sampling_freq, timesteps):
     return data_interpolated
 #end
 
-def hr_from_lr_an(data_out, lr_sampling_frequency, timesteps, return_all = True, interp_lr = True):
-    
-    data_lr = data_out[:,:timesteps,:,:]
+def hr_from_lr_an(data_out, data_in, lr_sampling_frequency, timesteps, return_all = True, interp_lr = True):
     
     if interp_lr:
-        data_lr = interpolate_along_channels(data_lr, lr_sampling_frequency, timesteps)
+        data_lr = interpolate_along_channels(data_in[:,:timesteps,:,:], lr_sampling_frequency, timesteps)
+    else:
+        data_lr = data_out[:,:timesteps,:,:]
     #end
     
-    data_an = data_out[:,2 * timesteps:,:,:]
+    data_an = data_out[:, 2*timesteps: ,:,:]
     data_hr = data_lr + data_an
     
     if return_all:
