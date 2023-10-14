@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
+import futls as fs
 
 if torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -223,16 +224,6 @@ class ConvLSTM1d(torch.nn.Module):
         
         # generate empty prev_state, if None is provided
         if prev_state is None:
-            '''
-            ATTENTION : the variable ``spatial_size`` has the value of
-            24, which is not spatial but rather the temporal dimension.
-            Could it be an issue?
-            Is it the dimension on which the convolutional operators act,
-            regardless of the fact they are 1d or 2d?
-            '''
-            # batch_size   : m
-            # hidden_size  : dim state of LSTM (user defined)
-            # spatial_size : FORMAT_SIZE
             state_size = [batch_size, self.hidden_size] + list(spatial_size)
             prev_state = (
                 torch.autograd.Variable(torch.zeros(state_size)).to(DEVICE),
@@ -240,13 +231,8 @@ class ConvLSTM1d(torch.nn.Module):
             )
         #end
         
-        # prev_state has two components
-        # input_     : [m, N, T]
-        # prev_state : ([m, dim_LSTM, T], [m, dim_LSTM, T])
         prev_hidden, prev_cell = prev_state
         
-        # data size is [batch, channel, height, width]
-        # stacked_inputs : [m, N + dim_LSTM, T]
         stacked_inputs = torch.cat((input_, prev_hidden), 1)
         gates = self.Gates(stacked_inputs)
         
@@ -265,8 +251,6 @@ class ConvLSTM1d(torch.nn.Module):
         cell = (remember_gate * prev_cell) + (in_gate * cell_gate)
         hidden = out_gate * torch.tanh(cell)
         
-        # hidden : [m, dim_LSTM, T]
-        # cell   : [m, dim_LSTM, T]
         return hidden, cell
     #end
 #end
@@ -332,10 +316,6 @@ class model_GradUpdateLSTM(torch.nn.Module):
     
     def forward(self, hidden, cell, grad, gradnorm = 1.0):
         
-        # compute gradient
-        # hidden : [m, 2, T]
-        # cell   : [m, 2, T]
-        # grad   : [m, N, T]
         grad = grad / gradnorm
         grad = self.dropout( grad )
         
@@ -354,18 +334,14 @@ class model_GradUpdateLSTM(torch.nn.Module):
             cell = cell_[:,:,dB:grad.size(2)+dB,:]
         else:
             if hidden is None:
-                
-                # grad   : [m, N, T]
-                # hidden : []
-                # cell   : []
                 hidden, cell = self.lstm(grad, None)
             else:
                 hidden, cell = self.lstm(grad, [hidden, cell])
             #end
         #end
         
-        grad = self.dropout( hidden ) # grad : [m, dim_LSTM, T]
-        grad = self.convLayer( grad ) # grad : [m, N, T]
+        grad = self.dropout( hidden )
+        grad = self.convLayer( grad )
         
         return grad, hidden, cell
     #end
@@ -467,7 +443,9 @@ class Solver_Grad_4DVarNN(nn.Module):
                  alphaObs = 1.,
                  alphaReg = 1.,
                  stochastic = False,
-                 varcost_learnable_params = False):
+                 varcost_learnable_params = False,
+                 histogrammize = None, 
+                 lr_sampling_freq = None):
         
         super(Solver_Grad_4DVarNN, self).__init__()
         
@@ -490,7 +468,9 @@ class Solver_Grad_4DVarNN(nn.Module):
                                             alphaReg = alphaReg,
                                             learnable_params = varcost_learnable_params)
         
-        self.stochastic = stochastic
+        self.stochastic    = stochastic
+        self.histogrammize = histogrammize
+        self.lr_sfrequency = lr_sampling_freq
         
         self.var_cost_values = list()
         
@@ -501,7 +481,18 @@ class Solver_Grad_4DVarNN(nn.Module):
     
     def forward(self, x, yobs, mask):
         
-        return self.solve(x_0 = x, obs = yobs, mask = mask)
+        # return self.solve(x_0 = x, obs = yobs, mask = mask)
+        x_final = self.solve(x_0 = x, obs = yobs, mask = mask)
+        if self.histogrammize is None:
+            return x_final
+        else:
+            x_lr = x_final[:,:24,:,:]
+            x_lr = fs.interpolate_along_channels(x_lr, self.lr_sfrequency, 24)
+            x_an = x_final[:,48:,:,:]
+            x_hr = x_lr + x_an
+            x_hist = self.histogrammize(x_hr)
+            return x_hist
+        #end
     #end
     
     def solve(self, x_0, obs, mask):
