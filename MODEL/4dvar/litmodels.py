@@ -615,9 +615,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Choice of observation model
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
-        
-        histogrammize = fs.empirical_histogrammize
-        
+                
         # Instantiation of the gradient solver
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             Phi,                                                            # Prior
@@ -635,7 +633,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             alphaObs = alpha_obs,                                           # alpha observations
             alphaReg = alpha_reg,                                           # alpha regularization
             varcost_learnable_params = self.hparams.learn_varcost_params,   # learnable varcost params
-            histogrammize = histogrammize                                   # hist or field output
         )
         
     #end
