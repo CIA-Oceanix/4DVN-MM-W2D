@@ -615,7 +615,14 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Choice of observation model
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
-                
+        
+        if self.hparams.inversion == 'fp':
+            Phi = Phi
+        elif self.hparams.inversion == 'gs':
+            Phi == Phi.Phi_fields_hr
+            self.Phi_hist = Phi.Phi_fields_to_hist
+        #end
+        
         # Instantiation of the gradient solver
         self.model = NN_4DVar.Solver_Grad_4DVarNN(
             Phi,                                                            # Prior
@@ -909,18 +916,22 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         batch_input = batch_input * mask
         
         # Inversion
-        # if phase == 'train':
         with torch.set_grad_enabled(True):
-            batch_input                     = torch.autograd.Variable(batch_input, requires_grad = True)
-            wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
-            reco_hr                         = reco_lr + reco_an
+            batch_input = torch.autograd.Variable(batch_input, requires_grad = True)
+            
+            if self.hparams.inversion == 'fp':
+                
+                wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
+                reco_hr = reco_lr + reco_an
+                
+            elif self.hparams.inversion == 'gs':
+                
+                output = self.model(batch_input, batch_input, mask)
+                reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.hr_mask_sfreq, 24)
+                reco_hr = reco_lr + reco_an
+                wind_hist_out = self.Phi_hist(reco_hr)
+            #end
         #end
-        # else:
-        #     with torch.no_grad():
-        #         wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
-        #         reco_hr                         = reco_lr + reco_an
-        #     #end
-        # #end
         
         # Transform output in exp, if necessary
         # wind_hist_out = wind_hist_out.exp()
