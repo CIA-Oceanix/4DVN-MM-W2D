@@ -220,6 +220,62 @@ def interpolate_along_channels(data, sampling_freq, timesteps):
     return data_interpolated
 #end
 
+def hr_from_lr_an(data_out, lr_sampling_frequency, timesteps, return_all = True, interp_lr = True):
+    
+    data_lr = data_out[:,:timesteps,:,:]
+    
+    if interp_lr:
+        data_lr = interpolate_along_channels(data_lr, lr_sampling_frequency, timesteps)
+    #end
+    
+    data_an = data_out[:,2 * timesteps:,:,:]
+    data_hr = data_lr + data_an
+    
+    if return_all:
+        return data_hr, data_lr, data_an
+    else:
+        return data_hr
+    #end
+#end
+
+def empirical_histogrammize(data_fields, kernel_size, bins, laplace_smoothing = False):
+    
+    def get_lr_dim(dim, ks_):
+        return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
+    #end
+    
+    batch_size, timesteps, height_hr, width_hr = data_fields.shape
+    height_lr, width_lr = get_lr_dim(height_hr, kernel_size), get_lr_dim(width_hr, kernel_size)
+    
+    hist = torch.zeros((batch_size, timesteps, height_lr, width_lr, bins.__len__()-1))
+    
+    for b_idx in range(bins.__len__()-1):
+        num_items = (data_fields > bins[b_idx]) & (data_fields <= bins[b_idx + 1])
+        summed_items = torch.nn.functional.avg_pool2d(num_items.float(), kernel_size, divisor_override = 1)
+        hist[:,:,:,:,b_idx] = summed_items
+    #end
+    
+    # Catch cells out of values range, if any
+    if torch.any(hist.sum(-1) == 0):
+        ec = torch.nonzero(hist.sum(-1) == 0, as_tuple = False)
+        m,t,i,j = ec[:,0], ec[:,1], ec[:,2], ec[:,3]
+        
+        repl_tensor = torch.zeros(bins.__len__()-1)
+        repl_tensor[0] = hist.sum(-1).max()
+        
+        hist[m,t,i,j] = repl_tensor
+    #end
+    
+    if laplace_smoothing:
+        hist += 1e-6
+    #end
+    
+    norm_constants = hist.sum(-1)
+    for _bin in range(bins.__len__()-1):
+        hist[:,:,:,:, _bin] = hist[:,:,:,:, _bin] / norm_constants
+    return hist
+#end
+
 def get_persistency_model(data, frequency):
     
     persistence = torch.zeros(data.shape)
@@ -346,44 +402,5 @@ def fieldsHR2hist(data_field, kernel_size, bins, progbars = False, verbose = Tru
     #end
     
     return data_hist
-#end
-
-
-def empirical_histogrammize(data_fields, kernel_size, bins, laplace_smoothing = False):
-    
-    def get_lr_dim(dim, ks_):
-        return np.int32(np.floor( (dim - ks_) / ks_ + 1 ))
-    #end
-    
-    batch_size, timesteps, height_hr, width_hr = data_fields.shape
-    height_lr, width_lr = get_lr_dim(height_hr, kernel_size), get_lr_dim(width_hr, kernel_size)
-    
-    hist = torch.zeros((batch_size, timesteps, height_lr, width_lr, bins.__len__()-1))
-    
-    for b_idx in range(bins.__len__()-1):
-        num_items = (data_fields > bins[b_idx]) & (data_fields <= bins[b_idx + 1])
-        summed_items = torch.nn.functional.avg_pool2d(num_items.float(), kernel_size, divisor_override = 1)
-        hist[:,:,:,:,b_idx] = summed_items
-    #end
-    
-    # Catch cells out of values range, if any
-    if torch.any(hist.sum(-1) == 0):
-        ec = torch.nonzero(hist.sum(-1) == 0, as_tuple = False)
-        m,t,i,j = ec[:,0], ec[:,1], ec[:,2], ec[:,3]
-        
-        repl_tensor = torch.zeros(bins.__len__()-1)
-        repl_tensor[0] = hist.sum(-1).max()
-        
-        hist[m,t,i,j] = repl_tensor
-    #end
-    
-    if laplace_smoothing:
-        hist += 1e-6
-    #end
-    
-    norm_constants = hist.sum(-1)
-    for _bin in range(bins.__len__()-1):
-        hist[:,:,:,:, _bin] = hist[:,:,:,:, _bin] / norm_constants
-    return hist
 #end
 

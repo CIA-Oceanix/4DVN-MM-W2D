@@ -100,11 +100,7 @@ class Experiment:
         if (self.cparams.INVERSION == 'fp' or self.cparams.INVERSION == 'bl') and self.cparams.MM_OBSMODEL:
             raise ValueError('Trainable observation operator is to be used only with "gs" inversion')
         #end
-        
-        # if self.cparams.VNAME == '4DVN-PDF' and self.cparams.PRIOR != 'FPN':
-        #     raise ValueError('Select FPN prior with 4DVN-PDF case')
-        # #end
-        
+                
     #end
     
     def print_exp_details(self):

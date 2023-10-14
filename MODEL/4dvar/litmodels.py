@@ -632,7 +632,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             self.hparams.n_solver_iter,                                     # Solver iterations
             alphaObs = alpha_obs,                                           # alpha observations
             alphaReg = alpha_reg,                                           # alpha regularization
-            varcost_learnable_params = self.hparams.learn_varcost_params    # learnable varcost params
+            varcost_learnable_params = self.hparams.learn_varcost_params,   # learnable varcost params
+            histogrammize = None                                            # hist or field output
         )
         
     #end
