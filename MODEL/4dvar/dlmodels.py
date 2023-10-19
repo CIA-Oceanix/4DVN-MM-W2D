@@ -72,6 +72,7 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             nn.Conv2d(ts_length, 32, (5,5), padding = 2),
+            nn.LeakyReLU(0.1),
             nn.Conv2d(32, ts_length, (5,5), padding = 2)
         )
     #end
@@ -578,7 +579,7 @@ class ModelObs_MM1d(nn.Module):
             nn.Linear(25, 11)
         )
         
-        self.net_data = nn.Sequentbatch_inputial(
+        self.net_data = nn.Sequential(
             nn.Conv1d(in_channels, 64, kernel_size = 3),
             nn.LeakyReLU(0.1)
         )
