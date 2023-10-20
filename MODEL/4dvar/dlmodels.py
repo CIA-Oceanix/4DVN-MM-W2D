@@ -71,9 +71,9 @@ class ConvNet(nn.Module):
         ts_length = shape_data[1] * 3
         
         self.net = nn.Sequential(
-            nn.Conv2d(ts_length, 32, (5,5), padding = 2), # 32
-            # nn.LeakyReLU(0.1),
-            nn.Conv2d(32, ts_length, (5,5), padding = 2)
+            nn.Conv2d(ts_length, 128, (5,5), padding = 2), # 32
+            nn.LeakyReLU(0.1),
+            nn.Conv2d(128, ts_length, (5,5), padding = 2)
         )
     #end
     
