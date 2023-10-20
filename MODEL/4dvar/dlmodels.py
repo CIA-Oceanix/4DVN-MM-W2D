@@ -72,7 +72,7 @@ class ConvNet(nn.Module):
         
         self.net = nn.Sequential(
             nn.Conv2d(ts_length, 128, (5,5), padding = 2), # 32
-            # nn.LeakyReLU(0.1),
+            nn.LeakyReLU(0.1),
             nn.Conv2d(128, ts_length, (5,5), padding = 2)
         )
     #end
