@@ -87,6 +87,28 @@ class ConvNet(nn.Module):
 #end
 
 
+class SConvNet(nn.Module):
+    
+    def __init__(self, shape_data, config_params):
+        super(SConvNet, self).__init__()
+        	
+        ts_length = shape_data[1] * 3
+        
+        self.net = nn.Sequential(
+            nn.Conv2d(ts_length, 32, (5,5), padding = 2),
+            # nn.LeakyReLU(0.1),
+            nn.Conv2d(32, ts_length, (5,5), padding = 2)
+        )
+    #end
+    
+    def forward(self, data):
+        
+        reco = self.net(data)
+        return reco
+    #end
+#end
+
+
 class ConvAutoEncoder(nn.Module):
     def __init__(self, shape_data, config_params):
         super(ConvAutoEncoder, self).__init__()
@@ -628,8 +650,11 @@ class ModelObs_MM1d_mod(ModelObs_MM1d):
 def model_selection(shape_data, config_params, normparams = None, components = False):
     
     if config_params.PRIOR == 'SN':
-        model = ConvNet(shape_data, config_params)
+        model = SConvNet(shape_data, config_params)
     #end
+    
+    elif config_params.PRIOR == 'CN':
+        model = ConvNet(shape_data, config_params)
     
     elif config_params.PRIOR == 'AE':
         model = ConvAutoEncoder(shape_data, config_params)
