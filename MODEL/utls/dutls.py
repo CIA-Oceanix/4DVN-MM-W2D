@@ -156,6 +156,12 @@ class W2DSimuDataModule(pl.LightningDataModule):
         self.save_nparams()
     #end
     
+    def denormalize(self, data):
+        
+        normparams = self.test_dataset.get_normparams()
+        return data * normparams['std']
+    #end
+    
     def extract_time_series(self, wind_data, ts_length, num_subseries, random_extract = False):
         
         if random_extract:
@@ -244,12 +250,10 @@ class W2DSimuDataModule(pl.LightningDataModule):
     #end
     
     def val_dataloader(self):
-        
         return DataLoader(self.val_dataset, batch_size = self.batch_size, generator = torch.Generator(DEVICE))
     #end
     
     def test_dataloader(self):
-        
         return DataLoader(self.test_dataset, batch_size = self.batch_size, generator = torch.Generator(DEVICE))
     #end
 #end
