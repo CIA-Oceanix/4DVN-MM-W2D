@@ -130,6 +130,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
         shape = wind2D.shape[1:3]
         self.shapeData = (self.batch_size, self.timesteps, *tuple(shape))
         
+        print(wind2D.shape)
+        
         n_test  = np.int32(24 * self.test_days)
         n_train = np.int32(wind2D.__len__() - n_test)
         n_val   = np.int32(24 * self.val_days)
