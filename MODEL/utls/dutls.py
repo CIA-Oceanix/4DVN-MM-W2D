@@ -6,6 +6,7 @@ import netCDF4 as nc
 import torch
 import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
+import pandas as pd
 
 
 if torch.cuda.is_available():
@@ -112,6 +113,10 @@ class W2DSimuDataModule(pl.LightningDataModule):
         # NetCDF4 dataset
         ds_wind2D = nc.Dataset(os.path.join(self.path_data, 'winds_24h', self.data_name), 'r')
         wind2D = np.array(ds_wind2D['wind'])
+        time = np.array(ds_wind2D['time'])
+        time = pd.to_datetime(time)
+        print('Dataset spanning: {} to {}'.format(time.min(), time.max()))
+        
         mask_land = np.array(ds_wind2D['mask_land'])
         region_lat = np.array(ds_wind2D['lat'])
         region_lon = np.array(ds_wind2D['lon'])
