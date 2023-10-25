@@ -666,9 +666,11 @@ def model_selection(shape_data, config_params, normparams = None, components = F
         raise NotImplementedError('No valid prior')
     #end
     
-    if config_params.VNAME == '4DVN-PDF':
-        return TrainableFieldsToHist(model, shape_data, config_params)
-    else:
-        return model
-    #end
+    return model
+    
+    # if config_params.VNAME == '4DVN-PDF':
+    #     return TrainableFieldsToHist(model, shape_data, config_params)
+    # else:
+    #     return model
+    # #end
 #end

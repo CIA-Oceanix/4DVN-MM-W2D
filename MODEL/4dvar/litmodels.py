@@ -575,8 +575,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
 class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     # Now this will change a bit
     
-    def __init__(self, m_Phi, shape_data, land_buoy_coordinates, normparams, config_params, run, start_time = None):
-        super(LitModel_OSSE2_Distribution, self).__init__(m_Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)
+    def __init__(self, Phi, shape_data, land_buoy_coordinates, normparams, config_params, run, start_time = None):
+        super(LitModel_OSSE2_Distribution, self).__init__(Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)
         
         self.start_time = start_time
         
@@ -616,15 +616,18 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         # Choice of observation model
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
         
+        # Choice of the inversion scheme
+        
+        self.h_Phi = dlm.HistogrammizationDirect(shape_data[1], 256, shape_data, 
+                                                 config_params.LR_KERNELSIZE,
+                                                 config_params.WIND_BINS)
+        
         if self.hparams.inversion == 'fp':
-            
-            self.model = m_Phi
+            self.model = Phi
             
         elif self.hparams.inversion == 'gs':
-            
-            # Instantiation of the gradient solver
             self.model = NN_4DVar.Solver_Grad_4DVarNN(
-                m_Phi.Phi,                                                      # Prior
+                Phi,                                                            # Prior
                 observation_model,                                              # Observation model
                 NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
                     mgrad_shapedata,                                              # m_Grad : Shape data
@@ -640,7 +643,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 alphaReg = alpha_reg,                                           # alpha regularization
                 varcost_learnable_params = self.hparams.learn_varcost_params,   # learnable varcost params
             )
-            
         #end
         
     #end
@@ -922,7 +924,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             
             if self.hparams.inversion == 'fp':
                 
-                wind_hist_out, reco_lr, reco_an = self.model(batch_input, wind_hr_gt, self.normparams)
+                output = self.model(batch_input)
+                reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.hr_mask_sfreq, 24)
                 reco_hr = reco_lr + reco_an
                 
             elif self.hparams.inversion == 'gs':
