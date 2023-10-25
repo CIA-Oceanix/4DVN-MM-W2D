@@ -575,8 +575,8 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
 class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
     # Now this will change a bit
     
-    def __init__(self, Phi, shape_data, land_buoy_coordinates, normparams, config_params, run, start_time = None):
-        super(LitModel_OSSE2_Distribution, self).__init__(Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)
+    def __init__(self, m_Phi, shape_data, land_buoy_coordinates, normparams, config_params, run, start_time = None):
+        super(LitModel_OSSE2_Distribution, self).__init__(m_Phi, shape_data, land_buoy_coordinates, config_params, run, start_time = None)
         
         self.start_time = start_time
         
@@ -618,14 +618,13 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         if self.hparams.inversion == 'fp':
             
-            Phi = Phi
-            self.model = Phi
+            self.model = m_Phi
             
         elif self.hparams.inversion == 'gs':
             
             # Instantiation of the gradient solver
             self.model = NN_4DVar.Solver_Grad_4DVarNN(
-                Phi.Phi_fields_hr,                                              # Prior
+                m_Phi.Phi,                                                      # Prior
                 observation_model,                                              # Observation model
                 NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
                     mgrad_shapedata,                                              # m_Grad : Shape data
