@@ -345,10 +345,14 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         self.setup()
     #end
     
-    def get_shapeData(self):
+    def get_shapeData(self, modality = None):
+        ''' Modality = {"fields", "hists"} '''
         
         if self.shapeData is not None:
-            return self.shapeData
+            if modality is None:
+                return self.shapeData
+            else:
+                return self.shapeData[modality]
         else:
             raise ValueError('Shape data is None, likely not initialized instance')
         #end
@@ -362,7 +366,10 @@ class WPDFSimuDataModule(pl.LightningDataModule):
         mask      = np.array(ds['mask_land'])
         
         timesteps, height_lr, width_lr, bins = wind_hist.shape
-        self.shapeData = (self.batch_size, self.timesteps, height_lr, width_lr, bins)
+        _,         height_hr, width_hr, _    = wind_hr.shape
+        shapeData_hists  = (self.batch_size, self.timesteps, height_lr, width_lr, bins)
+        shapeData_fields = (self.batch_size, self.timesteps, height_hr, width_hr)
+        self.shapeData   = {'hists' : shapeData_hists, 'fields' : shapeData_fields}
         
         n_test  = np.int32(24 * self.test_days)
         n_train = np.int32(wind_hist.__len__() - n_test)

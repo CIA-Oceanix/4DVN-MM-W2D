@@ -617,30 +617,32 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
         
         if self.hparams.inversion == 'fp':
+            
             Phi = Phi
+            self.model = Phi
+            
         elif self.hparams.inversion == 'gs':
-            Phi == Phi.Phi_fields_hr
-            self.Phi_hist = Phi.Phi_fields_to_hist
+            
+            # Instantiation of the gradient solver
+            self.model = NN_4DVar.Solver_Grad_4DVarNN(
+                Phi.Phi_fields_hr,                                              # Prior
+                observation_model,                                              # Observation model
+                NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
+                    mgrad_shapedata,                                              # m_Grad : Shape data
+                    False,                                                        # m_Grad : Periodic BCs
+                    self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
+                    self.hparams.dropout,                                         # m_Grad : Dropout
+                ),
+                L2_Loss(),                                                      # Norm Observation
+                L2_Loss(),                                                      # Norm Prior
+                model_shapedata,                                                # Shape data
+                self.hparams.n_solver_iter,                                     # Solver iterations
+                alphaObs = alpha_obs,                                           # alpha observations
+                alphaReg = alpha_reg,                                           # alpha regularization
+                varcost_learnable_params = self.hparams.learn_varcost_params,   # learnable varcost params
+            )
+            
         #end
-        
-        # Instantiation of the gradient solver
-        self.model = NN_4DVar.Solver_Grad_4DVarNN(
-            Phi,                                                            # Prior
-            observation_model,                                              # Observation model
-            NN_4DVar.model_GradUpdateLSTM(                                  # Gradient solver
-                mgrad_shapedata,                                              # m_Grad : Shape data
-                False,                                                        # m_Grad : Periodic BCs
-                self.hparams.dim_grad_solver,                                 # m_Grad : Dim LSTM
-                self.hparams.dropout,                                         # m_Grad : Dropout
-            ),
-            L2_Loss(),                                                      # Norm Observation
-            L2_Loss(),                                                      # Norm Prior
-            model_shapedata,                                                # Shape data
-            self.hparams.n_solver_iter,                                     # Solver iterations
-            alphaObs = alpha_obs,                                           # alpha observations
-            alphaReg = alpha_reg,                                           # alpha regularization
-            varcost_learnable_params = self.hparams.learn_varcost_params,   # learnable varcost params
-        )
         
     #end
     
@@ -921,7 +923,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             
             if self.hparams.inversion == 'fp':
                 
-                wind_hist_out, reco_lr, reco_an = self.model.Phi(batch_input, wind_hr_gt, self.normparams)
+                wind_hist_out, reco_lr, reco_an = self.model(batch_input, wind_hr_gt, self.normparams)
                 reco_hr = reco_lr + reco_an
                 
             elif self.hparams.inversion == 'gs':
