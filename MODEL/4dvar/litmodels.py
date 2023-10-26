@@ -390,7 +390,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         return self.interpolate_channelwise(data_lr)
     #end
     
-    def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
+    def prepare_batch(self, data, timewindow_start = 6, timewindow_end = 30, timesteps = 24, phase = 'train'):
         
         # data_hr = data.clone()
         data_hr_u, data_hr_v = data[0], data[1]
@@ -410,9 +410,9 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         # Note: this is really one simuated data thing. With real data
         # there are no issues related to +/- Delta t
         # (thanks goodness real data are themselves biased)
-        if self.hparams.lr_sampl_delay:
+        if self.hparams.lr_sampl_delay and phase != 'test':
             data_lr_obs = self.get_data_lr_delay(data_lr_gt.clone(), timesteps, timewindow_start)
-        elif self.hparams.lr_intensity:
+        elif self.hparams.lr_intensity and phase != 'test':
             data_lr_obs = self.get_data_lr_alpha(data_lr_gt.clone(), timesteps, timewindow_start)
         else:
             data_lr_obs = data_lr_gt.clone()
@@ -487,7 +487,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Get and manipulate the data as desidered
-        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data)
+        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data, phase)
         input_data, input_state = self.get_input_data_state(data_lr_obs, data_an, data_hr_obs, init_state)
         
         # Mask data
