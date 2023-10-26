@@ -925,13 +925,13 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             if self.hparams.inversion == 'fp':
                 
                 output = self.model(batch_input)
-                reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.hr_mask_sfreq, 24)
+                reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
                 reco_hr = reco_lr + reco_an
                 
             elif self.hparams.inversion == 'gs':
                 
                 output = self.model(batch_input, batch_input, mask)
-                reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.hr_mask_sfreq, 24)
+                reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
                 reco_hr = reco_lr + reco_an
                 wind_hist_out = self.Phi_hist(reco_hr)
             #end
