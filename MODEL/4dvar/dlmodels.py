@@ -345,7 +345,7 @@ class HistogrammizationDirect(nn.Module):
         return out
     #end
     
-    def forward(self, data_fields_hr):
+    def forward(self, data_fields_hr, wind_hist_gt):
         
         # histograms regressor
         out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
@@ -363,7 +363,7 @@ class HistogrammizationDirect(nn.Module):
         
         # Residual connection
         out      = out_tmp
-        out_res  = out + wind_hist_log
+        out_res  = out + wind_hist_gt
         out_norm = self.normalize(out_res)
         
         return out_norm
