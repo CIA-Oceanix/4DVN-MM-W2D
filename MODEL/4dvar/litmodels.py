@@ -946,7 +946,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         #end
         
         # Transform output in exp, if necessary
-        # wind_hist_out = wind_hist_out.exp()
+        wind_hist_out = wind_hist_out.exp()
         
         # Save reconstructions
         # Denormalization does not take effect if normalize has been set to False

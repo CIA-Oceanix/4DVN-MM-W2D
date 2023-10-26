@@ -328,8 +328,8 @@ class HistogrammizationDirect(nn.Module):
         self.downsample     = nn.AvgPool2d(lr_kernelsize)
         self.relu           = nn.ReLU()
         self.shortcut       = nn.Identity()
-        # self.normalize      = nn.LogSoftmax(dim = -1)
-        self.normalize      = nn.Softmax(dim = -1)
+        self.normalize      = nn.LogSoftmax(dim = -1)
+        # self.normalize      = nn.Softmax(dim = -1)
     #end
     
     def reshape(self, data):
