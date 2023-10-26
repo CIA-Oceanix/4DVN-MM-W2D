@@ -487,7 +487,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
     def compute_loss(self, data, batch_idx, iteration, phase = 'train', init_state = None):
         
         # Get and manipulate the data as desidered
-        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data, phase)
+        data_lr, data_lr_obs, data_hr, data_an, data_hr_obs = self.prepare_batch(data, phase = phase)
         input_data, input_state = self.get_input_data_state(data_lr_obs, data_an, data_hr_obs, init_state)
         
         # Mask data
