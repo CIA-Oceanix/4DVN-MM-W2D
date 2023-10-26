@@ -615,13 +615,13 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Choice of observation model
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
-        
-        # Choice of the inversion scheme
-        
+                
+        # Neural histogram regressor
         self.h_Phi = dlm.HistogrammizationDirect(shape_data[1], 256, shape_data, 
                                                  config_params.LR_KERNELSIZE,
                                                  config_params.WIND_BINS)
         
+        # Choice of the inversion scheme
         if self.hparams.inversion == 'fp':
             self.model = Phi
             
@@ -927,13 +927,14 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 output = self.model(batch_input)
                 reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
                 reco_hr = reco_lr + reco_an
+                wind_hist_out = self.h_Phi(reco_hr * self.normparams['std'])
                 
             elif self.hparams.inversion == 'gs':
                 
                 output = self.model(batch_input, batch_input, mask)
                 reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
-                reco_hr = reco_lr + reco_an
-                wind_hist_out = self.Phi_hist(reco_hr)
+                reco_hr = (reco_lr + reco_an) * self.normparams['std']
+                wind_hist_out = self.h_Phi(reco_hr)
             #end
         #end
         
