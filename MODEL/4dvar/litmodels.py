@@ -957,8 +957,8 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             self.save_samples({
                 'data'  : wind_hist_gt.detach().cpu(),
                 'reco'  : wind_hist_out.detach().cpu(),
-                'wdata' : wind_hr_gt.detach().cpu() * self.normparams['std'],
-                'wreco' : reco_hr.detach().cpu() * self.normparams['std']
+                'wdata' : wind_hr_gt.detach().cpu(), #* self.normparams['std'],
+                'wreco' : reco_hr.detach().cpu() #* self.normparams['std']
             })
         #end
         
