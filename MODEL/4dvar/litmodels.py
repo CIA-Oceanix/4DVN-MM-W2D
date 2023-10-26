@@ -845,6 +845,12 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         return mask_downsampled
     #end
     
+    def interpolate_channelwise(self, data_lr, timesteps = 24):
+        
+        data_interpolated = fs.interpolate_along_channels(data_lr, self.hparams.lr_mask_sfreq, timesteps)
+        return data_interpolated
+    #end
+    
     def prepare_batch(self, batch, timewindow_start = 6, timewindow_end = 30, timesteps = 24):
         
         wind_hist, (data_hr_u, data_hr_v) = batch
@@ -925,15 +931,18 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
             if self.hparams.inversion == 'fp':
                 
                 output = self.model(batch_input)
-                reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
+                # reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
+                # reco_hr = reco_lr + reco_an
+                reco_lr = self.interpolate_channelwise(batch_input)
+                reco_an = output[:,48:,:,:]
                 reco_hr = reco_lr + reco_an
-                wind_hist_out = self.h_Phi(reco_hr * self.normparams['std'])
+                wind_hist_out = self.h_Phi(reco_hr)# * self.normparams['std'])
                 
             elif self.hparams.inversion == 'gs':
                 
                 output = self.model(batch_input, batch_input, mask)
                 reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
-                reco_hr = (reco_lr + reco_an) * self.normparams['std']
+                reco_hr = (reco_lr + reco_an)# * self.normparams['std']
                 wind_hist_out = self.h_Phi(reco_hr)
             #end
         #end
