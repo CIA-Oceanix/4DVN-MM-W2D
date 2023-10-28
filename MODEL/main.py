@@ -315,6 +315,7 @@ class Experiment:
             
             # save reports and reconstructions in the proper target directory
             self.path_manager.save_configfiles(self.cparams, 'config_params')
+            self.path_manager.save_start_end_times(lit_model.get_train_times())
             lit_model.remove_saved_outputs()
             
             print('\nTraining and test successful')

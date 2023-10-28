@@ -293,7 +293,7 @@ class PathManager:
         train_time = (train_time).seconds / (60 * 60)
         times = {'start' : start_time, 'end' : end_time, 'train' : train_time}
         
-        with open(os.path.join(self.path_evalmetrics, f'run{self.run}_train_time_hours.pkl')) as f:
+        with open(os.path.join(self.path_evalmetrics, f'run{self.run}_traintime_hours.pkl')) as f:
             pickle.dump(times, f)
         f.close()
     #end
