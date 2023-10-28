@@ -284,16 +284,17 @@ class PathManager:
     #end
     
     def set_nrun(self, nrun):
-        
         self.nrun = nrun
     #end
     
-    def print_evalreport(self, report_dict):
+    def save_start_end_times(self, start_time, end_time):
         
-        fname = 'evalmetrics' if self.nrun is None else f'evalmetrics_{self.nrun}'
+        train_time = end_time - start_time
+        train_time = (train_time).seconds / (60 * 60)
+        times = {'start' : start_time, 'end' : end_time, 'train' : train_time}
         
-        with open(os.path.join(self.path_evalmetrics, f'{fname}.json'), 'w') as f:
-            json.dump(report_dict, f, indent = 4)
+        with open(os.path.join(self.path_evalmetrics, f'{train_time}_hours.pkl')) as f:
+            pickle.dump(times, f)
         f.close()
     #end
     
@@ -307,38 +308,6 @@ class PathManager:
         with open(os.path.join(self.path_configfiles,
                                'modelname.txt'), 'w') as f:
             f.write(self.model_name)
-        f.close()
-    #end
-    
-    def save_model_output(self, outputs, mask_land, cparams, run, train_losses, val_losses, hd_distances = None):
-        
-        data = torch.cat([item['data'] for item in outputs], dim = 0)
-        reco = torch.cat([item['reco'] for item in outputs], dim = 0)
-        # wdata = torch.cat([item['wdata'] for item in outputs], dim = 0)
-        # wreco = torch.cat([item['wreco'] for item in outputs], dim = 0)
-        # print(data.shape)
-        # print(reco.shape)
-        
-        reco_ncd = nc.Dataset(os.path.join(self.path_modeloutput, 'reconstructions.nc'), 'a')
-        if run == 0:
-            reco_ncd['data'][0,:,:,:,:] = data
-            # reco_ncd['wdata'][0,:,:,:,:] = wdata
-            reco_ncd['mask'][0,:,:] = mask_land.cpu()
-        #end
-        reco_ncd['reco'][run,:,:,:,:] = reco
-        # reco_ncd['wreco'][run,:,:,:,:] = wreco
-        reco_ncd.close()
-        
-        with open(os.path.join(self.path_modeloutput,'cparams.json'), 'w') as f:
-            json.dump(cparams._asdict(), f, indent = 4)
-        f.close()
-        
-        with open(os.path.join(self.path_modeloutput, 'learning_curves.pkl'), 'wb') as f:
-            if hd_distances is None:
-                pickle.dump({'train' : train_losses, 'val' : val_losses}, f)
-            else:
-                pickle.dump({'train' : train_losses, 'val' : val_losses, 'hdist' : hd_distances}, f)
-            #end
         f.close()
     #end
 #end

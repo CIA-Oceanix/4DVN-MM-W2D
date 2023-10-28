@@ -31,7 +31,7 @@ class LitModel_Base(pl.LightningModule):
         self.__test_losses       = list()
         self.__test_batches_size = list()
         self.__samples_to_save   = list()
-        self.__var_cost_values   = list()        
+        self.__var_cost_values   = list()
         
         # cparams
         # Hyper-parameters, learning and workflow
@@ -84,13 +84,11 @@ class LitModel_Base(pl.LightningModule):
     #end
     
     def save_test_loss(self, test_loss, batch_size):
-        
         self.__test_losses.append(test_loss)
         self.__test_batches_size.append(batch_size)
     #end
     
     def get_test_loss(self):
-        
         losses = torch.Tensor(self.__test_losses)
         bsizes = torch.Tensor(self.__test_batches_size)
         weighted_average = torch.sum(torch.mul(losses, bsizes)).div(bsizes.sum())
@@ -99,27 +97,22 @@ class LitModel_Base(pl.LightningModule):
     #end
     
     def save_samples(self, samples):
-        
         self.__samples_to_save.append(samples)
     #end
     
     def get_saved_samples(self):
-        
         return self.__samples_to_save
     #end
     
     def save_var_cost_values(self, var_cost_values):
-        
         self.__var_cost_values = var_cost_values
     #end
     
     def get_var_cost_values(self):
-        
         return self.__var_cost_values
     #end
     
     def get_estimated_time(self):
-        
         start_time = self.start_time
         time_now = datetime.datetime.now()
         elapsed_time = (time_now - start_time).seconds / 60
@@ -128,8 +121,11 @@ class LitModel_Base(pl.LightningModule):
         return est_time
     #end
     
+    def get_train_times(self):
+        return self.start_time, self.end_time
+    #end
+    
     def save_epoch_loss(self, loss, epoch, quantity):
-        
         if quantity == 'train':
             self.__train_losses[epoch] = loss.item()
         elif quantity == 'val':
@@ -138,12 +134,10 @@ class LitModel_Base(pl.LightningModule):
     #end
     
     def get_learning_curves(self):
-        
         return self.__train_losses, self.__val_losses
     #end
     
     def remove_saved_outputs(self):
-        
         del self.__samples_to_save
     #end
     
@@ -198,13 +192,11 @@ class LitModel_Base(pl.LightningModule):
     #end
     
     def training_epoch_end(self, outputs):
-        
         loss = torch.stack([out['loss'] for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'train')
     #end
     
     def validation_step(self, batch, batch_idx):
-        
         metrics, out = self.forward(batch, batch_idx, phase = 'train')
         val_loss = metrics['loss']
         self.log('val_loss', val_loss)
@@ -213,7 +205,6 @@ class LitModel_Base(pl.LightningModule):
     #end
     
     def validation_epoch_end(self, outputs):
-        
         loss = torch.stack([out for out in outputs]).mean()
         self.save_epoch_loss(loss, self.current_epoch, 'val')
         
@@ -237,14 +228,16 @@ class LitModel_Base(pl.LightningModule):
         return metrics, outs
     #end
     
+    def on_train_end(self):
+        self.end_time = datetime.datetime.now()
+    #end        
+    
     def spatial_downsample_interpolate(self, data):
-        
         pooled = fs.downsample_and_interpolate_spatially(data, self.hparams.lr_kernel_size)
         return pooled
     #end
     
     def get_osse_mask(self, data_shape):
-        
         mask, mask_lr, mask_hr_dx1, mask_hr_dx2 = fs.get_data_mask(data_shape, 
                                                                    self.mask_land, 
                                                                    self.hparams.lr_mask_sfreq, 
@@ -277,7 +270,6 @@ class LitModel_Base(pl.LightningModule):
     #end
     
     def interpolate_channelwise(self, data_lr, timesteps = 24):
-        
         data_interpolated = fs.interpolate_along_channels(data_lr, self.hparams.lr_mask_sfreq, timesteps)
         return data_interpolated
     #end
