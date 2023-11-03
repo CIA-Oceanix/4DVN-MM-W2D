@@ -220,19 +220,14 @@ class Experiment:
         
         ## Instantiate dynamical prior and lit model
         if self.cparams.VNAME == '4DVN-W2D':
-            if self.cparams.WIND_MODULUS:
-                
-                Phi = model_selection(shape_data, self.cparams).to(DEVICE)
-                lit_model = LitModel_OSSE1_WindModulus(Phi,
-                                                       shape_data,
-                                                       land_buoy_coords,
-                                                       self.cparams,
-                                                       real_run,
-                                                       start_time = start_time).to(DEVICE)
-            else:
-                # COMPONENTS DEPRECATED
-                pass
-            #end
+            
+            Phi = model_selection(shape_data, self.cparams).to(DEVICE)
+            lit_model = LitModel_OSSE1_WindModulus(Phi,
+                                                   shape_data,
+                                                   land_buoy_coords,
+                                                   self.cparams,
+                                                   real_run,
+                                                   start_time = start_time).to(DEVICE)
             
         elif self.cparams.VNAME == '4DVN-PDF':
             

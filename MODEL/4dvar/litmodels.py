@@ -607,7 +607,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Choice of observation model
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
-                
+        
         # Neural histogram regressor
         self.h_Phi = dlm.HistogrammizationDirect(shape_data[1], 256, shape_data, 
                                                  config_params.LR_KERNELSIZE,
@@ -636,7 +636,6 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 varcost_learnable_params = self.hparams.learn_varcost_params,   # learnable varcost params
             )
         #end
-        
     #end
     
     def forward(self, batch, batch_idx, phase = 'train'):
