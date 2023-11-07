@@ -281,7 +281,7 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.reshape(out_tmp)
         
         # HR fields to hist empirical
-        fields_emp_hist = data_fields_hr.clone().detach()
+        fields_emp_hist     = data_fields_hr.clone().detach()
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, 
                                                          self.lr_kernelsize, 
                                                          self.wind_bins,
@@ -291,7 +291,7 @@ class HistogrammizationDirect(nn.Module):
         # Residual connection
         out      = out_tmp
         out_res  = out + wind_hist_log
-        out_norm = self.normalize(out_res)
+        out_norm = self.normalize(wind_hist_log)
         
         return out_norm
     #end
