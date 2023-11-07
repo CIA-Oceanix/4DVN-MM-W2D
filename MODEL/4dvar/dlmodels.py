@@ -252,6 +252,7 @@ class HistogrammizationDirect(nn.Module):
         # self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.downsample     = nn.AvgPool2d(lr_kernelsize)
         self.relu           = nn.ReLU()
+        self.sigmoid        = nn.Sigmoid()
         self.shortcut       = nn.Identity()
         # self.normalize      = nn.LogSoftmax(dim = -1)
         self.normalize      = nn.Softmax(dim = -1)
@@ -278,6 +279,7 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.relu(out_tmp)
         out_tmp = self.downsample(out_tmp)
         out_tmp = self.reshape(out_tmp)
+        out_tmp = self.sigmoid(out_tmp)
         
         # HR fields to hist empirical
         fields_emp_hist = data_fields_hr.clone().detach()
@@ -285,11 +287,11 @@ class HistogrammizationDirect(nn.Module):
                                                          self.lr_kernelsize, 
                                                          self.wind_bins,
                                                          laplace_smoothing = True)
-        wind_hist_log = torch.log(wind_hist_empirical)
+        # wind_hist_log = torch.log(wind_hist_empirical)
         
         # Residual connection
         out      = out_tmp
-        out_res  = out + wind_hist_log
+        out_res  = out + wind_hist_empirical
         out_norm = self.normalize(out_res)
         
         return out_norm
