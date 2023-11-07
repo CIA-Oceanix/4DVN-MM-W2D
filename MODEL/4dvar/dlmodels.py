@@ -284,11 +284,11 @@ class HistogrammizationDirect(nn.Module):
                                                          self.lr_kernelsize, 
                                                          self.wind_bins,
                                                          laplace_smoothing = True)
-        wind_hist_log = torch.log(wind_hist_empirical)
+        # wind_hist_log = torch.log(wind_hist_empirical)
         
         # Residual connection
         out      = out_tmp
-        out_res  = out + wind_hist_log
+        out_res  = out + wind_hist_empirical # wind_hist_log
         out_norm = self.normalize(out_res)
         
         return out_norm
