@@ -254,8 +254,8 @@ class HistogrammizationDirect(nn.Module):
         self.relu           = nn.ReLU()
         self.sigmoid        = nn.Sigmoid()
         self.shortcut       = nn.Identity()
-        # self.normalize      = nn.LogSoftmax(dim = -1)
-        self.normalize      = nn.Softmax(dim = -1)
+        self.normalize      = nn.LogSoftmax(dim = -1)
+        # self.normalize      = nn.Softmax(dim = -1)
     #end
     
     def reshape(self, data):
