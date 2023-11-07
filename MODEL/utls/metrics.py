@@ -24,10 +24,11 @@ def relative_gain(perf_base, perf_model, mode = 'lower'):
 #end
 
 class HellingerDistance(nn.Module):
-    def __init__(self, n_items = False):
+    def __init__(self, n_items = False, return_mean = True):
         super(HellingerDistance, self).__init__()
         
-        self.n_items = n_items
+        self.n_items     = n_items
+        self.return_mean = return_mean
     #end
     
     def forward(self, target, output):
@@ -47,7 +48,11 @@ class HellingerDistance(nn.Module):
         b_coefficient[b_coefficient > 1] = 1.
         hellinger_distance = torch.sqrt(1. - b_coefficient)
         
-        return hellinger_distance.mean()
+        if self.return_mean:
+            return hellinger_distance.mean()
+        else:
+            return hellinger_distance
+        #end
     #end
 #end
 
