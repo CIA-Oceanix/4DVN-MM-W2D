@@ -275,6 +275,7 @@ class HistogrammizationDirect(nn.Module):
         # histograms regressor
         out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
         out_tmp = self.linear_reshape(out_tmp)
+        out_tmp = self.relu(out_tmp)
         out_tmp = self.downsample(out_tmp)
         out_tmp = self.reshape(out_tmp)
         
