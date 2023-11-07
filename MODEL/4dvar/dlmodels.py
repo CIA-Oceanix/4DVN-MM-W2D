@@ -270,7 +270,7 @@ class HistogrammizationDirect(nn.Module):
         return out
     #end
     
-    def forward(self, data_fields_hr, wind_hist_gt):
+    def forward(self, data_fields_hr, denorm_param, wind_hist_gt):
         
         # histograms regressor
         out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
@@ -279,7 +279,7 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.reshape(out_tmp)
         
         # HR fields to hist empirical
-        fields_emp_hist = data_fields_hr.clone().detach()
+        fields_emp_hist = data_fields_hr.clone().detach() * denorm_param
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, 
                                                          self.lr_kernelsize, 
                                                          self.wind_bins,

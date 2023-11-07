@@ -925,7 +925,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 reco_lr = self.interpolate_channelwise(wind_lr.mul(mask_lr))
                 reco_an = output[:,48:,:,:]
                 reco_hr = reco_lr + reco_an
-                wind_hist_out = self.h_Phi(reco_hr * self.normparams['std'], wind_hist_gt)
+                wind_hist_out = self.h_Phi(reco_hr, self.normparams['std'], wind_hist_gt)
                 
             elif self.hparams.inversion == 'gs':
                 
