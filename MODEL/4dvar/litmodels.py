@@ -606,7 +606,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         observation_model = observation_model = dlm.ModelObs_SM(shape_data, dim_obs = 1)
         
         # Neural histogram regressor
-        self.h_Phi = dlm.HistogrammizationDirect(shape_data[1], 512, shape_data, 
+        self.h_Phi = dlm.HistogrammizationDirect(shape_data[1], 256, shape_data, 
                                                  config_params.LR_KERNELSIZE,
                                                  config_params.WIND_BINS)
         
