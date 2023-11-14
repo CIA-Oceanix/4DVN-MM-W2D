@@ -248,31 +248,6 @@ class HistogrammizationDirect(nn.Module):
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
         )
-        
-        self.conv2d_in = nn.Sequential(
-            DepthwiseConv2d(in_channels, in_channels, 3, padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(in_channels, in_channels, 3, padding = 1),
-        )
-        self.conv2d_in_middle = nn.Sequential(
-            nn.Conv2d(in_channels, 256, 3, padding = 1)
-        )
-        
-        self.conv2d_middle = nn.Sequential(
-            DepthwiseConv2d(256, 256, 3, padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(256, 256, 3, padding = 1),
-        )
-        self.conv2d_middle_out = nn.Sequential(
-            nn.Conv2d(256, out_channels, 3, padding = 1)
-        )
-        
-        self.conv2d_out = nn.Sequential(
-            DepthwiseConv2d(out_channels, out_channels, 3, padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(out_channels, out_channels, 3, padding = 1),
-        )
-        
         self.linear_reshape = nn.Conv2d(out_channels, hist_out_channels, kernel_size = 3, padding = 1)
         # self.downsample     = nn.MaxPool2d(lr_kernelsize)
         self.downsample     = nn.AvgPool2d(lr_kernelsize)
@@ -300,22 +275,10 @@ class HistogrammizationDirect(nn.Module):
         
         # histograms regressor
         out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
-        
-        # data_in     = self.conv2d_in(data_fields_hr.detach())
-        # out_tmp     = data_in + data_fields_hr
-        # out_tmp     = self.conv2d_in_middle(out_tmp)
-        
-        # data_middle = self.conv2d_middle(out_tmp)
-        # out_tmp     = data_middle + out_tmp
-        # out_tmp     = self.conv2d_middle_out(out_tmp)
-        
-        # data_out    = self.conv2d_out(out_tmp)
-        # out_tmp     = data_out + out_tmp
-        
-        # out_tmp = self.linear_reshape(out_tmp)
-        # out_tmp = self.relu(out_tmp)
-        # out_tmp = self.downsample(out_tmp)
-        # out_tmp = self.reshape(out_tmp)
+        out_tmp = self.linear_reshape(out_tmp)
+        out_tmp = self.relu(out_tmp)
+        out_tmp = self.downsample(out_tmp)
+        out_tmp = self.reshape(out_tmp)
         
         # HR fields to hist empirical
         fields_emp_hist     = data_fields_hr.clone().detach()
