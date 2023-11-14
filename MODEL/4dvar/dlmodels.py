@@ -297,40 +297,6 @@ class HistogrammizationDirect(nn.Module):
     #end
 #end
 
-class TrainableFieldsToHist(nn.Module):
-    def __init__(self, model, shape_data, cparams):
-        super(TrainableFieldsToHist, self).__init__()
-        
-        in_channels    = shape_data[1] * 1
-        out_channels   = 256
-        self.timesteps = shape_data[1]
-        self.lr_sfreq  = cparams.LR_MASK_SFREQ
-        self.Phi       = model
-        self.HPhi      = HistogrammizationDirect(in_channels, out_channels, shape_data, cparams.LR_KERNELSIZE, cparams.WIND_BINS)
-    #end
-    
-    def interpolate_lr(self, data_lr, sampling_freq, timesteps = 24):
-        return fs.interpolate_along_channels(data_lr, sampling_freq, timesteps)
-    #end
-    
-    def forward(self, data_input, data_gt, normparams):
-        
-        # Reconstruction of spatial wind speed fields
-        fields_ = self.Phi(data_input)
-        
-        # Interpolate lr part of reconstructions
-        # fields_lr_ = self.interpolate_lr(data_input[:,:self.timesteps,:,:], self.lr_sfreq)
-        # fields_an_  = fields_[:, 2 * self.timesteps:, :,:]
-        # fields_hr_ = fields_an_ + fields_lr_
-        fields_hr, fields_lr, fields_an = fs.hr_from_lr_an(fields_, data_input, self.lr_sfreq, self.timesteps)
-        fields_hr = fields_hr * normparams['std'] # if not normalize, std is 1
-        
-        # To histogram
-        hist_out  = self.HPhi(fields_hr)
-        return hist_out, fields_lr, fields_an
-    #end
-#end
-
 
 
 # TIP
