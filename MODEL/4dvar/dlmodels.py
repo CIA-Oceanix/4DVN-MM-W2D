@@ -253,8 +253,6 @@ class HistogrammizationDirect(nn.Module):
             DepthwiseConv2d(in_channels, in_channels, 3, padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(in_channels, in_channels, 3, padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(in_channels, in_channels, 3, padding = 1),
         )
         self.conv2d_in_middle = nn.Sequential(
             nn.Conv2d(in_channels, 256, 3, padding = 1)
@@ -264,16 +262,12 @@ class HistogrammizationDirect(nn.Module):
             DepthwiseConv2d(256, 256, 3, padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(256, 256, 3, padding = 1),
-            nn.ReLU(),
-            DepthwiseConv2d(256, 256, 3, padding = 1),
         )
         self.conv2d_middle_out = nn.Sequential(
             nn.Conv2d(256, out_channels, 3, padding = 1)
         )
         
         self.conv2d_out = nn.Sequential(
-            DepthwiseConv2d(out_channels, out_channels, 3, padding = 1),
-            nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, 3, padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, 3, padding = 1),
