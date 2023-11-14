@@ -299,23 +299,23 @@ class HistogrammizationDirect(nn.Module):
     def forward(self, data_fields_hr, wind_hist_gt):
         
         # histograms regressor
-        # out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
+        out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
         
-        data_in     = self.conv2d_in(data_fields_hr.detach())
-        out_tmp     = data_in + data_fields_hr
-        out_tmp     = self.conv2d_in_middle(out_tmp)
+        # data_in     = self.conv2d_in(data_fields_hr.detach())
+        # out_tmp     = data_in + data_fields_hr
+        # out_tmp     = self.conv2d_in_middle(out_tmp)
         
-        data_middle = self.conv2d_middle(out_tmp)
-        out_tmp     = data_middle + out_tmp
-        out_tmp     = self.conv2d_middle_out(out_tmp)
+        # data_middle = self.conv2d_middle(out_tmp)
+        # out_tmp     = data_middle + out_tmp
+        # out_tmp     = self.conv2d_middle_out(out_tmp)
         
-        data_out    = self.conv2d_out(out_tmp)
-        out_tmp     = data_out + out_tmp
+        # data_out    = self.conv2d_out(out_tmp)
+        # out_tmp     = data_out + out_tmp
         
-        out_tmp = self.linear_reshape(out_tmp)
-        out_tmp = self.relu(out_tmp)
-        out_tmp = self.downsample(out_tmp)
-        out_tmp = self.reshape(out_tmp)
+        # out_tmp = self.linear_reshape(out_tmp)
+        # out_tmp = self.relu(out_tmp)
+        # out_tmp = self.downsample(out_tmp)
+        # out_tmp = self.reshape(out_tmp)
         
         # HR fields to hist empirical
         fields_emp_hist     = data_fields_hr.clone().detach()
