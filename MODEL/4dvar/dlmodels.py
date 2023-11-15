@@ -279,7 +279,7 @@ class HistogrammizationDirect(nn.Module):
         out_tmp = self.reshape(out_tmp)
         
         # HR fields to hist empirical
-        fields_emp_hist     = data_fields_hr.clone().detach() * normparams['std']
+        fields_emp_hist     = data_fields_hr.clone().detach() * normparams
         wind_hist_empirical = fs.empirical_histogrammize(fields_emp_hist, 
                                                          self.lr_kernelsize, 
                                                          self.wind_bins,
