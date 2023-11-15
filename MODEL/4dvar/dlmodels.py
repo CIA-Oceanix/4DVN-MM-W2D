@@ -281,7 +281,7 @@ class HistogrammizationDirect(nn.Module):
     def forward(self, data_fields_hr, wind_hist_gt):
         
         # histograms regressor
-        if False:
+        if True:
             out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
             out_tmp = self.linear_reshape(out_tmp)
             out_tmp = self.downsample(out_tmp)
