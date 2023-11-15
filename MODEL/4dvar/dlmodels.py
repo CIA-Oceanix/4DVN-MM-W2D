@@ -242,19 +242,11 @@ class HistogrammizationDirect(nn.Module):
         hist_out_channels  = shape_data[1] * shape_data[-1]
         
         self.conv2d_relu_cascade = nn.Sequential(
-            DepthwiseConv2d(in_channels, 256, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(in_channels, 128, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
-            DepthwiseConv2d(256, out_channels, kernel_size = (3,3), padding = 1),
+            DepthwiseConv2d(128, out_channels, kernel_size = (3,3), padding = 1),
             nn.ReLU(),
             DepthwiseConv2d(out_channels, out_channels, kernel_size = (3,3), padding = 1)
-        )
-        
-        self.conv2d_strided_cascade = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 10, padding = 3, stride = 10),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels, 3, padding = 1),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels, 3, padding = 1)
         )
         
         self.linear_reshape = nn.Conv2d(out_channels, hist_out_channels, kernel_size = 3, padding = 1)
@@ -281,16 +273,10 @@ class HistogrammizationDirect(nn.Module):
     def forward(self, data_fields_hr, wind_hist_gt):
         
         # histograms regressor
-        if True:
-            out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
-            out_tmp = self.linear_reshape(out_tmp)
-            out_tmp = self.downsample(out_tmp)
-            out_tmp = self.reshape(out_tmp)
-        else:
-            out_tmp = self.conv2d_strided_cascade(data_fields_hr.detach())
-            out_tmp = self.linear_reshape(out_tmp)
-            out_tmp = self.reshape(out_tmp)
-        #end
+        out_tmp = self.conv2d_relu_cascade(data_fields_hr.detach())
+        out_tmp = self.linear_reshape(out_tmp)
+        out_tmp = self.downsample(out_tmp)
+        out_tmp = self.reshape(out_tmp)
         
         # HR fields to hist empirical
         fields_emp_hist     = data_fields_hr.clone().detach()
