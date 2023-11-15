@@ -288,7 +288,7 @@ class HistogrammizationDirect(nn.Module):
             out_tmp = self.reshape(out_tmp)
         else:
             out_tmp = self.conv2d_strided_cascade(data_fields_hr.detach())
-            out_tmp = self.linear_reshape()
+            out_tmp = self.linear_reshape(out_tmp)
             out_tmp = self.reshape(out_tmp)
         #end
         
