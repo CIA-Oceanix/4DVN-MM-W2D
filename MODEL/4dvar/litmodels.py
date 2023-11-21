@@ -928,7 +928,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 
                 output = self.model(batch_input, batch_input, mask)
                 reco_hr, reco_lr, reco_an = fs.hr_from_lr_an(output, batch_input, self.hparams.lr_mask_sfreq, 24)
-                reco_hr = (reco_lr + reco_an)# * self.normparams['std']
+                reco_hr = (reco_lr + reco_an) * self.normparams['std']
                 wind_hist_out = self.h_Phi(reco_hr)
             #end
         #end
@@ -955,13 +955,15 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
         
         # Compute loss
         loss = self.l2_loss((wind_hist_out - wind_hist_gt), mask = None)
-        # loss += self.l2_loss((wind_hr_gt - reco_hr), mask = None)
-        # grad_data = torch.gradient(wind_hr_gt, dim = (3,2))
-        # grad_reco = torch.gradient(reco_hr, dim = (3,2))
-        # loss_grad_x = self.loss_fn((grad_data[1] - grad_reco[1]), mask = None)
-        # loss_grad_y = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
-        # loss += (loss_grad_x + loss_grad_y) * 1.
         
+        if False:
+            loss += self.l2_loss((wind_hr_gt - reco_hr), mask = None)
+            grad_data = torch.gradient(wind_hr_gt, dim = (3,2))
+            grad_reco = torch.gradient(reco_hr, dim = (3,2))
+            loss_grad_x = self.loss_fn((grad_data[1] - grad_reco[1]), mask = None)
+            loss_grad_y = self.loss_fn((grad_data[0] - grad_reco[0]), mask = None)
+            loss += (loss_grad_x + loss_grad_y) * 1.
+        #end
         
         # Monitor Hellinger Distance
         hdistance = self.hd_loss(wind_hist_gt.detach().cpu(), wind_hist_out.detach().cpu())
