@@ -926,8 +926,7 @@ class LitModel_OSSE2_Distribution(LitModel_OSSE1_WindModulus):
                 
             elif self.hparams.inversion == 'gs':
                 
-                print(batch_input.shape)
-                output = self.model(batch_input, batch_input, mask)
+                output,_,_,_ = self.model(batch_input, batch_input, mask)
                 reco_lr = output[:,:24,:,:]
                 reco_an = output[:,48:,:,:]
                 reco_hr = (reco_lr + reco_an) * self.normparams['std']
