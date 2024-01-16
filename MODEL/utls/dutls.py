@@ -229,6 +229,12 @@ class W2DSimuDataModule(pl.LightningDataModule):
             buoy_positions = np.array(lcoords)
             logical_flag = np.ones(buoy_positions.shape[0]).reshape(-1,1)
             buoy_positions = np.concatenate((buoy_positions, logical_flag), axis = 1).astype(np.int32)
+        
+        elif self.hr_mask_mode == 'fbuoys':
+            
+            buoy_positions = pickle.load(open(os.path.join(os.getcwd(), 'preprocessing', 'buoys_osse2.pkl'), 'rb'))
+            logical_flag = np.ones(buoy_positions.shape[0]).reshape(-1,1)
+            buoy_positions = np.concatenate((buoy_positions, logical_flag), axis = 1).astype(np.int32)
             
         else:
             return None

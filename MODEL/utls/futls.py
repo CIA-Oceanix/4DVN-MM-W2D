@@ -101,7 +101,7 @@ def get_mask_HR_observation_points(shape_data, mode, buoys_positions):
         mode = mode[0]
     #end
     
-    if mode == 'buoy' or mode == 'buoys':
+    if mode == 'buoy' or mode == 'buoys' or mode == 'fbuoys':
         
         buoy_coords = buoys_positions
         mask = torch.zeros(shape_data)
