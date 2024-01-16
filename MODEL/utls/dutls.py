@@ -216,6 +216,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
             
         elif self.hr_mask_mode == 'buoys' or self.hr_mask_mode == 'zeroes':
             
+            print('***\nReal buoys constellation')
+            
             lcoords = list()
             for cdir in os.listdir(dir_buoys):
                 coords = np.genfromtxt(os.path.join(dir_buoys, cdir, 'coords.txt'), delimiter = ',')
@@ -231,6 +233,8 @@ class W2DSimuDataModule(pl.LightningDataModule):
             buoy_positions = np.concatenate((buoy_positions, logical_flag), axis = 1).astype(np.int32)
         
         elif self.hr_mask_mode == 'fbuoys':
+            
+            print('***\nOSSE-2 buoys constellation')
             
             buoy_positions = pickle.load(open(os.path.join(os.getcwd(), 'preprocessing', 'buoys_osse2.pkl'), 'rb'))
             logical_flag = np.ones(buoy_positions.shape[0]).reshape(-1,1)
