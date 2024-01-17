@@ -326,7 +326,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
         alpha_reg = config_params.ALPHA_REG
         
         # Choice of observation model
-        if self.hparams.hr_mask_mode == 'buoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
+        if self.hparams.hr_mask_mode == 'buoys' or self.hparams.hr_mask_mode == 'fbuoys' and self.hparams.hr_mask_sfreq is not None and self.hparams.mm_obsmodel:
             # Case time series plus obs HR, trainable obs term of 1d features
             observation_model = dlm.ModelObs_MM_mod(shape_data, self.buoy_position, dim_obs = 3)    
             
@@ -334,7 +334,7 @@ class LitModel_OSSE1_WindModulus(LitModel_Base):
             # Case obs HR, trainable obs term of 2D features
             observation_model = dlm.ModelObs_MM2d_mod(shape_data, dim_obs = 2)
             
-        elif self.hparams.hr_mask_mode == 'buoys' and self.hparams.mm_obsmodel:
+        elif self.hparams.hr_mask_mode == 'buoys' or self.hparams.hr_mask_mode == 'fbuoys' and self.hparams.mm_obsmodel:
             # Case only time series, trainable obs term for in-situ data
             observation_model = dlm.ModelObs_MM1d_mod(shape_data, self.buoy_position, dim_obs = 2)
         
